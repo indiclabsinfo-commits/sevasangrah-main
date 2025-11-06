@@ -1,12 +1,23 @@
 import { format, parseISO } from 'date-fns';
 
+// Parse date string as local date to avoid timezone issues
+export const parseLocalDate = (dateString: string): Date => {
+  // If it's in YYYY-MM-DD format, parse as local date
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day); // month is 0-indexed
+  }
+  // Otherwise use parseISO for ISO strings with time
+  return parseISO(dateString);
+};
+
 export const formatDate = (date: Date | string): string => {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
+  const dateObj = typeof date === 'string' ? parseLocalDate(date) : date;
   return format(dateObj, 'dd/MM/yyyy');
 };
 
 export const formatDateTime = (date: Date | string): string => {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
+  const dateObj = typeof date === 'string' ? parseLocalDate(date) : date;
   return format(dateObj, 'dd/MM/yyyy HH:mm');
 };
 

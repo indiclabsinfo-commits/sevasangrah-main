@@ -25,70 +25,6 @@ import type { Patient } from '@/types';
 import { formatDate, getInitials, formatPhone } from '@/utils';
 import dataService from '@/services/dataService';
 
-// Mock data
-const mockPatients: Patient[] = [
-  {
-    id: '1',
-    firstName: 'Rahul',
-    lastName: 'Sharma',
-    email: 'rahul.sharma@email.com',
-    phone: '+91 9876543210',
-    address: '123 MG Road, Bangalore, Karnataka 560001',
-    dateOfBirth: new Date('1985-06-15'),
-    gender: 'male',
-    bloodGroup: 'O+',
-    emergencyContact: {
-      name: 'Priya Sharma',
-      phone: '+91 9876543211',
-      relationship: 'Wife'
-    },
-    medicalHistory: ['Diabetes', 'Hypertension'],
-    allergies: ['Penicillin'],
-    createdAt: new Date('2025-08-28'),
-    updatedAt: new Date('2025-08-28'),
-  },
-  {
-    id: '2',
-    firstName: 'Anjali',
-    lastName: 'Patel',
-    email: 'anjali.patel@email.com',
-    phone: '+91 9876543212',
-    address: '456 Park Street, Mumbai, Maharashtra 400001',
-    dateOfBirth: new Date('1990-03-22'),
-    gender: 'female',
-    bloodGroup: 'A+',
-    emergencyContact: {
-      name: 'Vikram Patel',
-      phone: '+91 9876543213',
-      relationship: 'Husband'
-    },
-    medicalHistory: ['Asthma'],
-    allergies: ['Dust'],
-    createdAt: new Date('2025-09-10'),
-    updatedAt: new Date('2025-09-10'),
-  },
-  {
-    id: '3',
-    firstName: 'Vikram',
-    lastName: 'Gupta',
-    email: 'vikram.gupta@email.com',
-    phone: '+91 9876543214',
-    address: '789 Civil Lines, Delhi 110001',
-    dateOfBirth: new Date('1978-11-08'),
-    gender: 'male',
-    bloodGroup: 'B+',
-    emergencyContact: {
-      name: 'Sunita Gupta',
-      phone: '+91 9876543215',
-      relationship: 'Mother'
-    },
-    medicalHistory: ['Heart Disease'],
-    allergies: [],
-    createdAt: new Date('2025-09-25'),
-    updatedAt: new Date('2025-09-25'),
-  },
-];
-
 export const Patients: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -99,9 +35,29 @@ export const Patients: React.FC = () => {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
 
+  // Load patients from Supabase on component mount
+  useEffect(() => {
+    loadPatients();
+  }, []);
+
+  const loadPatients = async () => {
+    setIsLoading(true);
+    try {
+      console.log('🔍 Loading patients from Supabase...');
+      const data = await dataService.getPatients();
+      console.log('✅ Patients loaded:', data?.length || 0);
+      setPatients(data || []);
+    } catch (error) {
+      console.error('❌ Error loading patients:', error);
+      toast.error('Failed to load patients');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const filteredPatients = useMemo(() => {
-    return mockPatients.filter(patient => {
-      const patientDate = new Date(patient.createdAt);
+    return patients.filter(patient => {
+      const patientDate = new Date(patient.date_of_entry || patient.created_at || patient.createdAt);
       if (startDate && patientDate < startDate) {
         return false;
       }
@@ -110,27 +66,31 @@ export const Patients: React.FC = () => {
       }
       return true;
     });
-  }, [startDate, endDate]);
+  }, [patients, startDate, endDate]);
 
   const columns: Column<Patient>[] = [
     {
-      key: 'firstName',
+      key: 'first_name',
       header: 'Patient',
-      render: (_, patient) => (
-        <div className="flex items-center">
-          <Avatar
-            fallback={getInitials(patient.firstName, patient.lastName)}
-            size="md"
-            className="bg-primary-100 text-primary-700"
-          />
-          <div className="ml-3">
-            <p className="text-sm font-medium text-gray-900">
-              {patient.firstName} {patient.lastName}
-            </p>
-            <p className="text-sm text-gray-500">{patient.email}</p>
+      render: (_, patient) => {
+        const firstName = patient.first_name || patient.firstName || '';
+        const lastName = patient.last_name || patient.lastName || '';
+        return (
+          <div className="flex items-center">
+            <Avatar
+              fallback={getInitials(firstName, lastName)}
+              size="md"
+              className="bg-primary-100 text-primary-700"
+            />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-900">
+                {firstName} {lastName}
+              </p>
+              <p className="text-sm text-gray-500">{patient.email || 'N/A'}</p>
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'phone',
@@ -143,15 +103,15 @@ export const Patients: React.FC = () => {
       ),
     },
     {
-      key: 'dateOfBirth',
+      key: 'age',
       header: 'Age/Gender',
       render: (_, patient) => {
-        const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
+        const age = patient.age || (patient.dateOfBirth ? new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear() : 'N/A');
         return (
           <div>
-            <p className="text-sm text-gray-900">{age} years</p>
+            <p className="text-sm text-gray-900">{age} {typeof age === 'number' ? 'years' : ''}</p>
             <Badge variant="neutral" size="sm">
-              {patient.gender}
+              {patient.gender || 'N/A'}
             </Badge>
           </div>
         );
@@ -167,11 +127,11 @@ export const Patients: React.FC = () => {
       ),
     },
     {
-      key: 'createdAt',
-      header: 'Registered',
-      render: (createdAt) => (
+      key: 'date_of_entry',
+      header: 'Entry Date',
+      render: (_, patient) => (
         <span className="text-sm text-gray-500">
-          {formatDate(createdAt)}
+          {formatDate(patient.date_of_entry || patient.created_at || patient.createdAt)}
         </span>
       ),
     },
@@ -459,60 +419,66 @@ export const Patients: React.FC = () => {
         size="lg"
         showFooter={false}
       >
-        {selectedPatient && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <Avatar
-                fallback={getInitials(selectedPatient.firstName, selectedPatient.lastName)}
-                size="xl"
-                className="mx-auto bg-primary-100 text-primary-700"
-              />
-              <h3 className="mt-4 text-xl font-bold text-gray-900">
-                {selectedPatient.firstName} {selectedPatient.lastName}
-              </h3>
-              <p className="text-gray-500">{selectedPatient.email}</p>
-            </div>
+        {selectedPatient && (() => {
+          const firstName = selectedPatient.first_name || selectedPatient.firstName || '';
+          const lastName = selectedPatient.last_name || selectedPatient.lastName || '';
+          const emergencyContactName = selectedPatient.emergency_contact_name || selectedPatient.emergencyContact?.name;
+          const emergencyContactPhone = selectedPatient.emergency_contact_phone || selectedPatient.emergencyContact?.phone;
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Contact Information</h4>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Phone:</strong> {formatPhone(selectedPatient.phone)}</p>
-                  <p><strong>Email:</strong> {selectedPatient.email}</p>
-                  <p><strong>Address:</strong> {selectedPatient.address}</p>
-                </div>
+          return (
+            <div className="space-y-6">
+              <div className="text-center">
+                <Avatar
+                  fallback={getInitials(firstName, lastName)}
+                  size="xl"
+                  className="mx-auto bg-primary-100 text-primary-700"
+                />
+                <h3 className="mt-4 text-xl font-bold text-gray-900">
+                  {firstName} {lastName}
+                </h3>
+                <p className="text-gray-500">{selectedPatient.email || 'N/A'}</p>
               </div>
 
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Personal Information</h4>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Date of Birth:</strong> {formatDate(selectedPatient.dateOfBirth)}</p>
-                  <p><strong>Gender:</strong> {selectedPatient.gender}</p>
-                  <p><strong>Blood Group:</strong> {selectedPatient.bloodGroup || 'N/A'}</p>
-                </div>
-              </div>
-
-              {selectedPatient.emergencyContact && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">Emergency Contact</h4>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Contact Information</h4>
                   <div className="space-y-2 text-sm">
-                    <p><strong>Name:</strong> {selectedPatient.emergencyContact.name}</p>
-                    <p><strong>Phone:</strong> {formatPhone(selectedPatient.emergencyContact.phone)}</p>
-                    <p><strong>Relationship:</strong> {selectedPatient.emergencyContact.relationship}</p>
+                    <p><strong>Phone:</strong> {formatPhone(selectedPatient.phone)}</p>
+                    <p><strong>Email:</strong> {selectedPatient.email || 'N/A'}</p>
+                    <p><strong>Address:</strong> {selectedPatient.address || 'N/A'}</p>
                   </div>
                 </div>
-              )}
 
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Medical Information</h4>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Medical History:</strong> {selectedPatient.medicalHistory?.join(', ') || 'None'}</p>
-                  <p><strong>Allergies:</strong> {selectedPatient.allergies?.join(', ') || 'None'}</p>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Personal Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <p><strong>Age:</strong> {selectedPatient.age || 'N/A'} {typeof selectedPatient.age === 'number' ? 'years' : ''}</p>
+                    <p><strong>Gender:</strong> {selectedPatient.gender || 'N/A'}</p>
+                    <p><strong>Blood Group:</strong> {selectedPatient.bloodGroup || 'N/A'}</p>
+                  </div>
+                </div>
+
+                {(emergencyContactName || emergencyContactPhone) && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Emergency Contact</h4>
+                    <div className="space-y-2 text-sm">
+                      <p><strong>Name:</strong> {emergencyContactName || 'N/A'}</p>
+                      <p><strong>Phone:</strong> {emergencyContactPhone ? formatPhone(emergencyContactPhone) : 'N/A'}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Medical Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <p><strong>Medical History:</strong> {selectedPatient.medicalHistory?.join(', ') || 'None'}</p>
+                    <p><strong>Allergies:</strong> {selectedPatient.allergies?.join(', ') || 'None'}</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </Modal>
     </div>
   );

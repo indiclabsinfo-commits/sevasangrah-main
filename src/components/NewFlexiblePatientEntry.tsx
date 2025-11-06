@@ -16,6 +16,7 @@ import {
   Building2
 } from 'lucide-react';
 import { logger } from '../utils/logger';
+import { parseLocalDate } from '../utils';
 
 // Doctors and Departments data
 const DOCTORS_DATA = [
@@ -458,7 +459,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
         
         // Update existing patient's date_of_entry and doctor information to new visit date
         const updateData: any = {
-          date_of_entry: formData.date_of_entry.toISOString().split('T')[0] // Format as YYYY-MM-DD
+          date_of_entry: `${formData.date_of_entry.getFullYear()}-${String(formData.date_of_entry.getMonth() + 1).padStart(2, '0')}-${String(formData.date_of_entry.getDate()).padStart(2, '0')}` // Format as YYYY-MM-DD in local timezone
         };
         
         // Update doctor information if provided
@@ -626,7 +627,9 @@ const NewFlexiblePatientEntry: React.FC = () => {
             doctor_name: doctor.doctor_name,
             department: doctor.department,
             status: 'COMPLETED',
-            transaction_date: formData.date_of_entry || new Date().toISOString().split('T')[0] // FIX: Use patient's date_of_entry as transaction_date
+            transaction_date: formData.date_of_entry
+              ? `${formData.date_of_entry.getFullYear()}-${String(formData.date_of_entry.getMonth() + 1).padStart(2, '0')}-${String(formData.date_of_entry.getDate()).padStart(2, '0')}`
+              : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`
           };
 
           logger.log('💳 Creating transaction:', transactionData);
@@ -724,7 +727,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
           try {
             const patientFullName = `${formData.prefix} ${formData.first_name} ${formData.last_name}`;
             const formattedDate = formData.date_of_entry
-              ? new Date(formData.date_of_entry).toLocaleDateString('en-IN')
+              ? formData.date_of_entry.toLocaleDateString('en-IN')
               : new Date().toLocaleDateString('en-IN');
             const doctorName = formData.consultation_mode === 'single'
               ? (formData.selected_doctor === 'CUSTOM' ? formData.custom_doctor_name : formData.selected_doctor)
@@ -1184,7 +1187,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                                 ID: {patient.patient_id} | Phone: {patient.phone}
                               </div>
                               <div style={{ fontSize: '11px', color: '#999999' }}>
-                                Last visit: {patient.date_of_entry ? new Date(patient.date_of_entry).toLocaleDateString() : 'N/A'}
+                                Last visit: {patient.date_of_entry ? parseLocalDate(patient.date_of_entry).toLocaleDateString() : 'N/A'}
                               </div>
                             </div>
                           ))}
