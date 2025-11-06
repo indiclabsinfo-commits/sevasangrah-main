@@ -1034,7 +1034,20 @@ const NewFlexiblePatientEntry: React.FC = () => {
                     </label>
                     <select
                       value={formData.prefix}
-                      onChange={(e) => setFormData({ ...formData, prefix: e.target.value })}
+                      onChange={(e) => {
+                        const newPrefix = e.target.value;
+                        const updates: any = { prefix: newPrefix };
+
+                        // Auto-select gender based on prefix
+                        if (newPrefix === 'Mr') {
+                          updates.gender = 'MALE';
+                        } else if (newPrefix === 'Mrs' || newPrefix === 'Ms') {
+                          updates.gender = 'FEMALE';
+                        }
+                        // Dr and Prof don't auto-set gender
+
+                        setFormData({ ...formData, ...updates });
+                      }}
                       style={{
                         width: '100%',
                         padding: '10px 12px',
@@ -1266,7 +1279,20 @@ const NewFlexiblePatientEntry: React.FC = () => {
                     </label>
                     <select
                       value={formData.gender}
-                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                      onChange={(e) => {
+                        const newGender = e.target.value;
+                        const updates: any = { gender: newGender };
+
+                        // Auto-select prefix based on gender
+                        if (newGender === 'MALE') {
+                          updates.prefix = 'Mr';
+                        } else if (newGender === 'FEMALE') {
+                          updates.prefix = 'Ms';
+                        }
+                        // OTHER gender doesn't auto-set prefix
+
+                        setFormData({ ...formData, ...updates });
+                      }}
                       style={{
                         width: '100%',
                         padding: '10px 12px',
