@@ -8,7 +8,7 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // Middleware
 app.use(cors());
@@ -98,8 +98,8 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Also accept temp password for admin users
     if (!validPassword &&
-        (email === 'admin@indic.com' || email === 'admin@valant.com' || email === 'admin@hospital.com') &&
-        password === 'admin123') {
+      (email === 'admin@indic.com' || email === 'admin@valant.com' || email === 'admin@hospital.com') &&
+      password === 'admin123') {
       validPassword = true;
     }
 
@@ -311,7 +311,7 @@ app.get('/api/patients/:id', authenticateToken, async (req, res) => {
 app.post('/api/patients', authenticateToken, async (req, res) => {
   try {
     const {
-      patient_id,
+      patient_id: providedPatientId,
       first_name,
       last_name,
       age,
@@ -326,25 +326,51 @@ app.post('/api/patients', authenticateToken, async (req, res) => {
       current_medications,
       blood_group,
       notes,
-      date_of_entry
+      date_of_entry,
+      assigned_doctor,
+      assigned_department,
+      prefix,
+      patient_tag,
+      date_of_birth
     } = req.body;
 
     // Generate UUID for id field
     const id = crypto.randomUUID();
 
+    // Auto-generate patient_id if not provided
+    let patient_id = providedPatientId;
+    if (!patient_id) {
+      // Get the count of existing patients to generate next ID
+      const countResult = await pool.query('SELECT COUNT(*) FROM patients');
+      const count = parseInt(countResult.rows[0].count) + 1;
+      patient_id = `P${count.toString().padStart(6, '0')}`;
+      console.log('📝 Auto-generated patient_id:', patient_id);
+    }
+
     const result = await pool.query(
       `INSERT INTO patients (
-        id, patient_id, first_name, last_name, age, gender, phone, email, address,
+        id, patient_id, prefix, first_name, last_name, age, gender, phone, email, address,
         emergency_contact_name, emergency_contact_phone, medical_history,
-        allergies, current_medications, blood_group, notes, date_of_entry, created_by, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        allergies, current_medications, blood_group, notes, date_of_entry,
+        assigned_doctor, assigned_department, patient_tag, date_of_birth,
+        created_by, is_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
       RETURNING *`,
       [
-        id, patient_id, first_name, last_name, age, gender, phone, email, address,
+        id, patient_id, prefix, first_name, last_name, age, gender, phone, email, address,
         emergency_contact_name, emergency_contact_phone, medical_history,
-        allergies, current_medications, blood_group, notes, date_of_entry, req.user.id, true
+        allergies, current_medications, blood_group, notes, date_of_entry,
+        assigned_doctor, assigned_department, patient_tag, date_of_birth,
+        req.user.id, true
       ]
     );
+
+    console.log('✅ Patient created successfully:', {
+      patient_id: result.rows[0].patient_id,
+      name: `${result.rows[0].first_name} ${result.rows[0].last_name}`,
+      assigned_doctor: result.rows[0].assigned_doctor,
+      assigned_department: result.rows[0].assigned_department
+    });
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -983,6 +1009,154 @@ const createGenericRoutes = (tableName) => {
 // Initialize generic routes for simple tables
 ['audit_logs', 'custom_services', 'daily_expenses', 'medicines', 'email_logs', 'hospitals'].forEach(table => {
   createGenericRoutes(table);
+});
+
+// OPD QUEUE ROUTES
+app.get('/api/opd-queues', async (req, res) => {
+  try {
+    const { status, doctor_id, date } = req.query;
+    console.log(`[OPD] Fetching queues with params:`, { status, doctor_id, date });
+
+    let query = `
+      SELECT q.*, 
+             p.first_name, p.last_name, p.phone, p.patient_id as patient_code, p.age, p.gender,
+             d.first_name as doctor_name, d.last_name as doctor_last_name
+      FROM opd_queues q
+      JOIN patients p ON q.patient_id = p.id
+      LEFT JOIN users d ON q.doctor_id = d.id
+      WHERE 1=1
+    `;
+
+    const params = [];
+    let paramIndex = 1;
+
+    if (status) {
+      query += ` AND q.status = $${paramIndex++}`;
+      params.push(status);
+    }
+
+    if (doctor_id) {
+      query += ` AND q.doctor_id = $${paramIndex++}`;
+      params.push(doctor_id);
+    }
+
+    if (date) {
+      query += ` AND DATE(q.created_at) = $${paramIndex++}`;
+      params.push(date);
+    } else {
+      // Default to today if no date provided
+      query += ` AND DATE(q.created_at) = CURRENT_DATE`;
+    }
+
+    query += ` ORDER BY q.priority DESC, q.token_number ASC`;
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching OPD queues:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/opd-queues', async (req, res) => {
+  try {
+    const { patient_id, doctor_id, appointment_id, priority, notes } = req.body;
+    console.log(`[OPD] Creating queue entry for patient ${patient_id}`);
+
+    // Get next token number for today
+    const tokenResult = await pool.query(`
+      SELECT COALESCE(MAX(token_number), 0) + 1 as next_token 
+      FROM opd_queues 
+      WHERE DATE(created_at) = CURRENT_DATE
+    `);
+    const nextToken = tokenResult.rows[0].next_token;
+
+    const result = await pool.query(
+      `INSERT INTO opd_queues (patient_id, doctor_id, appointment_id, token_number, priority, status)
+       VALUES ($1, $2, $3, $4, $5, 'WAITING')
+       RETURNING *`,
+      [patient_id, doctor_id, appointment_id, nextToken, priority || false]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating OPD queue:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/opd-queues/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const result = await pool.query(
+      `UPDATE opd_queues 
+       SET status = $1, updated_at = NOW() 
+       WHERE id = $2 
+       RETURNING *`,
+      [status, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Queue entry not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating queue status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PATIENT VITALS ROUTES
+app.post('/api/patient-vitals', async (req, res) => {
+  try {
+    const {
+      patient_id, queue_id, visit_id,
+      blood_pressure, pulse, temperature, weight, height, spo2, respiratory_rate, bmi, notes, recorded_by
+    } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO patient_vitals 
+       (patient_id, queue_id, visit_id, blood_pressure, pulse, temperature, weight, height, spo2, respiratory_rate, bmi, notes, recorded_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       RETURNING *`,
+      [patient_id, queue_id, visit_id, blood_pressure, pulse, temperature, weight, height, spo2, respiratory_rate, bmi, notes, recorded_by]
+    );
+
+    // Auto-update queue status if linked
+    if (queue_id) {
+      await pool.query(
+        `UPDATE opd_queues SET status = 'VITALS_DONE' WHERE id = $1 AND status = 'WAITING'`,
+        [queue_id]
+      );
+    }
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error recording vitals:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/patient-vitals/latest/:patientId', async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    const result = await pool.query(
+      `SELECT * FROM patient_vitals 
+       WHERE patient_id = $1 
+       ORDER BY recorded_at DESC 
+       LIMIT 1`,
+      [patientId]
+    );
+
+    res.json(result.rows[0] || null);
+  } catch (error) {
+    console.error('Error fetching latest vitals:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // =====================================================================

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, User, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import HospitalService from '../services/hospitalService';
 
 interface QueuePatient {
   id: string;
@@ -22,30 +23,27 @@ const QueueDisplayScreen: React.FC = () => {
   // Fetch today's queue
   const fetchQueue = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        setError('Please log in to view the queue');
-        setLoading(false);
-        return;
-      }
+      const data = await HospitalService.getOPDQueues();
 
-      const response = await fetch('http://localhost:3002/api/queue/today', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Transform data to match component interface
+      const transformedData: QueuePatient[] = data.map((item: any) => ({
+        id: item.id,
+        patient_id: item.patient_code || item.patient_id, // Use code if available
+        first_name: item.first_name,
+        last_name: item.last_name,
+        queue_no: item.token_number,
+        // Map status: IN_CONSULTATION -> called, WAITING/VITALS_DONE -> waiting
+        queue_status: item.status === 'IN_CONSULTATION' ? 'called' :
+          item.status === 'COMPLETED' ? 'completed' : 'waiting',
+        age: item.age,
+        gender: item.gender
+      }));
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch queue');
-      }
-
-      const data = await response.json();
-      setQueuePatients(data);
+      setQueuePatients(transformedData);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching queue:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load queue');
+      setError(err.message || 'Failed to load queue');
     } finally {
       setLoading(false);
     }
@@ -54,24 +52,12 @@ const QueueDisplayScreen: React.FC = () => {
   // Update queue status
   const updateQueueStatus = async (patientId: string, status: 'waiting' | 'called' | 'completed') => {
     try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        toast.error('Please log in to update queue status');
-        return;
-      }
+      // Map UI status back to API status
+      let apiStatus = 'WAITING';
+      if (status === 'called') apiStatus = 'IN_CONSULTATION';
+      if (status === 'completed') apiStatus = 'COMPLETED';
 
-      const response = await fetch(`http://localhost:3002/api/queue/${patientId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ queue_status: status }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update queue status');
-      }
+      await HospitalService.updateQueueStatus(patientId, apiStatus);
 
       // Refresh the queue
       await fetchQueue();
@@ -108,7 +94,7 @@ const QueueDisplayScreen: React.FC = () => {
 
   // Get current patient (first one with status 'called' or 'waiting')
   const currentPatient = queuePatients.find(p => p.queue_status === 'called') ||
-                        queuePatients.find(p => p.queue_status === 'waiting');
+    queuePatients.find(p => p.queue_status === 'waiting');
 
   if (loading) {
     return (
@@ -291,14 +277,13 @@ const QueueDisplayScreen: React.FC = () => {
                   padding: '16px 20px',
                   backgroundColor:
                     patient.queue_status === 'completed' ? '#F5F5F5' :
-                    patient.queue_status === 'called' ? '#E3F2FD' :
-                    '#FFFFFF',
+                      patient.queue_status === 'called' ? '#E3F2FD' :
+                        '#FFFFFF',
                   borderRadius: '8px',
-                  border: `2px solid ${
-                    patient.queue_status === 'completed' ? '#E0E0E0' :
-                    patient.queue_status === 'called' ? '#2196F3' :
-                    '#EEEEEE'
-                  }`,
+                  border: `2px solid ${patient.queue_status === 'completed' ? '#E0E0E0' :
+                      patient.queue_status === 'called' ? '#2196F3' :
+                        '#EEEEEE'
+                    }`,
                   opacity: patient.queue_status === 'completed' ? 0.6 : 1,
                 }}
               >
@@ -341,12 +326,12 @@ const QueueDisplayScreen: React.FC = () => {
                       fontWeight: '600',
                       backgroundColor:
                         patient.queue_status === 'completed' ? '#E8F5E9' :
-                        patient.queue_status === 'called' ? '#E3F2FD' :
-                        '#FFF8E1',
+                          patient.queue_status === 'called' ? '#E3F2FD' :
+                            '#FFF8E1',
                       color:
                         patient.queue_status === 'completed' ? '#4CAF50' :
-                        patient.queue_status === 'called' ? '#2196F3' :
-                        '#F59E0B',
+                          patient.queue_status === 'called' ? '#2196F3' :
+                            '#F59E0B',
                       textTransform: 'capitalize',
                     }}
                   >

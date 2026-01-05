@@ -1250,9 +1250,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ patient, isOp
                       })()}</td>
                       <td className="p-2">
                         <span className={`px-2 py-1 rounded text-xs ${transaction.transaction_type === 'CONSULTATION' ? 'bg-blue-100 text-blue-800' :
-                            transaction.transaction_type === 'ADMISSION' ? 'bg-green-100 text-green-800' :
-                              transaction.transaction_type === 'REFUND' ? 'bg-red-100 text-red-800' :
-                                'bg-gray-100 text-gray-800'
+                          transaction.transaction_type === 'ADMISSION' ? 'bg-green-100 text-green-800' :
+                            transaction.transaction_type === 'REFUND' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
                           }`}>
                           {transaction.transaction_type}
                         </span>
@@ -1290,8 +1290,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ patient, isOp
                       <td className="p-2">{transaction.payment_mode}</td>
                       <td className="p-2">
                         <span className={`px-2 py-1 rounded text-xs ${transaction.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                            transaction.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
+                          transaction.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
                           }`}>
                           {transaction.status}
                         </span>
@@ -1460,7 +1460,7 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
     return getLocalDateString();
   };
 
-  const [dateRange, setDateRange] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('today');
+  const [dateRange, setDateRange] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
   const [startDate, setStartDate] = useState(getLocalDateString());
   const [endDate, setEndDate] = useState(getLocalDateString());
   // REMOVED: selectedDate is redundant, derive from startDate or dateRange
@@ -2353,8 +2353,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                 <button
                   onClick={() => setDateRange('all')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dateRange === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   All Time
@@ -2362,8 +2362,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                 <button
                   onClick={() => setDateRange('today')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dateRange === 'today'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   Today
@@ -2371,8 +2371,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                 <button
                   onClick={() => setDateRange('week')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dateRange === 'week'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   Last 7 Days
@@ -2380,8 +2380,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                 <button
                   onClick={() => setDateRange('month')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dateRange === 'month'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   This Month
@@ -2389,8 +2389,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                 <button
                   onClick={() => setDateRange('custom')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dateRange === 'custom'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   Custom Range
@@ -2451,8 +2451,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
               <button
                 onClick={() => handleSort('name')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'name'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 Patient Name {getSortIcon('name')}
@@ -2460,8 +2460,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
               <button
                 onClick={() => handleSort('date')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'date'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 Last Visit {getSortIcon('date')}
@@ -2469,8 +2469,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
               <button
                 onClick={() => handleSort('visits')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'visits'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 Visits {getSortIcon('visits')}
@@ -2478,8 +2478,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
               <button
                 onClick={() => handleSort('spent')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'spent'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 Total Spent {getSortIcon('spent')}

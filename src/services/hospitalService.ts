@@ -788,6 +788,37 @@ export class HospitalService {
     }
   }
 
+  static async updateAppointment(id: string, updates: Partial<FutureAppointment>): Promise<FutureAppointment> {
+    try {
+      logger.log(`🔄 Updating appointment ${id} with:`, updates);
+      const response = await axios.put(`${this.getBaseUrl()}/api/appointments/${id}`, updates, {
+        headers: this.getHeaders()
+      });
+      logger.log('✅ Appointment updated successfully');
+      return response.data;
+    } catch (error: any) {
+      logger.error('🚨 updateAppointment error:', error);
+      throw error;
+    }
+  }
+
+
+
+  // ==================== DOCTOR OPERATIONS ====================
+
+  static async getDoctors(): Promise<User[]> {
+    try {
+      logger.log('👨‍⚕️ Fetching doctors from backend...');
+      const response = await axios.get(`${this.getBaseUrl()}/api/doctors`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error: any) {
+      logger.error('Error fetching doctors:', error);
+      throw error;
+    }
+  }
+
   static async getAppointments(limit = 100): Promise<AppointmentWithRelations[]> {
     try {
       logger.log('📅 [HOSPITAL SERVICE] Fetching appointments from backend...');
@@ -1541,6 +1572,81 @@ export class HospitalService {
       logger.error('🚨 deletePrescription error:', error);
       logger.error('Error response:', error.response?.data);
       throw error;
+    }
+  }
+
+  // ==================== OPD QUEUE OPERATIONS ====================
+
+  static async getOPDQueues(status?: string, doctor_id?: string, date?: string): Promise<any[]> {
+    try {
+      logger.log('[OPD] Fetching queues...');
+      const params: any = {};
+      if (status) params.status = status;
+      if (doctor_id) params.doctor_id = doctor_id;
+      if (date) params.date = date;
+
+      const response = await axios.get(`${this.getBaseUrl()}/api/opd-queues`, {
+        headers: this.getHeaders(),
+        params
+      });
+
+      return response.data || [];
+    } catch (error: any) {
+      logger.error('Error fetching OPD queues:', error);
+      throw error;
+    }
+  }
+
+  static async addToOPDQueue(data: { patient_id: string; doctor_id: string; appointment_id?: string; priority?: boolean; notes?: string }): Promise<any> {
+    try {
+      logger.log('[OPD] Adding to queue:', data);
+      const response = await axios.post(`${this.getBaseUrl()}/api/opd-queues`, data, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error: any) {
+      logger.error('Error adding to OPD queue:', error);
+      throw error;
+    }
+  }
+
+  static async updateQueueStatus(id: string, status: string): Promise<any> {
+    try {
+      logger.log(`[OPD] Updating queue ${id} status to ${status}`);
+      const response = await axios.put(`${this.getBaseUrl()}/api/opd-queues/${id}/status`, { status }, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error: any) {
+      logger.error('Error updating queue status:', error);
+      throw error;
+    }
+  }
+
+  static async recordVitals(data: any): Promise<any> {
+    try {
+      logger.log('[OPD] Recording vitals:', data);
+      const response = await axios.post(`${this.getBaseUrl()}/api/patient-vitals`, data, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error: any) {
+      logger.error('Error recording vitals:', error);
+      throw error;
+    }
+  }
+
+  static async getLatestVitals(patientId: string): Promise<any> {
+    try {
+      logger.log('[OPD] Fetching latest vitals for:', patientId);
+      const response = await axios.get(`${this.getBaseUrl()}/api/patient-vitals/latest/${patientId}`, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error: any) {
+      logger.error('Error fetching latest vitals:', error);
+      // throw error; // Component should handle null
+      return null;
     }
   }
 }

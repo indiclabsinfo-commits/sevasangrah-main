@@ -142,6 +142,18 @@ const PatientEntryForm: React.FC<PatientEntryFormProps> = ({ onPatientCreated, o
                              doctors.find(d => d.id === data.selected_doctor)?.name || data.selected_doctor;
       const finalDepartmentName = data.selected_department === 'CUSTOM' ? data.custom_department_name : data.selected_department;
 
+      // Calculate age from date of birth if provided
+      let calculatedAge = null;
+      if (data.date_of_birth) {
+        const birthDate = new Date(data.date_of_birth);
+        const today = new Date();
+        calculatedAge = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          calculatedAge--;
+        }
+      }
+
       // Create Patient with dummy emergency contact info (since it's removed from UI)
       const patientData = {
         prefix: data.prefix,
@@ -149,6 +161,7 @@ const PatientEntryForm: React.FC<PatientEntryFormProps> = ({ onPatientCreated, o
         last_name: data.last_name,
         date_of_birth: data.date_of_birth,
         date_of_entry: data.date_of_entry,
+        age: calculatedAge,
         gender: data.gender,
         phone: data.phone,
         email: data.email || undefined,

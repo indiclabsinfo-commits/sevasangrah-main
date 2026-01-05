@@ -27,7 +27,9 @@
       "Bash(ps:*)",
       "Bash(chmod:*)",
       "Bash(npm run build:typecheck:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(grep:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": [],
     "ask": []
