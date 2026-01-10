@@ -370,7 +370,7 @@ const App: React.FC = () => {
 
       const backupData = {
         backup_info: {
-          hospital_name: 'SEVASANGRAHA HOSPITAL',
+          hospital_name: 'SevaSangraha',
           backup_date: new Date().toISOString(),
           backup_by: user?.email || 'Unknown',
           backup_version: '2.0',
@@ -562,7 +562,7 @@ const App: React.FC = () => {
 
       const exportDataObject: any = {
         export_info: {
-          hospital_name: 'SEVASANGRAHA HOSPITAL',
+          hospital_name: 'SevaSangraha',
           exported_at: new Date().toISOString(),
           exported_by: user?.email || 'Unknown'
         }
@@ -634,7 +634,7 @@ const App: React.FC = () => {
         mimeType = 'application/json';
       } else {
         // CSV format with real data
-        let csvContent = 'SEVASANGRAHA HOSPITAL DATA EXPORT\n';
+        let csvContent = 'SevaSangraha Hospital - Data Export\n';
         csvContent += `Exported on: ${new Date().toLocaleString()}\n\n`;
 
         if (exportData.patients && exportDataObject.patients?.data?.length > 0) {
@@ -960,14 +960,20 @@ const App: React.FC = () => {
               {/* Logo */}
               <img
                 src="/logo.png"
-                alt="SEVASANGRAHA HOSPITAL"
+                alt="SevaSangraha"
                 className="h-12 w-12 object-contain"
               />
               {/* Hospital Name */}
               <div>
-                <h1 className="text-xl font-bold text-blue-900">SEVASANGRAHA HOSPITAL</h1>
-                <p className="text-xs text-gray-500">
-                  Hospital Management System
+                <h1 className="text-2xl font-serif text-blue-900" style={{
+                  fontFamily: "'Playfair Display', serif",
+                  letterSpacing: '0.05em',
+                  fontWeight: 600
+                }}>
+                  SevaSangraha
+                </h1>
+                <p className="text-xs text-gray-500" style={{ letterSpacing: '0.1em' }}>
+                  HOSPITAL MANAGEMENT
                 </p>
               </div>
             </div>

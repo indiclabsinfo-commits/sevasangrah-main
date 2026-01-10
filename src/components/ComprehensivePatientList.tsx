@@ -891,15 +891,15 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ patient, isOp
 
                     const result = await window.opener.sendEmailFromPopup({
                       to: email,
-                      subject: \`Receipt #\${receiptNum} - Sevasangraha Hospital\`,
+                      subject: \`Receipt #\${receiptNum} - SevaSangraha\`,
                       html: \`
                         <!DOCTYPE html>
                         <html>
                         <head><meta charset="utf-8"></head>
                         <body style="font-family: Arial, sans-serif; padding: 20px;">
-                          <h2>Dear \${patientFullName},</h2>
-                          <p>Thank you for choosing Sevasangraha Hospital. Please find your receipt attached.</p>
-                          <p>Best regards,<br><strong>Sevasangraha Hospital Team</strong></p>
+                          <h2 style="font-family: 'Playfair Display', serif; color: #0056B3;">Dear \${patientFullName},</h2>
+                          <p>Thank you for choosing <strong style="font-family: 'Playfair Display', serif; letter-spacing: 0.05em;">SevaSangraha</strong>. Please find your receipt attached.</p>
+                          <p>Best regards,<br><strong style="font-family: 'Playfair Display', serif; letter-spacing: 0.05em;">SevaSangraha Team</strong></p>
                         </body>
                         </html>
                       \`,
@@ -1250,9 +1250,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ patient, isOp
                       })()}</td>
                       <td className="p-2">
                         <span className={`px-2 py-1 rounded text-xs ${transaction.transaction_type === 'CONSULTATION' ? 'bg-blue-100 text-blue-800' :
-                            transaction.transaction_type === 'ADMISSION' ? 'bg-green-100 text-green-800' :
-                              transaction.transaction_type === 'REFUND' ? 'bg-red-100 text-red-800' :
-                                'bg-gray-100 text-gray-800'
+                          transaction.transaction_type === 'ADMISSION' ? 'bg-green-100 text-green-800' :
+                            transaction.transaction_type === 'REFUND' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
                           }`}>
                           {transaction.transaction_type}
                         </span>
@@ -1290,8 +1290,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ patient, isOp
                       <td className="p-2">{transaction.payment_mode}</td>
                       <td className="p-2">
                         <span className={`px-2 py-1 rounded text-xs ${transaction.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                            transaction.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
+                          transaction.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
                           }`}>
                           {transaction.status}
                         </span>
@@ -1605,8 +1605,15 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
       logger.log('✅ Loaded', patientsData.length, 'patients for the date range');
 
       // Filter out patients who have PENDING appointments (not confirmed/completed ones)
+      // Check both database field (has_pending_appointment) and localStorage appointments
       patientsData = patientsData.filter(patient => {
-        // Check localStorage appointments for this patient
+        // First check the database flag (set when scheduling appointment during registration)
+        if ((patient as any).has_pending_appointment === true) {
+          logger.log(`👤 Hiding patient ${patient.first_name} ${patient.last_name} - has_pending_appointment=true in DB`);
+          return false; // Hide this patient
+        }
+
+        // Then check localStorage appointments for this patient
         try {
           const appointments = JSON.parse(localStorage.getItem('hospital_appointments') || '[]');
           const hasPendingAppointment = appointments.some((apt: any) => {
@@ -2353,8 +2360,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                 <button
                   onClick={() => setDateRange('all')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dateRange === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   All Time
@@ -2362,8 +2369,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                 <button
                   onClick={() => setDateRange('today')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dateRange === 'today'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   Today
@@ -2371,8 +2378,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                 <button
                   onClick={() => setDateRange('week')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dateRange === 'week'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   Last 7 Days
@@ -2380,8 +2387,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                 <button
                   onClick={() => setDateRange('month')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dateRange === 'month'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   This Month
@@ -2389,8 +2396,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                 <button
                   onClick={() => setDateRange('custom')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dateRange === 'custom'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   Custom Range
@@ -2451,8 +2458,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
               <button
                 onClick={() => handleSort('name')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'name'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 Patient Name {getSortIcon('name')}
@@ -2460,8 +2467,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
               <button
                 onClick={() => handleSort('date')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'date'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 Last Visit {getSortIcon('date')}
@@ -2469,8 +2476,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
               <button
                 onClick={() => handleSort('visits')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'visits'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 Visits {getSortIcon('visits')}
@@ -2478,8 +2485,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
               <button
                 onClick={() => handleSort('spent')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sortBy === 'spent'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 Total Spent {getSortIcon('spent')}

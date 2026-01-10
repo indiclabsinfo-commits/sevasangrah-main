@@ -679,23 +679,23 @@ const IPDBillingModule: React.FC = () => {
                     },
                     body: JSON.stringify({
                       to: email,
-                      subject: 'IPD Bill #${bill.billId} - Sevasangraha Hospital',
+                      subject: 'IPD Bill #${bill.billId} - SevaSangraha',
                       html: \`
                         <!DOCTYPE html>
                         <html>
                         <head><meta charset="utf-8"></head>
                         <body style="font-family: Arial, sans-serif; padding: 20px;">
-                          <h2>Dear ${bill.patientName},</h2>
-                          <p>Thank you for choosing Sevasangraha Hospital. Please find your IPD bill attached.</p>
+                          <h2 style="font-family: 'Playfair Display', serif; color: #0056B3;">Dear ${bill.patientName},</h2>
+                          <p>Thank you for choosing <strong style="font-family: 'Playfair Display', serif; letter-spacing: 0.05em;">SevaSangraha</strong>. Please find your IPD bill attached.</p>
                           <p><strong>Bill Number:</strong> ${bill.billId}</p>
                           <p><strong>Admission Date:</strong> ${new Date(bill.admissionDate).toLocaleDateString('en-IN')}</p>
                           <p><strong>Discharge Date:</strong> ${new Date(bill.dischargeDate).toLocaleDateString('en-IN')}</p>
-                          <p>Best regards,<br><strong>Sevasangraha Hospital Team</strong></p>
+                          <p>Best regards,<br><strong style="font-family: 'Playfair Display', serif; letter-spacing: 0.05em;">SevaSangraha Team</strong></p>
                         </body>
                         </html>
                       \`,
                       from: 'onboarding@resend.dev',
-                      fromName: 'Sevasangraha Hospital',
+                      fromName: 'SevaSangraha',
                       attachments: [{
                         filename: 'IPD_Bill_${bill.billId}.pdf',
                         content: pdfBase64

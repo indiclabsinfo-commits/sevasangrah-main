@@ -2289,8 +2289,8 @@ const NewIPDBillingModule: React.FC = () => {
         <div class="page">
           <div class="header">
             <h1>IPD BILL</h1>
-            <h2 style="margin: 5px 0; font-size: 18px; color: #0056B3;">SEVASANGRAHA HOSPITAL</h2>
-            <div class="subtitle">IPD Bill List</div>
+            <h2 style="margin: 5px 0; font-size: 24px; color: #0056B3; font-family: 'Playfair Display', serif; letter-spacing: 0.05em; font-weight: 600;">SevaSangraha</h2>
+            <div class="subtitle" style="letter-spacing: 0.1em;">HOSPITAL MANAGEMENT</div>
           </div>
 
           <div class="print-date">
