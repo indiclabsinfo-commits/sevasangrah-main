@@ -32,46 +32,6 @@ export class HospitalService {
     return import.meta.env.VITE_API_URL || 'http://localhost:3002';
   }
 
-  // Interceptor to handle auth errors globally
-  static {
-    axios.interceptors.response.use(
-      response => response,
-      error => {
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-          logger.error('🔐 Auth Error (401/403) detected in interceptor');
-          // Only clear if not already on login page to avoid loops
-          if (!window.location.pathname.includes('/login')) {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('auth_user');
-            // Optional: Redirect to login or let the UI handle the missing token
-            // window.location.href = '/login'; 
-          }
-        }
-        return Promise.reject(error);
-      }
-    );
-  }
-
-  // Interceptor to handle auth errors globally
-  static {
-    axios.interceptors.response.use(
-      response => response,
-      error => {
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-          logger.error('🔐 Auth Error (401/403) detected in interceptor');
-          // Only clear if not already on login page to avoid loops
-          if (!window.location.pathname.includes('/login')) {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('auth_user');
-            // Optional: Redirect to login or let the UI handle the missing token
-            // window.location.href = '/login'; 
-          }
-        }
-        return Promise.reject(error);
-      }
-    );
-  }
-
   // ==================== AUTHENTICATION ====================
 
   static async getCurrentUser(): Promise<User | null> {
@@ -824,37 +784,6 @@ export class HospitalService {
       logger.error('🚨 createAppointment error:', error);
       logger.error('Error response:', error.response?.data);
       logger.error('Error status:', error.response?.status);
-      throw error;
-    }
-  }
-
-  static async updateAppointment(id: string, updates: Partial<FutureAppointment>): Promise<FutureAppointment> {
-    try {
-      logger.log(`🔄 Updating appointment ${id} with:`, updates);
-      const response = await axios.put(`${this.getBaseUrl()}/api/appointments/${id}`, updates, {
-        headers: this.getHeaders()
-      });
-      logger.log('✅ Appointment updated successfully');
-      return response.data;
-    } catch (error: any) {
-      logger.error('🚨 updateAppointment error:', error);
-      throw error;
-    }
-  }
-
-
-
-  // ==================== DOCTOR OPERATIONS ====================
-
-  static async getDoctors(): Promise<User[]> {
-    try {
-      logger.log('👨‍⚕️ Fetching doctors from backend...');
-      const response = await axios.get(`${this.getBaseUrl()}/api/doctors`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
-    } catch (error: any) {
-      logger.error('Error fetching doctors:', error);
       throw error;
     }
   }
@@ -1612,94 +1541,6 @@ export class HospitalService {
       logger.error('🚨 deletePrescription error:', error);
       logger.error('Error response:', error.response?.data);
       throw error;
-    }
-  }
-
-  // ==================== OPD QUEUE OPERATIONS ====================
-
-  static async getOPDQueues(status?: string, doctor_id?: string, date?: string): Promise<any[]> {
-    try {
-      logger.log('[OPD] Fetching queues...');
-      const params: any = {};
-      if (status) params.status = status;
-      if (doctor_id) params.doctor_id = doctor_id;
-      if (date) params.date = date;
-
-      const response = await axios.get(`${this.getBaseUrl()}/api/opd-queues`, {
-        headers: this.getHeaders(),
-        params
-      });
-
-      return response.data || [];
-    } catch (error: any) {
-      logger.error('Error fetching OPD queues:', error);
-      throw error;
-    }
-  }
-
-  static async addToOPDQueue(data: { patient_id: string; doctor_id: string; appointment_id?: string; priority?: boolean; notes?: string }): Promise<any> {
-    try {
-      logger.log('[OPD] Adding to queue:', data);
-      const response = await axios.post(`${this.getBaseUrl()}/api/opd-queues`, data, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error: any) {
-      logger.error('🚨 addToOPDQueue error:', error);
-      throw error;
-    }
-  }
-
-  static async reorderOPDQueue(items: { id: string; order: number }[]): Promise<void> {
-    try {
-      logger.log('🔄 Reordering OPD queue:', items.length, 'items');
-      await axios.post(`${this.getBaseUrl()}/api/opd-queues/reorder`, { items }, {
-        headers: this.getHeaders()
-      });
-      logger.log('✅ Queue reordered successfully');
-    } catch (error: any) {
-      logger.error('🚨 reorderOPDQueue error:', error);
-      throw error;
-    }
-  }
-
-  static async updateOPDQueueStatus(queueId: string, status: string): Promise<any> {
-    try {
-      logger.log(`[OPD] Updating queue ${queueId} status to ${status}`);
-      const response = await axios.put(`${this.getBaseUrl()}/api/opd-queues/${queueId}/status`, { status }, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error: any) {
-      logger.error('Error updating queue status:', error);
-      throw error;
-    }
-  }
-
-  static async recordVitals(data: any): Promise<any> {
-    try {
-      logger.log('[OPD] Recording vitals:', data);
-      const response = await axios.post(`${this.getBaseUrl()}/api/patient-vitals`, data, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error: any) {
-      logger.error('Error recording vitals:', error);
-      throw error;
-    }
-  }
-
-  static async getLatestVitals(patientId: string): Promise<any> {
-    try {
-      logger.log('[OPD] Fetching latest vitals for:', patientId);
-      const response = await axios.get(`${this.getBaseUrl()}/api/patient-vitals/latest/${patientId}`, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error: any) {
-      logger.error('Error fetching latest vitals:', error);
-      // throw error; // Component should handle null
-      return null;
     }
   }
 }

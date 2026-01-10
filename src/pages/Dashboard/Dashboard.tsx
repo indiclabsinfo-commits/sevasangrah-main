@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Users,
-  Calendar,
+import { 
+  Users, 
+  Calendar, 
   Bed,
   IndianRupee,
   TrendingDown,
@@ -16,7 +16,6 @@ import { formatCurrency } from '@/utils';
 import HospitalService from '../../services/hospitalService';
 import { useAppointments } from '../../hooks/useAppointments';
 import { queryKeys } from '../../config/reactQuery';
-import type { DashboardStats } from '../../config/supabaseNew';
 
 export const Dashboard: React.FC = () => {
   const queryClient = useQueryClient();
@@ -34,86 +33,64 @@ export const Dashboard: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'thisWeek' | 'thisMonth' | null>('today');
 
   // Fetch dashboard data with date filter
-  const { data: dashboardStats, isLoading: statsLoading, refetch: refetchStats } = useQuery<DashboardStats>({
+  const { data: dashboardStats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
     queryKey: [...queryKeys.dashboardStats, dateFilter, Date.now()], // Add timestamp for cache busting
     queryFn: async () => {
       console.log('🔄 Fetching dashboard data...', new Date().toLocaleTimeString());
       console.log('📅 Dashboard dateFilter:', { start: dateFilter.start, end: dateFilter.end });
       console.log('📊 Dashboard State Debug:', {
         hasDateFilter: !!(dateFilter.start && dateFilter.end),
-        isTodayFilter: dateFilter.start && dateFilter.end &&
+        isTodayFilter: dateFilter.start && dateFilter.end && 
           dateFilter.start.toDateString() === dateFilter.end.toDateString() &&
           dateFilter.start.toDateString() === new Date().toDateString(),
         startDate: dateFilter.start?.toISOString(),
         endDate: dateFilter.end?.toISOString()
       });
-
+      
       // If date filter is applied, fetch filtered data
       if (dateFilter.start && dateFilter.end) {
         console.log('📊 Using filtered dashboard stats for date range');
         // Handle same-day date ranges properly
         const startDate = new Date(dateFilter.start);
         const endDate = new Date(dateFilter.end);
-
+        
         // For same-day ranges, set end time to end of day
         if (startDate.toDateString() === endDate.toDateString()) {
           endDate.setHours(23, 59, 59, 999);
         }
-
+        
         return await HospitalService.getDashboardStatsWithDateRange(
           startDate.toISOString(),
           endDate.toISOString()
         );
       }
-
+      
       console.log('📊 Using default dashboard stats (no date filter)');
       const stats = await HospitalService.getDashboardStats();
       return stats;
     },
     refetchInterval: autoRefresh ? 10 * 1000 : false, // Refresh every 10 seconds for immediate updates
     staleTime: 0, // Always consider data stale
-  });
-
-  useEffect(() => {
-    if (dashboardStats) {
+    cacheTime: 0, // Don't cache data
+    onSuccess: (data) => {
       setLastRefreshTime(new Date());
       console.log('✅ Dashboard data refreshed:', {
-        todayRevenue: dashboardStats.todayRevenue,
-        totalPatients: dashboardStats.totalPatients,
+        todayRevenue: data?.todayRevenue,
+        totalPatients: data?.totalPatients,
         timestamp: new Date().toLocaleTimeString()
       });
-    }
-  }, [dashboardStats]);
+    },
+  });
 
   // Fetch appointments data  
-  // Calculate calendar date range for fetching appointments
-  const calendarRange = useMemo(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-
-    // Start from the beginning of the calendar grid (Sunday before 1st of month)
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
-    startDate.setHours(0, 0, 0, 0);
-
-    // e.g. 6 weeks coverage to be safe
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 42);
-    endDate.setHours(23, 59, 59, 999);
-
-    return { start: startDate, end: endDate };
-  }, [currentMonth]);
-
-  // Fetch appointments data based on the visible calendar month
   const { data: appointmentsData, isLoading: appointmentsLoading, refetch: refetchAppointments } = useAppointments({
     filters: {
       dateRange: {
-        start: calendarRange.start.toISOString(),
-        end: calendarRange.end.toISOString(),
+        start: new Date().toISOString(),
+        end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Next 30 days
       },
     },
-    limit: 200, // Increased limit to cover the whole month view
+    limit: 100,
     sortBy: 'scheduled_at',
     sortOrder: 'asc',
   });
@@ -125,12 +102,12 @@ export const Dashboard: React.FC = () => {
       // Force immediate refresh by invalidating queries
       await queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
       await queryClient.refetchQueries({ queryKey: queryKeys.dashboardStats });
-
+      
       // Also refetch appointments
       if (refetchStats && refetchAppointments) {
         await Promise.all([refetchStats(), refetchAppointments()]);
       }
-
+      
       setLastRefreshTime(new Date());
       console.log('✅ Manual refresh completed');
     } catch (error) {
@@ -142,7 +119,7 @@ export const Dashboard: React.FC = () => {
   const formatLastRefresh = (time: Date) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - time.getTime()) / 1000);
-
+    
     if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     return time.toLocaleTimeString();
@@ -153,11 +130,11 @@ export const Dashboard: React.FC = () => {
     // Immediate refresh on mount
     console.log('🚀 Dashboard mounted, forcing immediate refresh...');
     queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
-
+    
     const handleStorageChange = () => {
       setLocalStorageUpdate(prev => prev + 1);
     };
-
+    
     const handleTransactionUpdate = () => {
       console.log('📊 Transaction updated, refreshing dashboard stats...');
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
@@ -167,10 +144,10 @@ export const Dashboard: React.FC = () => {
 
     // Listen for storage events from other tabs/windows
     window.addEventListener('storage', handleStorageChange);
-
+    
     // Also listen for custom event for same-tab updates
     window.addEventListener('appointmentUpdated', handleStorageChange);
-
+    
     // Listen for transaction updates
     window.addEventListener('transactionUpdated', handleTransactionUpdate);
 
@@ -213,15 +190,15 @@ export const Dashboard: React.FC = () => {
     const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
-
+    
     const days = [];
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + 41); // 6 weeks
-
+    
     for (let date = new Date(startDate); date < endDate; date.setDate(date.getDate() + 1)) {
       days.push(new Date(date));
     }
-
+    
     return days;
   };
 
@@ -231,13 +208,10 @@ export const Dashboard: React.FC = () => {
     console.log('Appointments Data from API:', appointmentsData);
     console.log('Appointments Data type:', typeof appointmentsData);
     console.log('Has data property?:', appointmentsData?.data);
-
+    
     // Combine appointments from both sources
-    const supabaseAppointments = (appointmentsData?.data || []).map((apt: any) => ({
-      ...apt,
-      scheduled_at: apt.scheduled_at || `${apt.appointment_date}T${apt.appointment_time}`
-    }));
-
+    const supabaseAppointments = appointmentsData?.data || [];
+    
     // Get appointments from localStorage
     let localAppointments = [];
     try {
@@ -248,7 +222,6 @@ export const Dashboard: React.FC = () => {
         // Transform localStorage appointments to match the expected format
         localAppointments = parsed.map((apt: any) => ({
           id: apt.id,
-          appointment_date: apt.appointment_date,
           scheduled_at: `${apt.appointment_date}T${apt.appointment_time}:00`,
           patient: {
             first_name: apt.patient_name?.split(' ')[0] || '',
@@ -264,43 +237,20 @@ export const Dashboard: React.FC = () => {
     } catch (error) {
       console.error('Error loading localStorage appointments:', error);
     }
-
+    
     // Combine both sources
     const allAppointments = [...supabaseAppointments, ...localAppointments];
     console.log('Combined appointments:', allAppointments);
-
-    // Helper to get local YYYY-MM-DD string
-    const getLocalDateString = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    const startDateStr = getLocalDateString(selectedDate);
-
+    
+    const startDate = new Date(selectedDate);
+    startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(selectedDate);
     endDate.setDate(endDate.getDate() + 7);
-    const endDateStr = getLocalDateString(endDate);
-
-    console.log('Date Filter Range:', { startDateStr, endDateStr });
-
+    endDate.setHours(23, 59, 59, 999);
+    
     return allAppointments.filter((appointment: any) => {
-      // Use appointment_date string directly if available, otherwise fallback to parsing scheduled_at
-      let aptDateStr = appointment.appointment_date;
-
-      if (!aptDateStr && appointment.scheduled_at) {
-        aptDateStr = appointment.scheduled_at.split('T')[0];
-      }
-
-      console.log('Checking Appointment:', {
-        id: appointment.id,
-        aptDateStr,
-        inRange: aptDateStr >= startDateStr && aptDateStr <= endDateStr
-      });
-
-      if (!aptDateStr) return false;
-      return aptDateStr >= startDateStr && aptDateStr <= endDateStr;
+      const appointmentDate = new Date(appointment.scheduled_at);
+      return appointmentDate >= startDate && appointmentDate <= endDate;
     }).slice(0, 10); // Show maximum 10 appointments
   };
 
@@ -342,15 +292,16 @@ export const Dashboard: React.FC = () => {
               <label className="text-sm text-[#333333] font-medium">Auto Refresh:</label>
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${autoRefresh
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${
+                  autoRefresh 
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
               >
                 {autoRefresh ? 'ON' : 'OFF'}
               </button>
             </div>
-
+            
             {/* Date Filter Button */}
             <div className="relative">
               <Button
@@ -360,11 +311,11 @@ export const Dashboard: React.FC = () => {
                 <CalendarIcon className="h-4 w-4" />
                 {dateFilter.start && dateFilter.end ? 'Filtered' : 'Date Filter'}
               </Button>
-
+              
               {showDatePicker && (
                 <div className="absolute right-0 top-12 bg-white border rounded-lg shadow-lg p-4 z-50 w-72">
                   <h3 className="text-sm font-semibold text-[#333333] mb-3">Select Date Range</h3>
-
+                  
                   <div className="space-y-3">
                     <div>
                       <label className="text-xs text-[#666666]">From Date</label>
@@ -378,7 +329,7 @@ export const Dashboard: React.FC = () => {
                         }}
                       />
                     </div>
-
+                    
                     <div>
                       <label className="text-xs text-[#666666]">To Date</label>
                       <input
@@ -391,7 +342,7 @@ export const Dashboard: React.FC = () => {
                         }}
                       />
                     </div>
-
+                    
                     <div className="flex gap-2 pt-2">
                       <button
                         onClick={() => {
@@ -403,7 +354,7 @@ export const Dashboard: React.FC = () => {
                       >
                         Apply Filter
                       </button>
-
+                      
                       <button
                         onClick={() => {
                           setDateFilter({ start: null, end: null });
@@ -415,7 +366,7 @@ export const Dashboard: React.FC = () => {
                         Clear Filter
                       </button>
                     </div>
-
+                    
                     {/* Quick Filters */}
                     <div className="border-t pt-3 mt-3">
                       <p className="text-xs text-[#666666] mb-2">Quick Filters</p>
@@ -476,8 +427,8 @@ export const Dashboard: React.FC = () => {
                 </div>
               )}
             </div>
-
-            <Button
+            
+            <Button 
               onClick={() => {
                 console.log('🔄 DASHBOARD REFRESH BUTTON CLICKED - Simple refresh: reloading page...');
                 console.log('📊 Dashboard state before refresh:', {
@@ -493,8 +444,8 @@ export const Dashboard: React.FC = () => {
               <RefreshCw className="h-4 w-4" />
               Refresh Data
             </Button>
-
-            <Button
+            
+            <Button 
               onClick={() => {
                 console.log('🔥 FORCE CACHE CLEAR BUTTON CLICKED');
                 queryClient.clear(); // Clear all cache
@@ -517,11 +468,11 @@ export const Dashboard: React.FC = () => {
             <h2 className="text-lg font-semibold text-[#333333] mb-4">
               Detailed Analytics for {dateFilter.start.toLocaleDateString()} - {dateFilter.end.toLocaleDateString()}
             </h2>
-
+            
             {/* Revenue Breakdown */}
             <div className="mb-6">
               <h3 className="text-md font-semibold text-[#007bff] mb-3">Revenue Breakdown</h3>
-
+              
               {/* Debug info - Check data structure */}
               {(() => {
                 if (dashboardStats?.details?.revenue) {
@@ -537,14 +488,15 @@ export const Dashboard: React.FC = () => {
                 }
                 return null;
               })()}
-
+              
               {/* Period Cards */}
               {dashboardStats?.details?.revenue?.periodBreakdown ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   {/* Today Card */}
-                  <button
-                    className={`p-4 rounded-lg cursor-pointer transition-all hover:shadow-lg text-left w-full ${selectedPeriod === 'today' ? 'bg-blue-50 border-2 border-blue-200 shadow-md' : 'bg-[#F5F5F5] hover:bg-gray-100'
-                      }`}
+                  <button 
+                    className={`p-4 rounded-lg cursor-pointer transition-all hover:shadow-lg text-left w-full ${
+                      selectedPeriod === 'today' ? 'bg-blue-50 border-2 border-blue-200 shadow-md' : 'bg-[#F5F5F5] hover:bg-gray-100'
+                    }`}
                     onClick={() => {
                       setSelectedPeriod(selectedPeriod === 'today' ? null : 'today');
                     }}
@@ -558,11 +510,12 @@ export const Dashboard: React.FC = () => {
                       {dashboardStats.details.revenue.periodBreakdown.today?.count || 0} records
                     </p>
                   </button>
-
+                  
                   {/* This Week Card */}
-                  <button
-                    className={`p-4 rounded-lg cursor-pointer transition-all hover:shadow-lg text-left w-full ${selectedPeriod === 'thisWeek' ? 'bg-blue-50 border-2 border-blue-200 shadow-md' : 'bg-[#F5F5F5] hover:bg-gray-100'
-                      }`}
+                  <button 
+                    className={`p-4 rounded-lg cursor-pointer transition-all hover:shadow-lg text-left w-full ${
+                      selectedPeriod === 'thisWeek' ? 'bg-blue-50 border-2 border-blue-200 shadow-md' : 'bg-[#F5F5F5] hover:bg-gray-100'
+                    }`}
                     onClick={() => {
                       setSelectedPeriod(selectedPeriod === 'thisWeek' ? null : 'thisWeek');
                     }}
@@ -576,11 +529,12 @@ export const Dashboard: React.FC = () => {
                       {dashboardStats.details.revenue.periodBreakdown.thisWeek?.count || 0} records
                     </p>
                   </button>
-
+                  
                   {/* This Month Card */}
-                  <button
-                    className={`p-4 rounded-lg cursor-pointer transition-all hover:shadow-lg text-left w-full ${selectedPeriod === 'thisMonth' ? 'bg-blue-50 border-2 border-blue-200 shadow-md' : 'bg-[#F5F5F5] hover:bg-gray-100'
-                      }`}
+                  <button 
+                    className={`p-4 rounded-lg cursor-pointer transition-all hover:shadow-lg text-left w-full ${
+                      selectedPeriod === 'thisMonth' ? 'bg-blue-50 border-2 border-blue-200 shadow-md' : 'bg-[#F5F5F5] hover:bg-gray-100'
+                    }`}
                     onClick={() => {
                       setSelectedPeriod(selectedPeriod === 'thisMonth' ? null : 'thisMonth');
                     }}
@@ -606,7 +560,7 @@ export const Dashboard: React.FC = () => {
                   })}</p>
                 </div>
               )}
-
+              
               {/* Detailed breakdown for selected period */}
               {selectedPeriod && dashboardStats.details.revenue.periodBreakdown && (
                 <div className="mb-6 bg-white border-2 border-blue-100 rounded-lg p-4">
@@ -615,7 +569,7 @@ export const Dashboard: React.FC = () => {
                     {selectedPeriod === 'thisWeek' && 'This Week\'s Revenue Details'}
                     {selectedPeriod === 'thisMonth' && 'This Month\'s Revenue Details'}
                   </h4>
-
+                  
                   <div className="mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium text-[#333333]">Total Revenue:</span>
@@ -630,7 +584,7 @@ export const Dashboard: React.FC = () => {
                       </span>
                     </div>
                   </div>
-
+                  
                   {/* Recent transactions for the selected period */}
                   {dashboardStats.details.revenue.periodBreakdown[selectedPeriod].transactions.length > 0 && (
                     <div>
@@ -672,7 +626,7 @@ export const Dashboard: React.FC = () => {
                   )}
                 </div>
               )}
-
+              
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="bg-[#F5F5F5] p-4 rounded-lg">
                   <p className="text-sm text-[#666666]">By Transaction Type</p>
@@ -683,7 +637,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
-
+                
                 <div className="bg-[#F5F5F5] p-4 rounded-lg">
                   <p className="text-sm text-[#666666]">By Payment Mode</p>
                   {Object.entries(dashboardStats.details.revenue.byPaymentMode || {}).map(([mode, amount]) => (
@@ -693,7 +647,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
-
+                
                 <div className="bg-[#F5F5F5] p-4 rounded-lg">
                   <p className="text-sm text-[#666666]">By Department</p>
                   {Object.entries(dashboardStats.details.revenue.byDepartment || {}).map(([dept, amount]) => (
@@ -704,7 +658,7 @@ export const Dashboard: React.FC = () => {
                   ))}
                 </div>
               </div>
-
+              
               {/* Top Transactions */}
               {dashboardStats.details.revenue.topTransactions?.length > 0 && (
                 <div>
@@ -745,7 +699,7 @@ export const Dashboard: React.FC = () => {
                 </div>
               )}
             </div>
-
+            
             {/* Expenses Breakdown */}
             <div className="mb-6">
               <h3 className="text-md font-semibold text-[#007bff] mb-3">Expenses Breakdown</h3>
@@ -759,7 +713,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
-
+                
                 {dashboardStats.details.expenses.topExpenses?.length > 0 && (
                   <div className="bg-[#F5F5F5] p-4 rounded-lg">
                     <p className="text-sm text-[#666666]">Recent Expenses</p>
@@ -776,7 +730,7 @@ export const Dashboard: React.FC = () => {
                 )}
               </div>
             </div>
-
+            
             {/* Patients Summary */}
             {dashboardStats.details.patients.recentPatients?.length > 0 && (
               <div className="mb-6">
@@ -785,11 +739,7 @@ export const Dashboard: React.FC = () => {
                   {dashboardStats.details.patients.recentPatients.slice(0, 6).map((patient: any) => (
                     <div key={patient.id} className="bg-[#F5F5F5] p-3 rounded-lg">
                       <p className="text-sm font-medium">{patient.first_name} {patient.last_name}</p>
-                      {patient.uhid ? (
-                        <p className="text-xs font-mono font-semibold text-blue-600">UHID: {patient.uhid}</p>
-                      ) : (
-                        <p className="text-xs text-[#666666]">ID: {patient.patient_id || 'Not assigned'}</p>
-                      )}
+                      <p className="text-xs text-[#666666]">ID: {patient.patient_id}</p>
                       <p className="text-xs text-[#666666]">Phone: {patient.phone}</p>
                       <p className="text-xs text-[#999999]">Registered: {new Date(patient.created_at).toLocaleDateString()}</p>
                     </div>
@@ -797,7 +747,7 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
             )}
-
+            
             {/* Appointments Summary */}
             {dashboardStats.details.appointments.recentAppointments?.length > 0 && (
               <div className="mb-6">
@@ -823,10 +773,11 @@ export const Dashboard: React.FC = () => {
                           <td className="px-4 py-2">{apt.appointment_time}</td>
                           <td className="px-4 py-2">{apt.appointment_type}</td>
                           <td className="px-4 py-2">
-                            <span className={`px-2 py-1 text-xs rounded-full ${apt.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              apt.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
                               apt.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
-                                'bg-yellow-100 text-yellow-700'
-                              }`}>
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
                               {apt.status}
                             </span>
                           </td>
@@ -837,7 +788,7 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
             )}
-
+            
             {/* Beds Status */}
             <div>
               <h3 className="text-md font-semibold text-[#007bff] mb-3">Bed Status</h3>
@@ -856,8 +807,8 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <div className="bg-purple-50 p-3 rounded-lg">
                   <p className="text-2xl font-bold text-purple-700">
-                    {dashboardStats.details.beds.total > 0
-                      ? Math.round((dashboardStats.details.beds.occupied / dashboardStats.details.beds.total) * 100)
+                    {dashboardStats.details.beds.total > 0 
+                      ? Math.round((dashboardStats.details.beds.occupied / dashboardStats.details.beds.total) * 100) 
                       : 0}%
                   </p>
                   <p className="text-sm text-purple-600">Occupancy Rate</p>
@@ -866,12 +817,13 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         )}
-
+        
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           {/* Total Patients Card */}
-          <div
-            className={`bg-white rounded-lg p-6 shadow-sm cursor-pointer transition-all hover:shadow-md ${expandedCard === 'patients' ? 'ring-2 ring-[#007bff]' : ''
-              }`}
+          <div 
+            className={`bg-white rounded-lg p-6 shadow-sm cursor-pointer transition-all hover:shadow-md ${
+              expandedCard === 'patients' ? 'ring-2 ring-[#007bff]' : ''
+            }`}
             onClick={() => setExpandedCard(expandedCard === 'patients' ? null : 'patients')}
           >
             <div className="flex items-center justify-between mb-2">
@@ -884,12 +836,12 @@ export const Dashboard: React.FC = () => {
               {dashboardStats?.totalPatients?.toLocaleString() || '0'}
             </div>
             <p className="text-xs text-[#999999]">
-              {dateFilter.start && dateFilter.end
-                ? `Created in selected period`
+              {dateFilter.start && dateFilter.end 
+                ? `Created in selected period` 
                 : 'Updated just now'
               }
             </p>
-
+            
             {/* Expanded details */}
             {expandedCard === 'patients' && dashboardStats?.details?.patients && (
               <div className="mt-4 pt-4 border-t">
@@ -898,13 +850,7 @@ export const Dashboard: React.FC = () => {
                   {dashboardStats.details.patients.recentPatients?.slice(0, 3).map((patient: any) => (
                     <div key={patient.id} className="text-xs">
                       <p className="font-medium">{patient.first_name} {patient.last_name}</p>
-                      <p className="text-[#666666]">
-                        {patient.uhid ? (
-                          <span className="font-mono font-semibold text-blue-600">UHID: {patient.uhid}</span>
-                        ) : (
-                          `ID: ${patient.patient_id || 'Not assigned'}`
-                        )} • {patient.phone}
-                      </p>
+                      <p className="text-[#666666]">ID: {patient.patient_id} • {patient.phone}</p>
                     </div>
                   ))}
                 </div>
@@ -913,9 +859,10 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Admissions Card */}
-          <div
-            className={`bg-white rounded-lg p-6 shadow-sm cursor-pointer transition-all hover:shadow-md ${expandedCard === 'appointments' ? 'ring-2 ring-[#007bff]' : ''
-              }`}
+          <div 
+            className={`bg-white rounded-lg p-6 shadow-sm cursor-pointer transition-all hover:shadow-md ${
+              expandedCard === 'appointments' ? 'ring-2 ring-[#007bff]' : ''
+            }`}
             onClick={() => setExpandedCard(expandedCard === 'appointments' ? null : 'appointments')}
           >
             <div className="flex items-center justify-between mb-2">
@@ -926,12 +873,12 @@ export const Dashboard: React.FC = () => {
               {dashboardStats?.todayAppointments?.toString() || '0'}
             </div>
             <p className="text-xs text-[#999999]">
-              {dateFilter.start && dateFilter.end
-                ? `In selected period`
+              {dateFilter.start && dateFilter.end 
+                ? `In selected period` 
                 : 'Updated just now'
               }
             </p>
-
+            
             {/* Expanded details */}
             {expandedCard === 'appointments' && dashboardStats?.details?.appointments && (
               <div className="mt-4 pt-4 border-t">
@@ -949,9 +896,10 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Available Beds Card */}
-          <div
-            className={`bg-white rounded-lg p-6 shadow-sm cursor-pointer transition-all hover:shadow-md ${expandedCard === 'beds' ? 'ring-2 ring-[#007bff]' : ''
-              }`}
+          <div 
+            className={`bg-white rounded-lg p-6 shadow-sm cursor-pointer transition-all hover:shadow-md ${
+              expandedCard === 'beds' ? 'ring-2 ring-[#007bff]' : ''
+            }`}
             onClick={() => setExpandedCard(expandedCard === 'beds' ? null : 'beds')}
           >
             <div className="flex items-center justify-between mb-2">
@@ -962,7 +910,7 @@ export const Dashboard: React.FC = () => {
               {dashboardStats?.availableBeds?.toString() || '0'}
             </div>
             <p className="text-xs text-[#999999]">Updated just now</p>
-
+            
             {/* Expanded details */}
             {expandedCard === 'beds' && dashboardStats?.details?.beds && (
               <div className="mt-4 pt-4 border-t">
@@ -978,8 +926,8 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <div className="mt-2 text-center">
                   <p className="text-xs text-[#666666]">
-                    Occupancy: {dashboardStats.details.beds.total > 0
-                      ? Math.round((dashboardStats.details.beds.occupied / dashboardStats.details.beds.total) * 100)
+                    Occupancy: {dashboardStats.details.beds.total > 0 
+                      ? Math.round((dashboardStats.details.beds.occupied / dashboardStats.details.beds.total) * 100) 
                       : 0}%
                   </p>
                 </div>
@@ -988,9 +936,10 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Revenue Card */}
-          <div
-            className={`bg-white rounded-lg p-6 shadow-sm cursor-pointer transition-all hover:shadow-md ${expandedCard === 'revenue' ? 'ring-2 ring-[#007bff]' : ''
-              }`}
+          <div 
+            className={`bg-white rounded-lg p-6 shadow-sm cursor-pointer transition-all hover:shadow-md ${
+              expandedCard === 'revenue' ? 'ring-2 ring-[#007bff]' : ''
+            }`}
             onClick={(e) => {
               // Don't toggle if clicking on period cards
               if ((e.target as HTMLElement).closest('.period-card-button')) {
@@ -1007,31 +956,31 @@ export const Dashboard: React.FC = () => {
               {formatCurrency(dashboardStats?.monthlyRevenue || 0)}
             </div>
             <p className="text-xs text-[#999999]">
-              {dateFilter.start && dateFilter.end
-                ? `For selected period`
+              {dateFilter.start && dateFilter.end 
+                ? `For selected period` 
                 : 'Updated just now'
               }
             </p>
-
+            
             {/* Expanded details */}
             {expandedCard === 'revenue' && dashboardStats?.details?.revenue && (
               <div className="mt-4 pt-4 border-t">
                 <p className="text-sm font-medium text-[#333333] mb-3">Revenue Breakdown</p>
-
-
+                
+                
                 {/* Period Cards inside Revenue Card */}
                 {!dashboardStats?.details?.revenue?.periodBreakdown && (
                   <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-800">
-                      💡 <strong>To see detailed period breakdown:</strong><br />
-                      1. Click "Date Filter" button above<br />
-                      2. Select a date range (e.g., today to today, or this week)<br />
-                      3. Click "Apply Filter"<br />
+                      💡 <strong>To see detailed period breakdown:</strong><br/>
+                      1. Click "Date Filter" button above<br/>
+                      2. Select a date range (e.g., today to today, or this week)<br/>
+                      3. Click "Apply Filter"<br/>
                       4. Then click on this Revenue card again
                     </p>
                   </div>
                 )}
-
+                
                 {dashboardStats?.details?.revenue?.periodBreakdown && (
                   <div className="mb-4">
                     <div className="grid grid-cols-3 gap-2 mb-3">
@@ -1045,7 +994,7 @@ export const Dashboard: React.FC = () => {
                           {dashboardStats.details.revenue.periodBreakdown.today?.count || 0} records
                         </p>
                       </div>
-
+                      
                       {/* This Week Card */}
                       <div className="p-3 rounded-lg text-left bg-gray-50">
                         <p className="text-xs text-gray-600 mb-1">This Week</p>
@@ -1056,7 +1005,7 @@ export const Dashboard: React.FC = () => {
                           {dashboardStats.details.revenue.periodBreakdown.thisWeek?.count || 0} records
                         </p>
                       </div>
-
+                      
                       {/* This Month Card */}
                       <div className="p-3 rounded-lg text-left bg-gray-50">
                         <p className="text-xs text-gray-600 mb-1">This Month</p>
@@ -1070,7 +1019,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                   </div>
                 )}
-
+                
                 <div className="space-y-1 text-xs max-h-40 overflow-y-auto">
                   {Object.entries(dashboardStats.details.revenue.byType || {}).slice(0, 4).map(([type, amount]) => (
                     <div key={type} className="flex justify-between">
@@ -1089,9 +1038,10 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Expenses Card */}
-          <div
-            className={`bg-white rounded-lg p-6 shadow-sm cursor-pointer transition-all hover:shadow-md ${expandedCard === 'expenses' ? 'ring-2 ring-[#007bff]' : ''
-              }`}
+          <div 
+            className={`bg-white rounded-lg p-6 shadow-sm cursor-pointer transition-all hover:shadow-md ${
+              expandedCard === 'expenses' ? 'ring-2 ring-[#007bff]' : ''
+            }`}
             onClick={() => setExpandedCard(expandedCard === 'expenses' ? null : 'expenses')}
           >
             <div className="flex items-center justify-between mb-2">
@@ -1102,12 +1052,12 @@ export const Dashboard: React.FC = () => {
               {formatCurrency(dashboardStats?.todayExpenses || 0)}
             </div>
             <p className="text-xs text-[#999999]">
-              {dateFilter.start && dateFilter.end
-                ? `For selected period`
+              {dateFilter.start && dateFilter.end 
+                ? `For selected period` 
                 : 'Updated just now'
               }
             </p>
-
+            
             {/* Expanded details */}
             {expandedCard === 'expenses' && dashboardStats?.details?.expenses && (
               <div className="mt-4 pt-4 border-t">
@@ -1138,46 +1088,46 @@ export const Dashboard: React.FC = () => {
               <h3 className="text-lg font-semibold text-[#333333] mb-4">Revenue Breakdown</h3>
               {dashboardStats?.details?.revenue ? (
                 <div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* By Transaction Type */}
-                    <div>
-                      <h4 className="text-sm font-medium text-[#999999] mb-3">By Transaction Type</h4>
-                      <div className="space-y-2">
-                        {Object.entries(dashboardStats.details.revenue.byType || {}).map(([type, amount]) => (
-                          <div key={type} className="flex justify-between">
-                            <span className="text-sm text-[#666666]">{type.replace(/_/g, ' ')}</span>
-                            <span className="text-sm font-medium text-[#333333]">{formatCurrency(amount as number)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* By Payment Mode */}
-                    <div>
-                      <h4 className="text-sm font-medium text-[#999999] mb-3">By Payment Mode</h4>
-                      <div className="space-y-2">
-                        {Object.entries(dashboardStats.details.revenue.byPaymentMode || {}).map(([mode, amount]) => (
-                          <div key={mode} className="flex justify-between">
-                            <span className="text-sm text-[#666666]">{mode}</span>
-                            <span className="text-sm font-medium text-[#333333]">{formatCurrency(amount as number)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Top Transactions */}
-                    <div>
-                      <h4 className="text-sm font-medium text-[#999999] mb-3">Recent Transactions</h4>
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {dashboardStats.details.revenue.topTransactions?.slice(0, 5).map((transaction: any, index: number) => (
-                          <div key={index} className="text-xs border-b pb-2">
-                            <div className="font-medium text-[#333333]">{transaction.patientName}</div>
-                            <div className="text-[#666666]">{transaction.transaction_type} - {formatCurrency(transaction.amount)}</div>
-                          </div>
-                        ))}
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* By Transaction Type */}
+                  <div>
+                    <h4 className="text-sm font-medium text-[#999999] mb-3">By Transaction Type</h4>
+                    <div className="space-y-2">
+                      {Object.entries(dashboardStats.details.revenue.byType || {}).map(([type, amount]) => (
+                        <div key={type} className="flex justify-between">
+                          <span className="text-sm text-[#666666]">{type.replace(/_/g, ' ')}</span>
+                          <span className="text-sm font-medium text-[#333333]">{formatCurrency(amount as number)}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                  
+                  {/* By Payment Mode */}
+                  <div>
+                    <h4 className="text-sm font-medium text-[#999999] mb-3">By Payment Mode</h4>
+                    <div className="space-y-2">
+                      {Object.entries(dashboardStats.details.revenue.byPaymentMode || {}).map(([mode, amount]) => (
+                        <div key={mode} className="flex justify-between">
+                          <span className="text-sm text-[#666666]">{mode}</span>
+                          <span className="text-sm font-medium text-[#333333]">{formatCurrency(amount as number)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Top Transactions */}
+                  <div>
+                    <h4 className="text-sm font-medium text-[#999999] mb-3">Recent Transactions</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {dashboardStats.details.revenue.topTransactions?.slice(0, 5).map((transaction: any, index: number) => (
+                        <div key={index} className="text-xs border-b pb-2">
+                          <div className="font-medium text-[#333333]">{transaction.patientName}</div>
+                          <div className="text-[#666666]">{transaction.transaction_type} - {formatCurrency(transaction.amount)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 </div>
               ) : (
                 <div className="text-center py-8 text-[#666666]">
@@ -1190,170 +1140,174 @@ export const Dashboard: React.FC = () => {
           )}
 
           {/* Patients Details */}
-          {expandedCard === 'patients' && dashboardStats?.details?.patients && (
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-[#333333] mb-4">Patients Breakdown</h3>
-              <div className="space-y-4">
-                <p className="text-sm text-[#666666]">
-                  Total new patients in selected period: <span className="font-medium text-[#333333]">{dashboardStats.details.patients.total}</span>
-                </p>
-                <div>
-                  <h4 className="text-sm font-medium text-[#999999] mb-3">Recent Patients</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {dashboardStats.details.patients.recentPatients?.slice(0, 8).map((patient: any, index: number) => (
-                      <div key={index} className="border rounded-lg p-3">
-                        <div className="font-medium text-[#333333]">
-                          {patient.first_name} {patient.last_name}
-                        </div>
-                        <div className="text-sm text-[#666666]">
-                          {patient.gender} • {patient.age} years
-                        </div>
-                        <div className="text-xs text-[#999999]">
-                          {new Date(patient.created_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Appointments Details */}
-          {expandedCard === 'appointments' && dashboardStats?.details?.appointments && (
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-[#333333] mb-4">Appointments Breakdown</h3>
-              <div className="space-y-4">
-                <p className="text-sm text-[#666666]">
-                  Total appointments in selected period: <span className="font-medium text-[#333333]">{dashboardStats.details.appointments.total}</span>
-                </p>
-                <div>
-                  <h4 className="text-sm font-medium text-[#999999] mb-3">Recent Appointments</h4>
-                  <div className="space-y-3">
-                    {dashboardStats.details.appointments.recentAppointments?.slice(0, 5).map((appointment: any, index: number) => (
-                      <div key={index} className="border rounded-lg p-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="font-medium text-[#333333]">
-                              {appointment.patient?.first_name} {appointment.patient?.last_name}
-                            </div>
-                            <div className="text-sm text-[#666666]">
-                              Dr. {appointment.doctor?.first_name} {appointment.doctor?.last_name}
-                            </div>
-                            <div className="text-xs text-[#999999]">
-                              {appointment.appointment_type}
-                            </div>
+            {expandedCard === 'patients' && dashboardStats?.details?.patients && (
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-[#333333] mb-4">Patients Breakdown</h3>
+                <div className="space-y-4">
+                  <p className="text-sm text-[#666666]">
+                    Total new patients in selected period: <span className="font-medium text-[#333333]">{dashboardStats.details.patients.total}</span>
+                  </p>
+                  <div>
+                    <h4 className="text-sm font-medium text-[#999999] mb-3">Recent Patients</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {dashboardStats.details.patients.recentPatients?.slice(0, 8).map((patient: any, index: number) => (
+                        <div key={index} className="border rounded-lg p-3">
+                          <div className="font-medium text-[#333333]">
+                            {patient.first_name} {patient.last_name}
                           </div>
-                          <div className="text-right">
-                            <div className="text-sm font-medium text-[#333333]">
-                              {new Date(appointment.appointment_date).toLocaleDateString()}
-                            </div>
-                            <div className="text-xs text-[#666666]">
-                              {appointment.appointment_time}
-                            </div>
+                          <div className="text-sm text-[#666666]">
+                            {patient.gender} • {patient.age} years
+                          </div>
+                          <div className="text-xs text-[#999999]">
+                            {new Date(patient.created_at).toLocaleDateString()}
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Expenses Details */}
-          {expandedCard === 'expenses' && (
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-[#333333] mb-4">Expenses Breakdown</h3>
-              {dashboardStats?.details?.expenses ? (
-                <div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* By Category */}
-                    <div>
-                      <h4 className="text-sm font-medium text-[#999999] mb-3">By Category</h4>
-                      <div className="space-y-2">
-                        {Object.entries(dashboardStats.details.expenses.byCategory || {}).map(([category, amount]) => (
-                          <div key={category} className="flex justify-between">
-                            <span className="text-sm text-[#666666]">{category.replace(/_/g, ' ')}</span>
-                            <span className="text-sm font-medium text-[#333333]">{formatCurrency(amount as number)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Recent Expenses */}
-                    <div>
-                      <h4 className="text-sm font-medium text-[#999999] mb-3">Recent Expenses</h4>
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {dashboardStats.details.expenses.topExpenses?.slice(0, 5).map((expense: any, index: number) => (
-                          <div key={index} className="text-xs border-b pb-2">
-                            <div className="font-medium text-[#333333]">{expense.description}</div>
-                            <div className="text-[#666666]">{expense.expense_category} - {formatCurrency(expense.amount)}</div>
-                            <div className="text-[#999999]">{new Date(expense.expense_date).toLocaleDateString()}</div>
-                          </div>
-                        ))}
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="text-center py-8 text-[#666666]">
-                  <p className="mb-2">💰 No detailed expense data available</p>
-                  <p className="text-sm">Apply a date filter to see detailed expense breakdown by categories and recent expenses.</p>
-                  <p className="text-xs mt-2 text-[#999999]">Current data shows: Today Expenses ₹{formatCurrency(dashboardStats?.todayExpenses || 0)}</p>
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {/* Beds Details */}
-          {expandedCard === 'beds' && dashboardStats?.details?.beds && (
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-[#333333] mb-4">Beds Status</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{dashboardStats.details.beds.available}</div>
-                  <div className="text-sm text-[#666666]">Available</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">{dashboardStats.details.beds.occupied}</div>
-                  <div className="text-sm text-[#666666]">Occupied</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-[#333333]">{dashboardStats.details.beds.total}</div>
-                  <div className="text-sm text-[#666666]">Total Beds</div>
+            {/* Appointments Details */}
+            {expandedCard === 'appointments' && dashboardStats?.details?.appointments && (
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-[#333333] mb-4">Appointments Breakdown</h3>
+                <div className="space-y-4">
+                  <p className="text-sm text-[#666666]">
+                    Total appointments in selected period: <span className="font-medium text-[#333333]">{dashboardStats.details.appointments.total}</span>
+                  </p>
+                  <div>
+                    <h4 className="text-sm font-medium text-[#999999] mb-3">Recent Appointments</h4>
+                    <div className="space-y-3">
+                      {dashboardStats.details.appointments.recentAppointments?.slice(0, 5).map((appointment: any, index: number) => (
+                        <div key={index} className="border rounded-lg p-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium text-[#333333]">
+                                {appointment.patient?.first_name} {appointment.patient?.last_name}
+                              </div>
+                              <div className="text-sm text-[#666666]">
+                                Dr. {appointment.doctor?.first_name} {appointment.doctor?.last_name}
+                              </div>
+                              <div className="text-xs text-[#999999]">
+                                {appointment.appointment_type}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-[#333333]">
+                                {new Date(appointment.appointment_date).toLocaleDateString()}
+                              </div>
+                              <div className="text-xs text-[#666666]">
+                                {appointment.appointment_time}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-[#999999] mb-3">Bed Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {dashboardStats.details.beds.bedsList?.slice(0, 12).map((bed: any, index: number) => (
-                    <div key={index} className={`border rounded-lg p-3 ${bed.status === 'AVAILABLE' ? 'bg-green-50 border-green-200' :
-                      bed.status === 'OCCUPIED' ? 'bg-red-50 border-red-200' :
+            )}
+
+            {/* Expenses Details */}
+            {expandedCard === 'expenses' && (
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-[#333333] mb-4">Expenses Breakdown</h3>
+                {dashboardStats?.details?.expenses ? (
+                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* By Category */}
+                  <div>
+                    <h4 className="text-sm font-medium text-[#999999] mb-3">By Category</h4>
+                    <div className="space-y-2">
+                      {Object.entries(dashboardStats.details.expenses.byCategory || {}).map(([category, amount]) => (
+                        <div key={category} className="flex justify-between">
+                          <span className="text-sm text-[#666666]">{category.replace(/_/g, ' ')}</span>
+                          <span className="text-sm font-medium text-[#333333]">{formatCurrency(amount as number)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Recent Expenses */}
+                  <div>
+                    <h4 className="text-sm font-medium text-[#999999] mb-3">Recent Expenses</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {dashboardStats.details.expenses.topExpenses?.slice(0, 5).map((expense: any, index: number) => (
+                        <div key={index} className="text-xs border-b pb-2">
+                          <div className="font-medium text-[#333333]">{expense.description}</div>
+                          <div className="text-[#666666]">{expense.expense_category} - {formatCurrency(expense.amount)}</div>
+                          <div className="text-[#999999]">{new Date(expense.expense_date).toLocaleDateString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-[#666666]">
+                    <p className="mb-2">💰 No detailed expense data available</p>
+                    <p className="text-sm">Apply a date filter to see detailed expense breakdown by categories and recent expenses.</p>
+                    <p className="text-xs mt-2 text-[#999999]">Current data shows: Today Expenses ₹{formatCurrency(dashboardStats?.todayExpenses || 0)}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Beds Details */}
+            {expandedCard === 'beds' && dashboardStats?.details?.beds && (
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-[#333333] mb-4">Beds Status</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{dashboardStats.details.beds.available}</div>
+                    <div className="text-sm text-[#666666]">Available</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">{dashboardStats.details.beds.occupied}</div>
+                    <div className="text-sm text-[#666666]">Occupied</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#333333]">{dashboardStats.details.beds.total}</div>
+                    <div className="text-sm text-[#666666]">Total Beds</div>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-[#999999] mb-3">Bed Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {dashboardStats.details.beds.bedsList?.slice(0, 12).map((bed: any, index: number) => (
+                      <div key={index} className={`border rounded-lg p-3 ${
+                        bed.status === 'AVAILABLE' ? 'bg-green-50 border-green-200' : 
+                        bed.status === 'OCCUPIED' ? 'bg-red-50 border-red-200' : 
                         'bg-gray-50 border-gray-200'
                       }`}>
-                      <div className="font-medium text-[#333333]">Bed {bed.bed_number}</div>
-                      <div className="text-sm text-[#666666]">{bed.room_type}</div>
-                      <div className={`text-xs font-medium ${bed.status === 'AVAILABLE' ? 'text-green-600' :
-                        bed.status === 'OCCUPIED' ? 'text-red-600' :
+                        <div className="font-medium text-[#333333]">Bed {bed.bed_number}</div>
+                        <div className="text-sm text-[#666666]">{bed.room_type}</div>
+                        <div className={`text-xs font-medium ${
+                          bed.status === 'AVAILABLE' ? 'text-green-600' : 
+                          bed.status === 'OCCUPIED' ? 'text-red-600' : 
                           'text-gray-600'
                         }`}>
-                        {bed.status}
+                          {bed.status}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+
         {/* Bottom Row - Calendar and Appointments */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Appointments Calendar */}
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-[#333333] mb-1">Appointments Calendar</h3>
             <p className="text-sm text-[#999999] mb-4">Select a date to view scheduled appointments</p>
-
+            
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-4">
               <button
@@ -1372,7 +1326,7 @@ export const Dashboard: React.FC = () => {
                 <ChevronRight className="h-5 w-5 text-[#333333]" />
               </button>
             </div>
-
+            
             {/* Calendar Grid */}
             <div className="grid grid-cols-7 gap-1 mb-2">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -1381,26 +1335,27 @@ export const Dashboard: React.FC = () => {
                 </div>
               ))}
             </div>
-
+            
             <div className="grid grid-cols-7 gap-1">
               {generateCalendarDays().map((date, index) => {
                 const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
                 const isToday = date.toDateString() === new Date().toDateString();
                 const isSelected = date.toDateString() === selectedDate.toDateString();
-
+                
                 return (
                   <button
                     key={index}
                     onClick={() => setSelectedDate(date)}
                     className={`
                       p-2 text-sm rounded-lg transition-colors
-                      ${isCurrentMonth
-                        ? isToday
-                          ? 'bg-[#007bff] text-white font-bold'
-                          : isSelected
+                      ${
+                        isCurrentMonth
+                          ? isToday
+                            ? 'bg-[#007bff] text-white font-bold'
+                            : isSelected
                             ? 'bg-[#007bff] text-white'
                             : 'text-[#333333] hover:bg-gray-100'
-                        : 'text-[#999999] hover:bg-gray-50'
+                          : 'text-[#999999] hover:bg-gray-50'
                       }
                     `}
                   >
@@ -1417,130 +1372,115 @@ export const Dashboard: React.FC = () => {
             <p className="text-sm text-[#999999] mb-4">
               Showing appointments for {formatSelectedDateRange()}
             </p>
-
-            <button
-              onClick={() => {
-                // Create test appointments
-                const today = new Date();
-                const tomorrow = new Date(today);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-
-                const testAppointments = [
-                  {
-                    id: 'test-' + Date.now(),
-                    patient_id: 'patient-1',
-                    patient_name: 'John Doe',
-                    doctor_name: 'Dr. Smith',
-                    department: 'Cardiology',
-                    appointment_date: today.toISOString().split('T')[0],
-                    appointment_time: '10:00',
-                    appointment_type: 'consultation',
-                    status: 'scheduled',
-                    estimated_duration: 30,
-                    estimated_cost: 500,
-                    notes: 'Regular checkup',
-                    created_at: new Date().toISOString()
-                  },
-                  {
-                    id: 'test-' + (Date.now() + 1),
-                    patient_id: 'patient-2',
-                    patient_name: 'Jane Smith',
-                    doctor_name: 'Dr. Johnson',
-                    department: 'Orthopedics',
-                    appointment_date: tomorrow.toISOString().split('T')[0],
-                    appointment_time: '14:30',
-                    appointment_type: 'follow-up',
-                    status: 'confirmed',
-                    estimated_duration: 45,
-                    estimated_cost: 350,
-                    notes: 'Post-surgery follow-up',
-                    created_at: new Date().toISOString()
-                  }
-                ];
-
-                localStorage.setItem('hospital_appointments', JSON.stringify(testAppointments));
-                window.location.reload();
-              }}
-              className="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Create Test Appointments & Reload
-            </button>
-          </div>
-
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {appointmentsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#007bff]"></div>
-              </div>
-            ) : (
-              (() => {
-                const upcomingAppointments = getUpcomingAppointments();
-
-                console.log('=== APPOINTMENTS DISPLAY DEBUG ===');
-                console.log('Upcoming appointments count:', upcomingAppointments.length);
-                console.log('Upcoming appointments:', upcomingAppointments);
-
-                if (upcomingAppointments.length === 0) {
-                  return (
-                    <div className="text-center py-8 text-[#999999]">
-                      <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>No appointments for this date range.</p>
-                      <p className="text-xs mt-2">Check console for debug info</p>
-                    </div>
-                  );
-                }
-
-                return upcomingAppointments.map((appointment: any) => (
-                  <div key={appointment.id} className="border-l-4 border-[#007bff] pl-4 py-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-[#333333]">
-                          {appointment.patient?.first_name} {appointment.patient?.last_name}
-                        </p>
-                        <p className="text-sm text-[#999999]">
-                          {appointment.department?.name || 'General'}
-                        </p>
+            
+              <button 
+                onClick={() => {
+                  // Create test appointments
+                  const today = new Date();
+                  const tomorrow = new Date(today);
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  
+                  const testAppointments = [
+                    {
+                      id: 'test-' + Date.now(),
+                      patient_id: 'patient-1',
+                      patient_name: 'John Doe',
+                      doctor_name: 'Dr. Smith',
+                      department: 'Cardiology',
+                      appointment_date: today.toISOString().split('T')[0],
+                      appointment_time: '10:00',
+                      appointment_type: 'consultation',
+                      status: 'scheduled',
+                      estimated_duration: 30,
+                      estimated_cost: 500,
+                      notes: 'Regular checkup',
+                      created_at: new Date().toISOString()
+                    },
+                    {
+                      id: 'test-' + (Date.now() + 1),
+                      patient_id: 'patient-2',
+                      patient_name: 'Jane Smith',
+                      doctor_name: 'Dr. Johnson',
+                      department: 'Orthopedics',
+                      appointment_date: tomorrow.toISOString().split('T')[0],
+                      appointment_time: '14:30',
+                      appointment_type: 'follow-up',
+                      status: 'confirmed',
+                      estimated_duration: 45,
+                      estimated_cost: 350,
+                      notes: 'Post-surgery follow-up',
+                      created_at: new Date().toISOString()
+                    }
+                  ];
+                  
+                  localStorage.setItem('hospital_appointments', JSON.stringify(testAppointments));
+                  window.location.reload();
+                }}
+                className="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Create Test Appointments & Reload
+              </button>
+            </div>
+            
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {appointmentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#007bff]"></div>
+                </div>
+              ) : (
+                (() => {
+                  const upcomingAppointments = getUpcomingAppointments();
+                  
+                  console.log('=== APPOINTMENTS DISPLAY DEBUG ===');
+                  console.log('Upcoming appointments count:', upcomingAppointments.length);
+                  console.log('Upcoming appointments:', upcomingAppointments);
+                  
+                  if (upcomingAppointments.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-[#999999]">
+                        <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No appointments for this date range.</p>
+                        <p className="text-xs mt-2">Check console for debug info</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-[#333333]">
-                          {appointment.appointment_date ? (
-                            new Date(appointment.appointment_date).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              timeZone: 'UTC' // Treat the date string as UTC to prevent local timezone shifting
-                            })
-                          ) : (
-                            new Date(appointment.scheduled_at).toLocaleDateString('en-US', {
+                    );
+                  }
+                  
+                  return upcomingAppointments.map((appointment: any) => (
+                    <div key={appointment.id} className="border-l-4 border-[#007bff] pl-4 py-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-[#333333]">
+                            {appointment.patient?.first_name} {appointment.patient?.last_name}
+                          </p>
+                          <p className="text-sm text-[#999999]">
+                            {appointment.department?.name || 'General'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-[#333333]">
+                            {new Date(appointment.scheduled_at).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric'
-                            })
-                          )}
-                        </p>
-                        <p className="text-sm text-[#999999]">
-                          {appointment.appointment_time ? (
-                            // Format 24h time string (HH:mm) to 12h format
-                            new Date(`2000-01-01T${appointment.appointment_time}`).toLocaleTimeString('en-US', {
+                            })}
+                          </p>
+                          <p className="text-sm text-[#999999]">
+                            {new Date(appointment.scheduled_at).toLocaleTimeString('en-US', {
                               hour: '2-digit',
                               minute: '2-digit',
                               hour12: true
-                            })
-                          ) : (
-                            new Date(appointment.scheduled_at).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true
-                            })
-                          )}
-                        </p>
+                            })}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ));
-              })()
-            )}
+                  ));
+                })()
+              )}
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
+
 };

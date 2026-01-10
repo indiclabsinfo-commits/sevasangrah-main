@@ -15,9 +15,6 @@ interface AppointmentListParams {
   date?: string;
   page?: number;
   limit?: number;
-  filters?: any;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
 }
 
 // Query hooks
@@ -65,21 +62,21 @@ export const useAppointmentStats = () => {
 // Mutation hooks
 export const useCreateAppointment = () => {
   const queryClient = useQueryClient();
-
+  
   return useMutation(
     createMutationOptions(
       (data: CreateAppointmentData) => appointmentService.createAppointment(data),
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.appointments() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.todayAppointments });
-          queryClient.invalidateQueries({ queryKey: queryKeys.appointmentStats });
+          queryClient.invalidateQueries(queryKeys.todayAppointments);
+          queryClient.invalidateQueries(queryKeys.appointmentStats);
         },
         optimisticUpdate: {
           queryKey: queryKeys.appointments(),
           updater: (oldData: any, variables) => {
             if (!oldData) return oldData;
-
+            
             const newAppointment: AppointmentWithRelations = {
               id: `temp-${Date.now()}`,
               appointment_id: `APT${Date.now()}`,
@@ -105,7 +102,7 @@ export const useCreateAppointment = () => {
 
 export const useUpdateAppointment = () => {
   const queryClient = useQueryClient();
-
+  
   return useMutation(
     createMutationOptions(
       ({ id, updates }: { id: string; updates: UpdateAppointmentData }) =>
@@ -114,11 +111,11 @@ export const useUpdateAppointment = () => {
         onSuccess: (data, variables) => {
           // Update the specific appointment cache
           queryClient.setQueryData(queryKeys.appointment(variables.id), data);
-
+          
           // Invalidate appointment lists
           queryClient.invalidateQueries({ queryKey: queryKeys.appointments() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.todayAppointments });
-          queryClient.invalidateQueries({ queryKey: queryKeys.appointmentStats });
+          queryClient.invalidateQueries(queryKeys.todayAppointments);
+          queryClient.invalidateQueries(queryKeys.appointmentStats);
         },
         optimisticUpdate: {
           queryKey: queryKeys.appointment(''),
@@ -134,7 +131,7 @@ export const useUpdateAppointment = () => {
 
 export const useCancelAppointment = () => {
   const queryClient = useQueryClient();
-
+  
   return useMutation(
     createMutationOptions(
       ({ id, reason }: { id: string; reason?: string }) =>
@@ -146,10 +143,10 @@ export const useCancelAppointment = () => {
             if (!oldData) return oldData;
             return { ...oldData, status: 'CANCELLED' };
           });
-
+          
           queryClient.invalidateQueries({ queryKey: queryKeys.appointments() });
-          queryClient.invalidateQueries({ queryKey: queryKeys.todayAppointments });
-          queryClient.invalidateQueries({ queryKey: queryKeys.appointmentStats });
+          queryClient.invalidateQueries(queryKeys.todayAppointments);
+          queryClient.invalidateQueries(queryKeys.appointmentStats);
         },
         optimisticUpdate: {
           queryKey: queryKeys.appointment(''),
@@ -221,7 +218,7 @@ export const useAppointmentsByDateRange = (startDate: string, endDate: string) =
 export const useUpcomingAppointments = (limit: number = 10) => {
   const today = new Date().toISOString();
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
+  
   return useAppointments({
     filters: {
       dateRange: {
@@ -253,7 +250,7 @@ export const useAvailableTimeSlots = (doctorId: string, date: string) => {
     const slots: string[] = [];
     const startHour = 9;
     const endHour = 18;
-
+    
     for (let hour = startHour; hour < endHour; hour++) {
       slots.push(`${hour.toString().padStart(2, '0')}:00`);
       slots.push(`${hour.toString().padStart(2, '0')}:30`);
@@ -272,9 +269,9 @@ export const useAvailableTimeSlots = (doctorId: string, date: string) => {
 };
 
 // Export types for convenience
-export type {
-  AppointmentWithRelations,
-  CreateAppointmentData,
+export type { 
+  AppointmentWithRelations, 
+  CreateAppointmentData, 
   AppointmentListParams,
-  UpdateAppointmentData
+  UpdateAppointmentData 
 };

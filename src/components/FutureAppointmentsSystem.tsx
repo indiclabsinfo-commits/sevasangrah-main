@@ -14,348 +14,348 @@ interface AppointmentFormProps {
 
 const AppointmentForm: React.FC<AppointmentFormProps> = ({ isOpen, onClose, onSuccess }) => {
   try {
-    const [formData, setFormData] = useState({
-      patient_id: '',
-      doctor_id: '',
-      appointment_date: '',
-      appointment_time: '',
-      duration_minutes: 30,
-      appointment_type: 'CONSULTATION',
-      reason: '',
-      estimated_cost: 0,
-      notes: '',
-      send_sms: false
-    });
+  const [formData, setFormData] = useState({
+    patient_id: '',
+    doctor_id: '',
+    appointment_date: '',
+    appointment_time: '',
+    duration_minutes: 30,
+    appointment_type: 'CONSULTATION',
+    reason: '',
+    estimated_cost: 0,
+    notes: '',
+    send_sms: false
+  });
 
-    const [patients, setPatients] = useState<PatientWithRelations[]>([]);
-    const [doctors, setDoctors] = useState<User[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [searchPatient, setSearchPatient] = useState('');
-    const [filteredPatients, setFilteredPatients] = useState<PatientWithRelations[]>([]);
+  const [patients, setPatients] = useState<PatientWithRelations[]>([]);
+  const [doctors, setDoctors] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchPatient, setSearchPatient] = useState('');
+  const [filteredPatients, setFilteredPatients] = useState<PatientWithRelations[]>([]);
 
-    useEffect(() => {
-      if (isOpen) {
-        loadPatientsAndDoctors();
-        // Set default date to today
-        const today = new Date().toISOString().split('T')[0];
-        setFormData(prev => ({ ...prev, appointment_date: today }));
+  useEffect(() => {
+    if (isOpen) {
+      loadPatientsAndDoctors();
+      // Set default date to today
+      const today = new Date().toISOString().split('T')[0];
+      setFormData(prev => ({ ...prev, appointment_date: today }));
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    // Filter patients based on search
+    if (searchPatient.trim()) {
+      const search = searchPatient.toLowerCase();
+      setFilteredPatients(
+        patients.filter(p => 
+          p.first_name.toLowerCase().includes(search) ||
+          p.last_name.toLowerCase().includes(search) ||
+          p.phone.includes(search) ||
+          p.patient_id.toLowerCase().includes(search)
+        ).slice(0, 10)
+      );
+    } else {
+      setFilteredPatients(patients.slice(0, 10));
+    }
+  }, [searchPatient, patients]);
+
+  const loadPatientsAndDoctors = async () => {
+    try {
+      const [patientsData, currentUser] = await Promise.all([
+        HospitalService.getPatients(50000, true, true),
+        HospitalService.getCurrentUser()
+      ]);
+      
+      setPatients(patientsData);
+      
+      // For now, use current user as doctor (in real app, you'd fetch all doctors)
+      if (currentUser) {
+        setDoctors([currentUser]);
+        setFormData(prev => ({ ...prev, doctor_id: currentUser.id }));
       }
-    }, [isOpen]);
+    } catch (error: any) {
+      toast.error(`Failed to load data: ${error.message}`);
+    }
+  };
 
-    useEffect(() => {
-      // Filter patients based on search
-      if (searchPatient.trim()) {
-        const search = searchPatient.toLowerCase();
-        setFilteredPatients(
-          patients.filter(p =>
-            p.first_name.toLowerCase().includes(search) ||
-            p.last_name.toLowerCase().includes(search) ||
-            p.phone.includes(search) ||
-            p.patient_id.toLowerCase().includes(search)
-          ).slice(0, 10)
-        );
-      } else {
-        setFilteredPatients(patients.slice(0, 10));
-      }
-    }, [searchPatient, patients]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.patient_id || !formData.doctor_id || !formData.appointment_date || !formData.appointment_time) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
-    const loadPatientsAndDoctors = async () => {
-      try {
-        const [patientsData, currentUser] = await Promise.all([
-          HospitalService.getPatients(50000, true, true),
-          HospitalService.getCurrentUser()
-        ]);
+    setLoading(true);
 
-        setPatients(patientsData);
+    try {
+      const appointmentData: CreateAppointmentData = {
+        patient_id: formData.patient_id,
+        doctor_id: formData.doctor_id,
+        appointment_date: formData.appointment_date,
+        appointment_time: formData.appointment_time,
+        duration_minutes: formData.duration_minutes,
+        appointment_type: formData.appointment_type,
+        reason: formData.reason.trim(),
+        estimated_cost: formData.estimated_cost,
+        notes: formData.notes.trim() || undefined
+      };
 
-        // For now, use current user as doctor (in real app, you'd fetch all doctors)
-        if (currentUser) {
-          setDoctors([currentUser]);
-          setFormData(prev => ({ ...prev, doctor_id: currentUser.id }));
-        }
-      } catch (error: any) {
-        toast.error(`Failed to load data: ${error.message}`);
-      }
-    };
+      console.log('📝 Creating appointment with data:', appointmentData);
+      await HospitalService.createAppointment(appointmentData);
+      console.log('✅ Appointment created successfully');
 
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
+      toast.success('Appointment scheduled successfully!');
 
-      if (!formData.patient_id || !formData.doctor_id || !formData.appointment_date || !formData.appointment_time) {
-        toast.error('Please fill in all required fields');
-        return;
-      }
+      // Send SMS confirmation if enabled and patient is selected
+      if (formData.send_sms && selectedPatient) {
+        try {
+          const patientFullName = `${selectedPatient.first_name} ${selectedPatient.last_name}`;
+          const doctor = doctors.find(d => d.id === formData.doctor_id);
+          const doctorName = doctor ? `${doctor.first_name} ${doctor.last_name}` : 'Our Doctor';
+          const formattedDate = new Date(formData.appointment_date).toLocaleDateString('en-IN');
 
-      setLoading(true);
+          const smsResult = await SMSService.sendAppointmentConfirmation(
+            selectedPatient.id,
+            patientFullName,
+            selectedPatient.phone,
+            formattedDate,
+            formData.appointment_time,
+            doctorName,
+            selectedPatient.patient_id // Use actual patient_id (e.g., P004063)
+          );
 
-      try {
-        const appointmentData: CreateAppointmentData = {
-          patient_id: formData.patient_id,
-          doctor_id: formData.doctor_id,
-          appointment_date: formData.appointment_date,
-          appointment_time: formData.appointment_time,
-          duration_minutes: formData.duration_minutes,
-          appointment_type: formData.appointment_type as 'CONSULTATION' | 'FOLLOW_UP' | 'EMERGENCY' | 'PROCEDURE' | 'CHECKUP',
-          reason: formData.reason.trim(),
-          estimated_cost: formData.estimated_cost,
-          notes: formData.notes.trim() || undefined
-        };
-
-        console.log('📝 Creating appointment with data:', appointmentData);
-        await HospitalService.createAppointment(appointmentData);
-        console.log('✅ Appointment created successfully');
-
-        toast.success('Appointment scheduled successfully!');
-
-        // Send SMS confirmation if enabled and patient is selected
-        if (formData.send_sms && selectedPatient) {
-          try {
-            const patientFullName = `${selectedPatient.first_name} ${selectedPatient.last_name}`;
-            const doctor = doctors.find(d => d.id === formData.doctor_id);
-            const doctorName = doctor ? `${doctor.first_name} ${doctor.last_name}` : 'Our Doctor';
-            const formattedDate = new Date(formData.appointment_date).toLocaleDateString('en-IN');
-
-            const smsResult = await SMSService.sendAppointmentConfirmation(
-              selectedPatient.id,
-              patientFullName,
-              selectedPatient.phone,
-              formattedDate,
-              formData.appointment_time,
-              doctorName,
-              selectedPatient.patient_id // Use actual patient_id (e.g., P004063)
-            );
-
-            if (smsResult.success) {
-              toast.success('SMS confirmation sent!');
-            } else if (smsResult.error && smsResult.error !== 'SMS service not configured') {
-              toast.error('Failed to send SMS confirmation');
-            }
-          } catch (smsError) {
-            console.error('SMS sending error:', smsError);
-            // Don't block the flow if SMS fails
+          if (smsResult.success) {
+            toast.success('SMS confirmation sent!');
+          } else if (smsResult.error && smsResult.error !== 'SMS service not configured') {
+            toast.error('Failed to send SMS confirmation');
           }
+        } catch (smsError) {
+          console.error('SMS sending error:', smsError);
+          // Don't block the flow if SMS fails
         }
-
-        // Reset form
-        setFormData({
-          patient_id: '',
-          doctor_id: doctors[0]?.id || '',
-          appointment_date: new Date().toISOString().split('T')[0],
-          appointment_time: '',
-          duration_minutes: 30,
-          appointment_type: 'CONSULTATION',
-          reason: '',
-          estimated_cost: 0,
-          notes: '',
-          send_sms: false
-        });
-
-        onSuccess();
-        onClose();
-      } catch (error: any) {
-        toast.error(`Failed to schedule appointment: ${error.message}`);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    if (!isOpen) return null;
+      // Reset form
+      setFormData({
+        patient_id: '',
+        doctor_id: doctors[0]?.id || '',
+        appointment_date: new Date().toISOString().split('T')[0],
+        appointment_time: '',
+        duration_minutes: 30,
+        appointment_type: 'CONSULTATION',
+        reason: '',
+        estimated_cost: 0,
+        notes: '',
+        send_sms: false
+      });
 
-    const selectedPatient = patients.find(p => p.id === formData.patient_id);
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      toast.error(`Failed to schedule appointment: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">📅 Schedule New Appointment</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+  if (!isOpen) return null;
+
+  const selectedPatient = patients.find(p => p.id === formData.patient_id);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">📅 Schedule New Appointment</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Patient Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Patient <span className="text-red-500">*</span>
+            </label>
+            
+            {/* Patient Search */}
+            <input
+              type="text"
+              placeholder="Search patient by name, phone, or ID..."
+              value={searchPatient}
+              onChange={(e) => setSearchPatient(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            
+            {/* Patient Dropdown */}
+            <select
+              value={formData.patient_id}
+              onChange={(e) => setFormData({ ...formData, patient_id: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
             >
-              ×
-            </button>
+              <option value="">Select a patient</option>
+              {filteredPatients.map(patient => (
+                <option key={patient.id} value={patient.id}>
+                  {patient.first_name} {patient.last_name} - {patient.phone} (ID: {patient.patient_id})
+                </option>
+              ))}
+            </select>
+
+            {/* Selected Patient Info */}
+            {selectedPatient && (
+              <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                <div className="font-medium">{selectedPatient.first_name} {selectedPatient.last_name}</div>
+                <div className="text-sm text-gray-600">
+                  {selectedPatient.phone} • {selectedPatient.gender} • {selectedPatient.visitCount || 0} visits
+                </div>
+              </div>
+            )}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Patient Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Patient <span className="text-red-500">*</span>
-              </label>
-
-              {/* Patient Search */}
-              <input
-                type="text"
-                placeholder="Search patient by name, phone, or ID..."
-                value={searchPatient}
-                onChange={(e) => setSearchPatient(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              {/* Patient Dropdown */}
-              <select
-                value={formData.patient_id}
-                onChange={(e) => setFormData({ ...formData, patient_id: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select a patient</option>
-                {filteredPatients.map(patient => (
-                  <option key={patient.id} value={patient.id}>
-                    {patient.first_name} {patient.last_name} - {patient.phone} (ID: {patient.patient_id})
-                  </option>
-                ))}
-              </select>
-
-              {/* Selected Patient Info */}
-              {selectedPatient && (
-                <div className="mt-2 p-3 bg-blue-50 rounded-lg">
-                  <div className="font-medium">{selectedPatient.first_name} {selectedPatient.last_name}</div>
-                  <div className="text-sm text-gray-600">
-                    {selectedPatient.phone} • {selectedPatient.gender} • {selectedPatient.visitCount || 0} visits
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Date and Time */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Appointment Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={formData.appointment_date}
-                  onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  min={new Date().toISOString().split('T')[0]}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Appointment Time <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="time"
-                  value={formData.appointment_time}
-                  onChange={(e) => setFormData({ ...formData, appointment_time: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Duration and Type */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
-                <select
-                  value={formData.duration_minutes}
-                  onChange={(e) => setFormData({ ...formData, duration_minutes: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value={15}>15 minutes</option>
-                  <option value={30}>30 minutes</option>
-                  <option value={45}>45 minutes</option>
-                  <option value={60}>1 hour</option>
-                  <option value={90}>1.5 hours</option>
-                  <option value={120}>2 hours</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Appointment Type</label>
-                <select
-                  value={formData.appointment_type}
-                  onChange={(e) => setFormData({ ...formData, appointment_type: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {APPOINTMENT_TYPES.map(type => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Reason */}
+          {/* Date and Time */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Reason for Visit <span className="text-red-500">*</span>
+                Appointment Date <span className="text-red-500">*</span>
               </label>
               <input
-                type="text"
-                value={formData.reason}
-                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                type="date"
+                value={formData.appointment_date}
+                onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Brief description of the visit purpose"
+                min={new Date().toISOString().split('T')[0]}
                 required
               />
             </div>
 
-            {/* Estimated Cost */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Cost (₹)</label>
-              <input
-                type="number"
-                value={formData.estimated_cost}
-                onChange={(e) => setFormData({ ...formData, estimated_cost: Number(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="0"
-                min="0"
-              />
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Additional notes or special instructions"
-                rows={3}
-              />
-            </div>
-
-            {/* SMS Checkbox */}
-            <div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.send_sms}
-                  onChange={(e) => setFormData({ ...formData, send_sms: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  Send SMS confirmation to patient
-                </span>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Appointment Time <span className="text-red-500">*</span>
               </label>
+              <input
+                type="time"
+                value={formData.appointment_time}
+                onChange={(e) => setFormData({ ...formData, appointment_time: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Duration and Type */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+              <select
+                value={formData.duration_minutes}
+                onChange={(e) => setFormData({ ...formData, duration_minutes: Number(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={15}>15 minutes</option>
+                <option value={30}>30 minutes</option>
+                <option value={45}>45 minutes</option>
+                <option value={60}>1 hour</option>
+                <option value={90}>1.5 hours</option>
+                <option value={120}>2 hours</option>
+              </select>
             </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Appointment Type</label>
+              <select
+                value={formData.appointment_type}
+                onChange={(e) => setFormData({ ...formData, appointment_type: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                {loading ? 'Scheduling...' : '📅 Schedule Appointment'}
-              </button>
+                {APPOINTMENT_TYPES.map(type => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
             </div>
-          </form>
-        </div>
+          </div>
+
+          {/* Reason */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Reason for Visit <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.reason}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Brief description of the visit purpose"
+              required
+            />
+          </div>
+
+          {/* Estimated Cost */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Cost (₹)</label>
+            <input
+              type="number"
+              value={formData.estimated_cost}
+              onChange={(e) => setFormData({ ...formData, estimated_cost: Number(e.target.value) || 0 })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="0"
+              min="0"
+            />
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Additional notes or special instructions"
+              rows={3}
+            />
+          </div>
+
+          {/* SMS Checkbox */}
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.send_sms}
+                onChange={(e) => setFormData({ ...formData, send_sms: e.target.checked })}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Send SMS confirmation to patient
+              </span>
+            </label>
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? 'Scheduling...' : '📅 Schedule Appointment'}
+            </button>
+          </div>
+        </form>
       </div>
-    );
+    </div>
+  );
   } catch (error: any) {
     console.error('Error in AppointmentForm:', error);
     return (
@@ -431,7 +431,6 @@ const FutureAppointmentsSystem: React.FC = () => {
     switch (status) {
       case 'SCHEDULED': return 'bg-blue-100 text-blue-800';
       case 'CONFIRMED': return 'bg-green-100 text-green-800';
-      case 'CHECKED_IN': return 'bg-indigo-100 text-indigo-800';
       case 'IN_PROGRESS': return 'bg-yellow-100 text-yellow-800';
       case 'COMPLETED': return 'bg-gray-100 text-gray-800';
       case 'CANCELLED': return 'bg-red-100 text-red-800';
@@ -552,12 +551,13 @@ const FutureAppointmentsSystem: React.FC = () => {
                   const appointmentDate = new Date(appointment.appointment_date);
                   const isToday = appointment.appointment_date === new Date().toISOString().split('T')[0];
                   const isPast = appointmentDate < new Date();
-
+                  
                   return (
-                    <tr
-                      key={appointment.id}
-                      className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
-                        } ${isToday ? 'bg-blue-25' : ''} ${isPast && appointment.status === 'SCHEDULED' ? 'bg-red-25' : ''}`}
+                    <tr 
+                      key={appointment.id} 
+                      className={`border-b hover:bg-gray-50 ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
+                      } ${isToday ? 'bg-blue-25' : ''} ${isPast && appointment.status === 'SCHEDULED' ? 'bg-red-25' : ''}`}
                     >
                       <td className="p-4">
                         <div className="font-medium">{appointmentDate.toLocaleDateString()}</div>
@@ -595,52 +595,19 @@ const FutureAppointmentsSystem: React.FC = () => {
                           ₹{(appointment.estimated_cost || 0).toLocaleString()}
                         </span>
                       </td>
-                      <td className="p-4 flex gap-2">
+                      <td className="p-4">
                         {appointment.patient && (
-                          <>
-                            {isToday && (appointment.status === 'SCHEDULED' || appointment.status === 'CONFIRMED') && (
-                              <button
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  if (!confirm('Check in patient to OPD Queue?')) return;
-                                  try {
-                                    await HospitalService.addToOPDQueue({
-                                      patient_id: appointment.patient!.id,
-                                      doctor_id: appointment.doctor_id,
-                                      appointment_id: appointment.id,
-                                      priority: false,
-                                      notes: appointment.reason
-                                    });
-                                    // Update appointment status to CHECKED_IN
-                                    await HospitalService.updateAppointment(appointment.id, {
-                                      status: 'CHECKED_IN'
-                                    });
-
-                                    toast.success('Patient checked into OPD Queue');
-                                    loadAppointments();
-                                  } catch (err) {
-                                    console.error('Check-in error:', err);
-                                    toast.error('Failed to check in');
-                                  }
-                                }}
-                                className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                title="Check In to OPD Queue"
-                              >
-                                🏥 Check In
-                              </button>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedPatientForReceipt(appointment.patient!);
-                                setShowReceiptModal(true);
-                              }}
-                              className="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              title="View Receipt"
-                            >
-                              🧾 Receipt
-                            </button>
-                          </>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPatientForReceipt(appointment.patient!);
+                              setShowReceiptModal(true);
+                            }}
+                            className="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            title="View Receipt"
+                          >
+                            🧾 Receipt
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -655,7 +622,7 @@ const FutureAppointmentsSystem: React.FC = () => {
           <div className="text-6xl mb-4">📅</div>
           <h3 className="text-xl font-semibold text-gray-800 mb-2">No appointments found</h3>
           <p className="text-gray-600 mb-4">
-            {filterDate || filterStatus !== 'all'
+            {filterDate || filterStatus !== 'all' 
               ? 'Try adjusting your filters'
               : 'No appointments have been scheduled yet'
             }

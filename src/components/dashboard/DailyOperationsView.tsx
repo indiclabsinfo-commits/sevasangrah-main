@@ -434,11 +434,7 @@ const DailyOperationsView: React.FC = () => {
                       <h3 className="font-semibold text-gray-800">
                         {journey.patient.first_name} {journey.patient.last_name}
                       </h3>
-                      {journey.patient.uhid ? (
-                        <p className="text-sm font-mono font-semibold text-blue-600">UHID: {journey.patient.uhid}</p>
-                      ) : (
-                        <p className="text-sm text-gray-600">ID: {journey.patient.patient_id}</p>
-                      )}
+                      <p className="text-sm text-gray-600">ID: {journey.patient.patient_id}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">

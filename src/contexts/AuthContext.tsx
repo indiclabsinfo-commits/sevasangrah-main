@@ -2,8 +2,6 @@ import React, { createContext, useContext, useState, useEffect, type ReactNode }
 import { authService } from '../services/authService';
 import type { LoginCredentials, RegisterData } from '../services/authService';
 import type { AuthUser } from '../config/supabaseNew';
-import axios from 'axios';
-import toast from 'react-hot-toast';
 import { logger, setLoggerPermissions } from '../utils/logger';
 import { setUserStatus } from '../utils/smartConsoleBlocker';
 import { setDevToolsAccess } from '../utils/devToolsBlocker';
@@ -58,14 +56,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     logger.log('🔧 [AuthContext] Initializing authentication...');
-
+    
     // Check for existing session on mount
     const initializeAuth = async () => {
       try {
         logger.log('🔧 [AuthContext] Getting current user...');
         const currentUser = await authService.getCurrentUser();
         logger.log('🔧 [AuthContext] Current user result:', currentUser);
-
+        
         setUser(currentUser);
         logger.log('🔧 [AuthContext] User state set to:', currentUser);
 
@@ -105,12 +103,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       logger.log('🔧 [AuthContext] Starting login with credentials:', { email: credentials.email });
       setLoading(true);
-
+      
       const result = await authService.login(credentials);
       logger.log('🔧 [AuthContext] Login service result:', result);
-
+      
       const { user: loggedInUser, error } = result;
-
+      
       if (error) {
         logger.error('❌ [AuthContext] Login error from service:', error);
         return { success: false, error };
@@ -118,7 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       logger.log('🔧 [AuthContext] Login successful, setting user:', loggedInUser);
       setUser(loggedInUser);
-
+      
       logger.log('✅ [AuthContext] Login completed successfully');
       return { success: true };
     } catch (error) {
@@ -135,7 +133,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       const { user: newUser, error } = await authService.register(userData);
-
+      
       if (error) {
         return { success: false, error };
       }
@@ -149,49 +147,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
     }
   };
-
-  /**
-   * Set up Axios interceptor to handle 401/403 responses
-   */
-  useEffect(() => {
-    logger.log('🔧 [AuthContext] Setting up Axios interceptor');
-
-    const interceptor = axios.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        const status = error.response ? error.response.status : null;
-
-        // Handle unauthorized or forbidden access
-        if (status === 401 || status === 403) {
-          logger.warn(`🛑 [AuthContext] Caught ${status} error from ${error.config?.url}`);
-          logger.warn(`🛑 [AuthContext] Response data:`, error.response?.data);
-
-          // Only redirect if we currently have a user (to avoid infinite loops)
-          if (user) {
-            logger.warn('🛑 [AuthContext] Session check triggered - LOGOUT DISABLED FOR DEBUGGING');
-            // toast.error('Session expired. Please log in again.');
-
-            // Clear local storage manually to ensure immediate effect
-            // localStorage.removeItem('auth_token');
-            // localStorage.removeItem('auth_user');
-
-            // Reset state
-            // setUser(null);
-
-            // Optional: Redirect to login page? 
-            // Usually the UI will react to user being null and show login screen
-          }
-        }
-
-        return Promise.reject(error);
-      }
-    );
-
-    return () => {
-      logger.log('🔧 [AuthContext] Ejecting Axios interceptor');
-      axios.interceptors.response.eject(interceptor);
-    };
-  }, [user]);
 
   const logout = async (): Promise<void> => {
     try {
@@ -214,7 +169,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       const { error } = await authService.updateProfile(user.id, updates);
-
+      
       if (error) {
         return { success: false, error };
       }
@@ -231,7 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const { error } = await authService.resetPassword(email);
-
+      
       if (error) {
         return { success: false, error };
       }
@@ -246,7 +201,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updatePassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const { error } = await authService.updatePassword(newPassword);
-
+      
       if (error) {
         return { success: false, error };
       }
@@ -268,22 +223,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       user: user ? { email: user.email, role: user.role } : null,
       userObject: user
     });
-
+    
     // FORCE ADMIN ACCESS: Grant all permissions to admin users
     if (user && (user.email === 'admin@indic.com' || user.email === 'meenal@indic.com')) {
       logger.log('✅ [AuthContext] FORCE ADMIN ACCESS - granting permission:', permission);
       return true;
     }
-
+    
     // Admin users have ALL permissions - no restrictions
     if (user && authService.isAdmin(user)) {
       logger.log('✅ [AuthContext] User is admin - granting permission:', permission);
       return true;
     }
-
+    
     const permissions = authService.getUserPermissions(user);
     const hasIt = permissions.includes(permission);
-
+    
     logger.log('🔍 [AuthContext] Permission check result:', {
       permission,
       userRole: user?.role,
@@ -291,7 +246,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       hasPermission: hasIt,
       isAdminCheck: authService.isAdmin(user)
     });
-
+    
     return hasIt;
   };
 
@@ -387,7 +342,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (permissions) {
     const permissionArray = Array.isArray(permissions) ? permissions : [permissions];
     const hasRequiredPermission = permissionArray.some(permission => hasPermission(permission));
-
+    
     if (!hasRequiredPermission) {
       return <>{fallback}</>;
     }

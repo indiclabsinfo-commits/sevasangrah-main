@@ -610,12 +610,7 @@ const SimpleEnhancedPatientRecord: React.FC<SimpleEnhancedPatientRecordProps> = 
           <div>
             <h2 className="text-2xl font-bold">Complete Patient Record</h2>
             <p className="opacity-90">
-              {patient.prefix} {patient.first_name} {patient.last_name}
-              {patient.uhid ? (
-                <span className="ml-2 font-mono font-bold"> • UHID: {patient.uhid}</span>
-              ) : (
-                ` - ID: ${patient.patient_id}`
-              )}
+              {patient.prefix} {patient.first_name} {patient.last_name} - ID: {patient.patient_id}
             </p>
           </div>
           <div className="flex gap-2">

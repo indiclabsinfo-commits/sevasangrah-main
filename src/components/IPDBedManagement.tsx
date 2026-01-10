@@ -208,13 +208,8 @@ const PatientSelectionModal: React.FC<PatientSelectionModalProps> = ({
                       <div className="font-medium text-gray-900">
                         {patient.first_name} {patient.last_name}
                       </div>
-                      {patient.uhid && (
-                        <div className="text-sm font-mono font-semibold text-blue-600 mb-1">
-                          UHID: {patient.uhid}
-                        </div>
-                      )}
                       <div className="text-sm text-gray-600">
-                        {!patient.uhid && `ID: ${patient.patient_id} | `}Phone: {patient.phone || 'N/A'}
+                        ID: {patient.patient_id} | Phone: {patient.phone || 'N/A'}
                       </div>
                       <div className="text-sm text-gray-600">
                         Age: {patient.age || 'N/A'} | Gender: {patient.gender}
@@ -2020,12 +2015,8 @@ const IPDBedManagement: React.FC = () => {
                   <div className="text-sm font-semibold text-gray-800">
                     {bed.patient.first_name} {bed.patient.last_name}
                   </div>
-                  <div className="text-xs font-medium">
-                    {bed.patient.uhid ? (
-                      <span className="font-mono text-blue-600">UHID: {bed.patient.uhid}</span>
-                    ) : (
-                      <span className="text-gray-600">ID: {bed.patient.patient_id}</span>
-                    )}
+                  <div className="text-xs text-gray-600 font-medium">
+                    ID: {bed.patient.patient_id}
                   </div>
                   {bed.admissionDate && (
                     <div className="text-xs text-gray-500">
@@ -2253,12 +2244,7 @@ const IPDBedManagement: React.FC = () => {
               <div>
                 <h2 className="text-2xl font-bold text-gray-800">Patient Records - Bed {selectedBedForRecords.number}</h2>
                 <p className="text-gray-600">
-                  {selectedPatientForRecords.first_name} {selectedPatientForRecords.last_name}
-                  {selectedPatientForRecords.uhid ? (
-                    <span className="ml-2 font-mono font-semibold text-blue-600">• UHID: {selectedPatientForRecords.uhid}</span>
-                  ) : (
-                    <span> • ID: {selectedPatientForRecords.patient_id}</span>
-                  )}
+                  {selectedPatientForRecords.first_name} {selectedPatientForRecords.last_name} • ID: {selectedPatientForRecords.patient_id}
                 </p>
               </div>
               <button

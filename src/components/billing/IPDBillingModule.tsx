@@ -88,9 +88,7 @@ const IPDBillingModule: React.FC = () => {
     'Air Bed Charges',
     'Water Bed Charges',
     'Ventilator Charges',
-    'C Pap Charges'
-  ];
-
+    'C Pap Charges',
   const filteredPatients = patients.filter(patient =>
       `${patient.first_name} ${patient.last_name}`.toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
       patient.patient_id.toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
@@ -1129,13 +1127,7 @@ const IPDBillingModule: React.FC = () => {
                               className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                             >
                               <div className="font-medium">{patient.first_name} {patient.last_name}</div>
-                              <div className="text-sm text-gray-500">
-                                {patient.uhid ? (
-                                  <span className="font-mono font-semibold text-blue-600">UHID: {patient.uhid}</span>
-                                ) : (
-                                  patient.patient_id
-                                )} • {patient.phone}
-                              </div>
+                              <div className="text-sm text-gray-500">{patient.patient_id} • {patient.phone}</div>
                             </div>
                           ))}
                         </div>

@@ -4,7 +4,6 @@ import { Eye, EyeOff, Heart, Shield, Users, Activity, Loader2 } from 'lucide-rea
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import InteractivePolkaDots from '@/components/InteractivePolkaDots';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -12,7 +11,7 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
-
+  
   const { login, loading } = useAuth();
 
   const validateForm = () => {
@@ -37,7 +36,7 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('🔧 [Login] Form submitted');
-
+    
     if (!validateForm()) {
       console.log('❌ [Login] Form validation failed');
       return;
@@ -46,23 +45,23 @@ export const Login: React.FC = () => {
     console.log('🔧 [Login] Form validation passed, attempting login...');
     console.log('🔧 [Login] Email:', email);
     console.log('🔧 [Login] Password length:', password.length);
-
+    
     try {
       const result = await login({ email, password });
       console.log('🔧 [Login] Login result:', result);
-
+      
       if (!result.success) {
         console.error('❌ [Login] Login failed:', result.error);
-        setErrors({
-          general: result.error || 'Login failed. Please check your credentials and try again.'
+        setErrors({ 
+          general: result.error || 'Login failed. Please check your credentials and try again.' 
         });
       } else {
         console.log('✅ [Login] Login successful! Auth context should handle redirect.');
       }
     } catch (error) {
       console.error('❌ [Login] Login exception:', error);
-      setErrors({
-        general: 'An unexpected error occurred. Please try again.'
+      setErrors({ 
+        general: 'An unexpected error occurred. Please try again.' 
       });
     }
     // Navigation will be handled automatically by AuthContext state change
@@ -87,55 +86,50 @@ export const Login: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
-      {/* Animated Background */}
-      <InteractivePolkaDots />
-
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch relative z-10">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
         {/* Left Side - Branding and Features */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center lg:text-left h-full flex flex-col justify-center"
+          className="text-center lg:text-left"
         >
-          <Card className="p-8 shadow-2xl bg-white/80 backdrop-blur-md border-white/50 h-full flex flex-col justify-center">
-            <div className="mb-8">
-              <div className="flex items-center justify-center lg:justify-start mb-4">
-                <div className="bg-gradient-to-r from-blue-600 to-green-600 p-3 rounded-xl shadow-lg">
-                  <Heart className="h-8 w-8 text-white" />
-                </div>
-                <div className="ml-3">
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">Sevāsangraha</h1>
-                  <p className="text-sm font-medium text-gray-600 tracking-wide">Healthcare Management System</p>
-                </div>
+          <div className="mb-8">
+            <div className="flex items-center justify-center lg:justify-start mb-4">
+              <div className="bg-gradient-to-r from-blue-600 to-green-600 p-3 rounded-xl">
+                <Heart className="h-8 w-8 text-white" />
               </div>
-              <p className="text-lg text-gray-800 font-medium leading-relaxed mb-8">
-                Streamline your healthcare operations with our comprehensive management platform.
-                Manage patients, appointments, and more in one integrated solution.
-              </p>
+              <div className="ml-3">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent" style={{ fontFamily: "'Playfair Display', 'Georgia', serif" }}>Sevāsangraha</h1>
+                <p className="text-sm text-gray-600">Healthcare Management System</p>
+              </div>
             </div>
+            <p className="text-lg text-gray-700 mb-8">
+              Streamline your healthcare operations with our comprehensive management platform. 
+              Manage patients, appointments, and more in one integrated solution.
+            </p>
+          </div>
 
-            <div className="space-y-6">
-              {features.map((feature, index) => (
-                <motion.div
-                  key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
-                  className="flex items-start space-x-4 p-3 rounded-lg hover:bg-white/50 transition-colors"
-                >
-                  <div className="bg-blue-100 p-2 rounded-lg shadow-sm">
-                    <feature.icon className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900">{feature.title}</h3>
-                    <p className="text-sm text-gray-700 font-medium">{feature.description}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </Card>
+          <div className="space-y-6">
+            {features.map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
+                className="flex items-start space-x-4"
+              >
+                <div className="bg-blue-100 p-2 rounded-lg">
+                  <feature.icon className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">{feature.title}</h3>
+                  <p className="text-sm text-gray-600">{feature.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
 
         {/* Right Side - Login Form */}
@@ -143,9 +137,8 @@ export const Login: React.FC = () => {
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="h-full"
         >
-          <Card className="p-8 shadow-2xl bg-white/90 backdrop-blur-sm h-full flex flex-col justify-center">
+          <Card className="p-8 shadow-2xl">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
               <p className="text-gray-600">Sign in to your account to continue</p>
@@ -175,8 +168,9 @@ export const Login: React.FC = () => {
                     setEmail(e.target.value);
                     if (errors.email) setErrors({ ...errors, email: undefined });
                   }}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.email ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.email ? 'border-red-300' : 'border-gray-300'
+                  }`}
                   placeholder="Enter your email"
                   disabled={loading}
                 />
@@ -205,8 +199,9 @@ export const Login: React.FC = () => {
                       setPassword(e.target.value);
                       if (errors.password) setErrors({ ...errors, password: undefined });
                     }}
-                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.password ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                      errors.password ? 'border-red-300' : 'border-gray-300'
+                    }`}
                     placeholder="Enter your password"
                     disabled={loading}
                   />
@@ -272,6 +267,8 @@ export const Login: React.FC = () => {
                 )}
               </Button>
             </form>
+
+            {/* Test Credentials */}
 
             {/* Footer */}
             <div className="mt-8 text-center text-sm text-gray-500">

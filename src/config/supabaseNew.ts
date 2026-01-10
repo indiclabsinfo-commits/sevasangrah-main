@@ -208,45 +208,13 @@ export interface FutureAppointment {
   appointment_date: string;
   appointment_time: string;
   appointment_type: 'CONSULTATION' | 'FOLLOW_UP' | 'EMERGENCY' | 'PROCEDURE' | 'CHECKUP';
-  status: 'SCHEDULED' | 'CONFIRMED' | 'CHECKED_IN' | 'IN_PROGRESS' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW';
+  status: 'SCHEDULED' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW';
   estimated_cost?: number;
-  reason?: string;
-  duration_minutes?: number;
   notes?: string;
   reminder_sent: boolean;
   hospital_id: string;
   created_at: string;
   created_by: string;
-}
-
-export interface OPDQueue {
-  id: string;
-  patient_id: string;
-  doctor_id: string;
-  appointment_id?: string;
-  status: 'WAITING' | 'VITALS_DONE' | 'IN_CONSULTATION' | 'COMPLETED' | 'CANCELLED';
-  token_number: number;
-  priority: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PatientVital {
-  id: string;
-  patient_id: string;
-  queue_id?: string;
-  visit_id?: string;
-  blood_pressure?: string;
-  pulse?: number;
-  temperature?: number;
-  weight?: number;
-  height?: number;
-  spo2?: number;
-  respiratory_rate?: number;
-  bmi?: number;
-  notes?: string;
-  recorded_by: string;
-  recorded_at: string;
 }
 
 // ENHANCED INTERFACES WITH RELATIONSHIPS
@@ -255,17 +223,10 @@ export interface PatientWithRelations extends Patient {
   transactions?: PatientTransaction[];
   admissions?: PatientAdmission[];
   appointments?: FutureAppointment[];
-  opd_queues?: OPDQueue[];
-  vitals?: PatientVital[];
   totalSpent?: number;
   visitCount?: number;
   lastVisit?: string;
   departmentStatus?: 'OPD' | 'IPD';
-}
-
-export interface OPDQueueWithRelations extends OPDQueue {
-  patient?: Patient;
-  doctor?: User;
 }
 
 export interface PatientAdmissionWithRelations extends PatientAdmission {
@@ -295,21 +256,16 @@ export interface AppointmentWithRelations extends FutureAppointment {
 
 // DASHBOARD STATISTICS TYPE
 export interface DashboardStats {
-  totalPatients: number;
-  totalDoctors: number;
-  totalBeds: number;
-  occupiedBeds: number;
-  todayRevenue: number;
-  monthlyRevenue: number;
-  todayExpenses: number;
-  todayAppointments: number;
-  pendingAdmissions: number;
-  patientGrowthRate: number;
-  revenueGrowthRate: number;
-  availableBeds?: number; // Optional as it might be calculated
-  netRevenue?: number;
-  occupancyRate?: number;
-  details?: any;
+  total_patients: number;
+  active_admissions: number;
+  available_beds: number;
+  total_beds: number;
+  today_revenue: number;
+  today_expenses: number;
+  net_revenue: number;
+  pending_appointments: number;
+  todays_appointments: number;
+  occupancy_rate: number;
 }
 
 // BED AVAILABILITY TYPE
@@ -436,8 +392,6 @@ export const APPOINTMENT_TYPES = [
 export const APPOINTMENT_STATUS = [
   { value: 'SCHEDULED', label: 'Scheduled' },
   { value: 'CONFIRMED', label: 'Confirmed' },
-  { value: 'CHECKED_IN', label: 'Checked In' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
   { value: 'CANCELLED', label: 'Cancelled' },
   { value: 'COMPLETED', label: 'Completed' },
   { value: 'NO_SHOW', label: 'No Show' }

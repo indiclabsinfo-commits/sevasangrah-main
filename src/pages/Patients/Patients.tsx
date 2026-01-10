@@ -83,20 +83,6 @@ export const Patients: React.FC = () => {
 
   const columns: Column<Patient>[] = [
     {
-      key: 'uhid' as keyof Patient,
-      header: 'UHID',
-      width: '140px',
-      render: (_, patient) => {
-        return patient.uhid ? (
-          <div className="font-mono text-sm font-semibold text-blue-600">
-            {patient.uhid}
-          </div>
-        ) : (
-          <span className="text-gray-400 text-xs">Not assigned</span>
-        );
-      },
-    },
-    {
       key: 'first_name',
       header: 'Patient',
       render: (_, patient) => {
@@ -399,7 +385,7 @@ export const Patients: React.FC = () => {
         data={filteredPatients}
         columns={columns}
         searchable
-        searchPlaceholder="Search by UHID, Name, Phone..."
+        searchPlaceholder="Search patients..."
         emptyState={
           <div className="text-center py-8">
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -471,18 +457,6 @@ export const Patients: React.FC = () => {
                   {firstName} {lastName}
                 </h3>
                 <p className="text-gray-500">{selectedPatient.email || 'N/A'}</p>
-
-                {/* UHID Display - NABH Compliance */}
-                {selectedPatient.uhid && (
-                  <div className="mt-4 inline-block">
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-500 rounded-lg px-6 py-3 shadow-sm">
-                      <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Patient UHID</p>
-                      <p className="text-2xl font-bold text-blue-600 font-mono tracking-wider">
-                        {selectedPatient.uhid}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

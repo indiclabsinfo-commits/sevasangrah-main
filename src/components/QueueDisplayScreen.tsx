@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, User, CheckCircle, AlertCircle, Filter } from 'lucide-react';
+import { Clock, User, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import HospitalService from '../services/hospitalService';
-import type { User as Doctor } from '../config/supabaseNew';
 
 interface QueuePatient {
   id: string;
@@ -13,7 +11,6 @@ interface QueuePatient {
   queue_status: 'waiting' | 'called' | 'completed';
   age?: number;
   gender?: string;
-  doctor_id?: string;
 }
 
 const QueueDisplayScreen: React.FC = () => {
@@ -22,49 +19,33 @@ const QueueDisplayScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Doctor Filter State
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [selectedDoctor, setSelectedDoctor] = useState<string>('');
-
-  // Fetch doctors on mount
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const docs = await HospitalService.getDoctors();
-        setDoctors(docs);
-      } catch (err) {
-        console.error('Failed to load doctors', err);
-      }
-    };
-    fetchDoctors();
-  }, []);
-
-  // Fetch queue with polling
+  // Fetch today's queue
   const fetchQueue = async () => {
     try {
-      // Pass selectedDoctor to filter if set. Pass undefined for status to fetch all active statuses (or backend default)
-      const data = await HospitalService.getOPDQueues(undefined, selectedDoctor || undefined);
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setError('Please log in to view the queue');
+        setLoading(false);
+        return;
+      }
 
-      // Transform data to match component interface
-      const transformedData: QueuePatient[] = data.map((item: any) => ({
-        id: item.id,
-        patient_id: item.patient_code || item.patient_id, // Use code if available
-        first_name: item.first_name,
-        last_name: item.last_name,
-        queue_no: item.token_number,
-        // Map status: IN_CONSULTATION -> called, WAITING/VITALS_DONE -> waiting
-        queue_status: item.status === 'IN_CONSULTATION' ? 'called' :
-          item.status === 'COMPLETED' ? 'completed' : 'waiting',
-        age: item.age,
-        gender: item.gender,
-        doctor_id: item.doctor_id
-      }));
+      const response = await fetch('http://localhost:3002/api/queue/today', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-      setQueuePatients(transformedData);
+      if (!response.ok) {
+        throw new Error('Failed to fetch queue');
+      }
+
+      const data = await response.json();
+      setQueuePatients(data);
       setError(null);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching queue:', err);
-      setError(err.message || 'Failed to load queue');
+      setError(err instanceof Error ? err.message : 'Failed to load queue');
     } finally {
       setLoading(false);
     }
@@ -73,12 +54,24 @@ const QueueDisplayScreen: React.FC = () => {
   // Update queue status
   const updateQueueStatus = async (patientId: string, status: 'waiting' | 'called' | 'completed') => {
     try {
-      // Map UI status back to API status
-      let apiStatus = 'WAITING';
-      if (status === 'called') apiStatus = 'IN_CONSULTATION';
-      if (status === 'completed') apiStatus = 'COMPLETED';
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        toast.error('Please log in to update queue status');
+        return;
+      }
 
-      await HospitalService.updateOPDQueueStatus(patientId, apiStatus);
+      const response = await fetch(`http://localhost:3002/api/queue/${patientId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ queue_status: status }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update queue status');
+      }
 
       // Refresh the queue
       await fetchQueue();
@@ -98,12 +91,12 @@ const QueueDisplayScreen: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Poll for updates every 3 seconds (Simulated Real-time)
+  // Fetch queue on mount and refresh every 10 seconds
   useEffect(() => {
     fetchQueue();
-    const interval = setInterval(fetchQueue, 3000);
+    const interval = setInterval(fetchQueue, 10000);
     return () => clearInterval(interval);
-  }, [selectedDoctor]); // Re-fetch when filter changes
+  }, []);
 
   // Get statistics
   const stats = {
@@ -115,9 +108,9 @@ const QueueDisplayScreen: React.FC = () => {
 
   // Get current patient (first one with status 'called' or 'waiting')
   const currentPatient = queuePatients.find(p => p.queue_status === 'called') ||
-    queuePatients.find(p => p.queue_status === 'waiting');
+                        queuePatients.find(p => p.queue_status === 'waiting');
 
-  if (loading && queuePatients.length === 0) {
+  if (loading) {
     return (
       <div style={{
         minHeight: '100vh',
@@ -189,41 +182,14 @@ const QueueDisplayScreen: React.FC = () => {
               })}
             </p>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            {/* Doctor Filter Dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#F0F7FF', padding: '8px 16px', borderRadius: '8px' }}>
-              <Filter style={{ width: '20px', height: '20px', color: '#0056B3' }} />
-              <select
-                value={selectedDoctor}
-                onChange={(e) => setSelectedDoctor(e.target.value)}
-                style={{
-                  fontSize: '16px',
-                  padding: '8px',
-                  borderRadius: '4px',
-                  border: '1px solid #0056B3',
-                  color: '#0056B3',
-                  fontWeight: '600',
-                  minWidth: '200px',
-                  backgroundColor: 'transparent'
-                }}
-              >
-                <option value="">All Doctors</option>
-                {doctors.map(doc => (
-                  <option key={doc.id} value={doc.id}>Dr. {doc.first_name} {doc.last_name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Clock style={{ width: '32px', height: '32px', color: '#0056B3' }} />
-              <div style={{ fontSize: '32px', fontWeight: '700', color: '#0056B3' }}>
-                {currentTime.toLocaleTimeString('en-IN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit'
-                })}
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Clock style={{ width: '32px', height: '32px', color: '#0056B3' }} />
+            <div style={{ fontSize: '32px', fontWeight: '700', color: '#0056B3' }}>
+              {currentTime.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              })}
             </div>
           </div>
         </div>
@@ -285,10 +251,10 @@ const QueueDisplayScreen: React.FC = () => {
             >
               {currentPatient.queue_no}
             </div>
-            <div style={{ fontSize: '48px', fontWeight: '700', color: '#111827', marginBottom: '8px' }}>
+            <div style={{ fontSize: '32px', fontWeight: '600', color: '#333333', marginBottom: '8px' }}>
               {currentPatient.first_name} {currentPatient.last_name}
             </div>
-            <div style={{ fontSize: '24px', color: '#666666', marginTop: '16px' }}>
+            <div style={{ fontSize: '20px', color: '#666666' }}>
               Patient ID: {currentPatient.patient_id}
             </div>
           </div>
@@ -325,13 +291,14 @@ const QueueDisplayScreen: React.FC = () => {
                   padding: '16px 20px',
                   backgroundColor:
                     patient.queue_status === 'completed' ? '#F5F5F5' :
-                      patient.queue_status === 'called' ? '#E3F2FD' :
-                        '#FFFFFF',
+                    patient.queue_status === 'called' ? '#E3F2FD' :
+                    '#FFFFFF',
                   borderRadius: '8px',
-                  border: `2px solid ${patient.queue_status === 'completed' ? '#E0E0E0' :
+                  border: `2px solid ${
+                    patient.queue_status === 'completed' ? '#E0E0E0' :
                     patient.queue_status === 'called' ? '#2196F3' :
-                      '#EEEEEE'
-                    }`,
+                    '#EEEEEE'
+                  }`,
                   opacity: patient.queue_status === 'completed' ? 0.6 : 1,
                 }}
               >
@@ -374,12 +341,12 @@ const QueueDisplayScreen: React.FC = () => {
                       fontWeight: '600',
                       backgroundColor:
                         patient.queue_status === 'completed' ? '#E8F5E9' :
-                          patient.queue_status === 'called' ? '#E3F2FD' :
-                            '#FFF8E1',
+                        patient.queue_status === 'called' ? '#E3F2FD' :
+                        '#FFF8E1',
                       color:
                         patient.queue_status === 'completed' ? '#4CAF50' :
-                          patient.queue_status === 'called' ? '#2196F3' :
-                            '#F59E0B',
+                        patient.queue_status === 'called' ? '#2196F3' :
+                        '#F59E0B',
                       textTransform: 'capitalize',
                     }}
                   >
