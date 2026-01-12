@@ -292,4 +292,33 @@ export const userService = {
   }
 };
 
+// UHID Service
+export const uhidService = {
+  async getConfig(hospitalId?: string) {
+    const response = await api.get('/uhid/config', {
+      params: { hospital_id: hospitalId }
+    });
+    return response.data;
+  },
+
+  async generateUhid(hospitalId?: string) {
+    const response = await api.post('/uhid/generate', {
+      hospital_id: hospitalId
+    });
+    return response.data;
+  },
+
+  async updateConfig(config: { prefix?: string; year_format?: string; hospital_id?: string }) {
+    const response = await api.put('/uhid/config', config);
+    return response.data;
+  },
+
+  async getNextUhid(hospitalId?: string) {
+    const response = await api.get('/uhid/next', {
+      params: { hospital_id: hospitalId }
+    });
+    return response.data;
+  }
+};
+
 export default api;

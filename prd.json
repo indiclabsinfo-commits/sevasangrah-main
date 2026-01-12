@@ -1,0 +1,520 @@
+{
+  "project": "Magnus Hospital HMS",
+  "branchName": "ralph/opd-module-completion",
+  "description": "Complete OPD Module - 27 remaining features for NABH-compliant Hospital Management System",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add UHID generation configuration table",
+      "description": "As a developer, I need a database table to store UHID sequence and configuration.",
+      "acceptanceCriteria": [
+        "Create uhid_config table with columns: id, prefix (default 'MH'), year_format, current_sequence, created_at, updated_at",
+        "Insert initial row with prefix='MH', year_format='YYYY', current_sequence=0",
+        "Enable RLS on the table",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "NABH Critical - Priority 1. Completed: Created SQL migration (database_migrations/001_create_uhid_config.sql), added UHID API endpoints to backend/server.js, added uhidService to frontend azureApiService.ts. Build passes."
+    },
+    {
+      "id": "US-002",
+      "title": "Create UHID generation service function",
+      "description": "As a developer, I need a service to generate unique UHIDs.",
+      "acceptanceCriteria": [
+        "Create generateUHID function in patientService.ts",
+        "Format: MH-YYYY-XXXXXX (e.g., MH-2026-000001)",
+        "Auto-increment sequence atomically to prevent duplicates",
+        "Return generated UHID string",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "NABH Critical - Priority 1. Completed: Added generateUHID and getNextUHID functions to PatientService class. Uses uhidService from azureApiService. Build passes."
+    },
+    {
+      "id": "US-003",
+      "title": "Display UHID on patient registration form",
+      "description": "As a front desk operator, I want to see the auto-generated UHID when registering a patient.",
+      "acceptanceCriteria": [
+        "Add UHID field to patient registration form (read-only)",
+        "Generate UHID on form load for new patients",
+        "Display UHID prominently at top of form",
+        "Save UHID with patient record",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "NABH Critical - Priority 1. Completed: Added UHID display to NewFlexiblePatientEntry.tsx header, fetches next UHID on form load, displays prominently with blue styling. Build passes."
+    },
+    {
+      "id": "US-004",
+      "title": "Add Aadhaar field to patients table",
+      "description": "As a developer, I need to store Aadhaar numbers in the database.",
+      "acceptanceCriteria": [
+        "Add aadhaar_number column to patients table (varchar 12, nullable)",
+        "Add aadhaar_verified column (boolean, default false)",
+        "Create index on aadhaar_number for lookups",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "NABH Critical - Priority 1. Completed: Created SQL migration (database_migrations/002_add_aadhaar_columns.sql) with aadhaar_number, aadhaar_verified, aadhaar_verified_at columns, index, and Verhoeff validation function. Patient interface already has aadhaar_number field."
+    },
+    {
+      "id": "US-005",
+      "title": "Add Aadhaar input to patient registration",
+      "description": "As a front desk operator, I want to capture patient Aadhaar number.",
+      "acceptanceCriteria": [
+        "Add Aadhaar number field to patient registration form",
+        "Validate 12-digit format with Verhoeff checksum",
+        "Display masked format (XXXX-XXXX-1234) after entry",
+        "Field is optional - not mandatory",
+        "Show validation error for invalid format",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "NABH Critical - Priority 1. Completed: Enhanced Aadhaar field in NewFlexiblePatientEntry.tsx with Verhoeff validation, masked display, color-coded validation feedback. Build passes."
+    },
+    {
+      "id": "US-006",
+      "title": "Add ABHA fields to patients table",
+      "description": "As a developer, I need to store ABHA information in the database.",
+      "acceptanceCriteria": [
+        "Add abha_number column to patients table (varchar 14, nullable)",
+        "Add abha_address column (varchar 50, nullable) for PHR address",
+        "Add abha_status column (enum: 'not_created', 'pending', 'created', 'linked')",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "NABH Critical - Priority 1"
+    },
+    {
+      "id": "US-007",
+      "title": "Add ABHA section to patient profile",
+      "description": "As a front desk operator, I want to see and manage ABHA status on patient profile.",
+      "acceptanceCriteria": [
+        "Add ABHA section to patient profile page",
+        "Display ABHA number if exists",
+        "Display ABHA status badge (Not Created/Pending/Created/Linked)",
+        "Add 'Link ABHA' button for patients without ABHA",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "NABH Critical - Priority 1"
+    },
+    {
+      "id": "US-008",
+      "title": "Create ABHA linking modal",
+      "description": "As a front desk operator, I want to link existing ABHA numbers to patients.",
+      "acceptanceCriteria": [
+        "Create LinkABHAModal component",
+        "Input field for ABHA number (14 digits) or PHR address",
+        "Validate ABHA format",
+        "Save ABHA to patient record on submit",
+        "Update status to 'linked'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "NABH Critical - Priority 1"
+    },
+    {
+      "id": "US-009",
+      "title": "Add TAT tracking columns to patient_visits table",
+      "description": "As a developer, I need to store timestamps for TAT calculation.",
+      "acceptanceCriteria": [
+        "Add registration_time column (timestamp with timezone)",
+        "Add consultation_start_time column (timestamp with timezone)",
+        "Add consultation_end_time column (timestamp with timezone)",
+        "Add billing_complete_time column (timestamp with timezone)",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "NABH Critical - Priority 1"
+    },
+    {
+      "id": "US-010",
+      "title": "Create TAT calculation service",
+      "description": "As a developer, I need a service to calculate TAT metrics.",
+      "acceptanceCriteria": [
+        "Create tatService.ts with functions: calculateRegistrationToConsultationTAT, calculateConsultationToBillingTAT",
+        "Return TAT in minutes",
+        "Handle null timestamps gracefully",
+        "Add function to check if TAT exceeds threshold (default 30 min)",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "NABH Critical - Priority 1"
+    },
+    {
+      "id": "US-011",
+      "title": "Display TAT on queue management screen",
+      "description": "As hospital management, I want to see real-time TAT on queue display.",
+      "acceptanceCriteria": [
+        "Add TAT column to queue management table",
+        "Show waiting time in minutes for each patient",
+        "Highlight in red if TAT exceeds 30 minutes",
+        "Auto-refresh TAT every 30 seconds",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "NABH Critical - Priority 1"
+    },
+    {
+      "id": "US-012",
+      "title": "Record consultation timestamps automatically",
+      "description": "As a system, I want to capture consultation start/end times automatically.",
+      "acceptanceCriteria": [
+        "Set consultation_start_time when doctor opens patient record",
+        "Set consultation_end_time when doctor saves/closes consultation",
+        "Update patient_visits record with timestamps",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "NABH Critical - Priority 1"
+    },
+    {
+      "id": "US-013",
+      "title": "Create TAT alerts configuration",
+      "description": "As hospital management, I want to configure TAT thresholds.",
+      "acceptanceCriteria": [
+        "Create tat_config table with threshold_minutes column",
+        "Create TAT settings page in admin section",
+        "Allow setting threshold for registration-to-consultation",
+        "Allow setting threshold for consultation-to-billing",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "NABH Critical - Priority 1"
+    },
+    {
+      "id": "US-014",
+      "title": "Create TAT reports page",
+      "description": "As hospital management, I want TAT reports for analysis.",
+      "acceptanceCriteria": [
+        "Create TATReports component in reports section",
+        "Show daily TAT summary with average, min, max",
+        "Filter by date range",
+        "Show TAT breach count",
+        "Export to Excel",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "NABH Critical - Priority 1"
+    },
+    {
+      "id": "US-015",
+      "title": "Add ICD-10 codes table",
+      "description": "As a developer, I need ICD-10 codes in the database.",
+      "acceptanceCriteria": [
+        "Create icd10_codes table with columns: code, description, category",
+        "Import top 500 common ICD-10 codes",
+        "Create index on code and description for search",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-016",
+      "title": "Add ICD-10 lookup to diagnosis entry",
+      "description": "As a doctor, I want to search and add ICD-10 codes to diagnoses.",
+      "acceptanceCriteria": [
+        "Add ICD-10 search field next to diagnosis input",
+        "Searchable dropdown with code and description",
+        "Auto-suggest based on diagnosis text",
+        "Save selected ICD-10 code with diagnosis",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-017",
+      "title": "Create examination templates table",
+      "description": "As a developer, I need to store examination templates.",
+      "acceptanceCriteria": [
+        "Create examination_templates table with columns: id, name, department, template_content (jsonb), doctor_id, is_system, created_at",
+        "Add sample templates for General, Cardiology, Orthopedics",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-018",
+      "title": "Add examination template selector",
+      "description": "As a doctor, I want to apply examination templates quickly.",
+      "acceptanceCriteria": [
+        "Add 'Apply Template' button on examination form",
+        "Show template selection modal with search",
+        "Filter templates by department",
+        "Populate form fields from selected template",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-019",
+      "title": "Create prescription templates table",
+      "description": "As a developer, I need to store prescription templates.",
+      "acceptanceCriteria": [
+        "Create prescription_templates table with columns: id, name, condition, medications (jsonb), doctor_id, is_system, created_at",
+        "Add sample templates for common conditions (Fever, Hypertension, Diabetes)",
+        "Typecheck passes"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-020",
+      "title": "Add prescription template selector",
+      "description": "As a doctor, I want to apply prescription templates.",
+      "acceptanceCriteria": [
+        "Add 'Apply Template' button on prescription form",
+        "Show template selection modal",
+        "Filter by condition/department",
+        "Populate medications from template",
+        "Allow editing after applying",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-021",
+      "title": "Create drug interactions table",
+      "description": "As a developer, I need drug interaction data.",
+      "acceptanceCriteria": [
+        "Create drug_interactions table with columns: drug1_id, drug2_id, severity (minor/moderate/major), description",
+        "Import common drug interactions (at least 100 pairs)",
+        "Create index for fast lookup",
+        "Typecheck passes"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-022",
+      "title": "Add drug interaction check to prescription",
+      "description": "As a doctor, I want warnings for drug interactions.",
+      "acceptanceCriteria": [
+        "Check for interactions when adding medication",
+        "Show warning popup for major interactions",
+        "Show info alert for moderate interactions",
+        "Allow doctor to override with reason",
+        "Log override for audit",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-023",
+      "title": "Add allergy check to prescription",
+      "description": "As a doctor, I want alerts when prescribing drugs patient is allergic to.",
+      "acceptanceCriteria": [
+        "Check prescription against patient allergy list",
+        "Show blocking alert for allergy matches",
+        "Require acknowledgment before proceeding",
+        "Log alert and acknowledgment for audit",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-024",
+      "title": "Create appointment calendar view",
+      "description": "As a front desk operator, I want a calendar view of appointments.",
+      "acceptanceCriteria": [
+        "Create AppointmentCalendar component",
+        "Day/Week/Month view toggle",
+        "Color-coded by doctor",
+        "Click appointment to view details",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-025",
+      "title": "Add recurring appointments support",
+      "description": "As a front desk operator, I want to schedule recurring appointments.",
+      "acceptanceCriteria": [
+        "Add recurrence options to appointment form (Weekly, Bi-weekly, Monthly)",
+        "Add number of occurrences field",
+        "Generate all appointments in series",
+        "Link appointments with recurrence_group_id",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-026",
+      "title": "Add no-show tracking",
+      "description": "As hospital management, I want to track appointment no-shows.",
+      "acceptanceCriteria": [
+        "Add 'Mark No-Show' button on appointment list",
+        "Update appointment status to 'no_show'",
+        "Track no_show_count on patient record",
+        "Show no-show indicator on patient profile",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-027",
+      "title": "Create referrals table",
+      "description": "As a developer, I need to store referral data.",
+      "acceptanceCriteria": [
+        "Create referrals table with columns: id, patient_id, referring_doctor_id, referred_to_doctor_id, referred_to_department, referral_type (internal/external), external_hospital, notes, status, created_at",
+        "Enable RLS on the table",
+        "Typecheck passes"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-028",
+      "title": "Add referral creation form",
+      "description": "As a doctor, I want to create referrals for patients.",
+      "acceptanceCriteria": [
+        "Add 'Create Referral' button on consultation screen",
+        "Referral form with type (internal/external), department, doctor, notes",
+        "For external: add hospital name and doctor fields",
+        "Save referral to database",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-029",
+      "title": "Create referral tracking list",
+      "description": "As hospital management, I want to track all referrals.",
+      "acceptanceCriteria": [
+        "Create ReferralList component",
+        "Show all referrals with filters (date, type, status)",
+        "Update referral status (Pending, Completed, Cancelled)",
+        "Export to Excel",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-030",
+      "title": "Add doctor-wise patient count report",
+      "description": "As hospital management, I want to see patient count by doctor.",
+      "acceptanceCriteria": [
+        "Create DoctorPatientReport component",
+        "Show patient count per doctor",
+        "Filter by date range",
+        "Show bar chart visualization",
+        "Export to Excel",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-031",
+      "title": "Add department-wise revenue report",
+      "description": "As hospital management, I want to see revenue by department.",
+      "acceptanceCriteria": [
+        "Create DepartmentRevenueReport component",
+        "Show revenue breakdown by department",
+        "Daily/Weekly/Monthly view toggle",
+        "Show trend line chart",
+        "Export to Excel",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 31,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-032",
+      "title": "Add payment mode analysis report",
+      "description": "As hospital management, I want to analyze payment modes.",
+      "acceptanceCriteria": [
+        "Create PaymentModeReport component",
+        "Show breakdown by Cash/Card/UPI/Insurance",
+        "Pie chart visualization",
+        "Filter by date range",
+        "Export to Excel",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 32,
+      "passes": false,
+      "notes": "Priority 2"
+    },
+    {
+      "id": "US-033",
+      "title": "Add OPD register export",
+      "description": "As hospital management, I want to export OPD register.",
+      "acceptanceCriteria": [
+        "Create OPD Register export function",
+        "Include all patient visits with details (UHID, name, doctor, diagnosis, billing)",
+        "Filter by date range",
+        "Export in NABH-compliant format",
+        "Excel download",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 33,
+      "passes": false,
+      "notes": "Priority 2"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { Patient } from '../types/index';
+import { uhidService } from './azureApiService';
 
 export interface CreatePatientData {
   first_name: string;
@@ -69,6 +70,36 @@ export class PatientService {
       } else {
         throw new Error(`Failed to create patient: ${error.message}`);
       }
+    }
+  }
+
+  /**
+   * Generate a new UHID for patient registration
+   * Format: MH-YYYY-XXXXXX (e.g., MH-2026-000001)
+   */
+  static async generateUHID(hospitalId?: string): Promise<string> {
+    try {
+      const result = await uhidService.generateUhid(hospitalId);
+      return result.uhid;
+    } catch (error: any) {
+      console.error('Error generating UHID:', error);
+      // Fallback to local generation if API fails
+      const year = new Date().getFullYear();
+      const randomSeq = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
+      return `MH-${year}-${randomSeq}`;
+    }
+  }
+
+  /**
+   * Get the next UHID preview (without incrementing)
+   */
+  static async getNextUHID(hospitalId?: string): Promise<{ next_uhid: string; sequence: number }> {
+    try {
+      return await uhidService.getNextUhid(hospitalId);
+    } catch (error: any) {
+      console.error('Error getting next UHID:', error);
+      const year = new Date().getFullYear();
+      return { next_uhid: `MH-${year}-000001`, sequence: 1 };
     }
   }
 

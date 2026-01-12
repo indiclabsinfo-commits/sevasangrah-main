@@ -1658,6 +1658,162 @@ app.delete('/api/billing/clear-all', authenticateToken, async (req, res) => {
 });
 
 
+// ==================== UHID ROUTES ====================
+
+// Get UHID configuration
+app.get('/api/uhid/config', authenticateToken, async (req, res) => {
+  try {
+    const hospitalId = req.query.hospital_id || '550e8400-e29b-41d4-a716-446655440000';
+    
+    const result = await pool.query(
+      'SELECT * FROM uhid_config WHERE hospital_id = $1',
+      [hospitalId]
+    );
+    
+    if (result.rows.length === 0) {
+      // Return default config if not exists
+      return res.json({
+        prefix: 'MH',
+        year_format: 'YYYY',
+        current_sequence: 0,
+        hospital_id: hospitalId
+      });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching UHID config:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Generate new UHID
+app.post('/api/uhid/generate', authenticateToken, async (req, res) => {
+  try {
+    const hospitalId = req.body.hospital_id || '550e8400-e29b-41d4-a716-446655440000';
+    
+    // Try using the database function first
+    try {
+      const result = await pool.query(
+        'SELECT generate_uhid($1) as uhid',
+        [hospitalId]
+      );
+      return res.json({ uhid: result.rows[0].uhid });
+    } catch (funcError) {
+      // Function might not exist, fall back to manual generation
+      console.log('generate_uhid function not found, using manual generation');
+    }
+    
+    // Manual UHID generation with atomic update
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      // Get or create config with row lock
+      let configResult = await client.query(
+        'SELECT * FROM uhid_config WHERE hospital_id = $1 FOR UPDATE',
+        [hospitalId]
+      );
+      
+      let prefix, sequence;
+      
+      if (configResult.rows.length === 0) {
+        // Create config if not exists
+        const insertResult = await client.query(
+          `INSERT INTO uhid_config (prefix, year_format, current_sequence, hospital_id)
+           VALUES ('MH', 'YYYY', 1, $1)
+           RETURNING prefix, current_sequence`,
+          [hospitalId]
+        );
+        prefix = insertResult.rows[0].prefix;
+        sequence = insertResult.rows[0].current_sequence;
+      } else {
+        // Update sequence
+        const updateResult = await client.query(
+          `UPDATE uhid_config 
+           SET current_sequence = current_sequence + 1, updated_at = NOW()
+           WHERE hospital_id = $1
+           RETURNING prefix, current_sequence`,
+          [hospitalId]
+        );
+        prefix = updateResult.rows[0].prefix;
+        sequence = updateResult.rows[0].current_sequence;
+      }
+      
+      await client.query('COMMIT');
+      
+      // Format UHID: MH-2026-000001
+      const year = new Date().getFullYear();
+      const uhid = `${prefix}-${year}-${String(sequence).padStart(6, '0')}`;
+      
+      res.json({ uhid });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error generating UHID:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update UHID configuration
+app.put('/api/uhid/config', authenticateToken, async (req, res) => {
+  try {
+    // Only admins can update config
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    const { prefix, year_format, hospital_id } = req.body;
+    const hospitalId = hospital_id || '550e8400-e29b-41d4-a716-446655440000';
+    
+    const result = await pool.query(
+      `INSERT INTO uhid_config (prefix, year_format, hospital_id)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (hospital_id) DO UPDATE
+       SET prefix = $1, year_format = $2, updated_at = NOW()
+       RETURNING *`,
+      [prefix || 'MH', year_format || 'YYYY', hospitalId]
+    );
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating UHID config:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get current UHID sequence (for display purposes)
+app.get('/api/uhid/next', authenticateToken, async (req, res) => {
+  try {
+    const hospitalId = req.query.hospital_id || '550e8400-e29b-41d4-a716-446655440000';
+    
+    const result = await pool.query(
+      'SELECT prefix, current_sequence FROM uhid_config WHERE hospital_id = $1',
+      [hospitalId]
+    );
+    
+    let prefix = 'MH';
+    let nextSequence = 1;
+    
+    if (result.rows.length > 0) {
+      prefix = result.rows[0].prefix;
+      nextSequence = result.rows[0].current_sequence + 1;
+    }
+    
+    const year = new Date().getFullYear();
+    const nextUhid = `${prefix}-${year}-${String(nextSequence).padStart(6, '0')}`;
+    
+    res.json({ next_uhid: nextUhid, sequence: nextSequence });
+  } catch (error) {
+    console.error('Error getting next UHID:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Catch-all handler: send back React's index.html file for client-side routing
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));

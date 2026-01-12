@@ -4,6 +4,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import HospitalService from '../services/hospitalService';
 import SMSService from '../services/smsService';
+import { PatientService } from '../services/patientService';
 import type { CreatePatientData, CreateTransactionData, AssignedDoctor } from '../config/supabaseNew';
 import {
   User,
@@ -39,6 +40,53 @@ const DOCTORS_DATA = [
 
 // Get unique departments
 const DEPARTMENTS = [...new Set(DOCTORS_DATA.map(doc => doc.department))].sort();
+
+// Aadhaar Verhoeff validation
+const validateAadhaarFormat = (aadhaar: string): boolean => {
+  if (!aadhaar || aadhaar.length !== 12 || !/^\d{12}$/.test(aadhaar)) {
+    return false;
+  }
+  
+  // First digit should not be 0 or 1
+  if (aadhaar[0] === '0' || aadhaar[0] === '1') {
+    return false;
+  }
+  
+  // Verhoeff algorithm tables
+  const d = [
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
+    [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
+    [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
+    [4, 0, 1, 2, 3, 9, 5, 6, 7, 8],
+    [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
+    [6, 5, 9, 8, 7, 1, 0, 4, 3, 2],
+    [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
+    [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
+    [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+  ];
+  
+  const p = [
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
+    [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
+    [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
+    [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
+    [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
+    [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
+    [7, 0, 4, 6, 9, 1, 3, 2, 5, 8]
+  ];
+  
+  let c = 0;
+  const reversed = aadhaar.split('').reverse();
+  
+  for (let i = 0; i < reversed.length; i++) {
+    const digit = parseInt(reversed[i], 10);
+    c = d[c][p[i % 8][digit]];
+  }
+  
+  return c === 0;
+};
 
 const NewFlexiblePatientEntry: React.FC = () => {
   // Helper functions for date format conversion
@@ -138,6 +186,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('');
   const [dbDoctors, setDbDoctors] = useState<any[]>([]); // New state for DB doctors
+  const [nextUhid, setNextUhid] = useState<string>(''); // UHID preview for new patients
+  const [uhidLoading, setUhidLoading] = useState(false);
   const [filteredDoctors, setFilteredDoctors] = useState(DOCTORS_DATA);
   const [selectedDoctors, setSelectedDoctors] = useState<any[]>([]);
   const [tempDepartment, setTempDepartment] = useState('');
@@ -181,8 +231,15 @@ const NewFlexiblePatientEntry: React.FC = () => {
           // For safety, we keep legacy list but know that real functionality (Queue) needs DB ID.
           setDbDoctors(formattedDocs);
         }
+
+        // Fetch next UHID for display
+        setUhidLoading(true);
+        const uhidResult = await PatientService.getNextUHID();
+        setNextUhid(uhidResult.next_uhid);
+        setUhidLoading(false);
       } catch (e) {
         console.error('Init error:', e);
+        setUhidLoading(false);
       }
     };
     checkConnection();
@@ -1117,9 +1174,32 @@ const NewFlexiblePatientEntry: React.FC = () => {
             {/* Left Column - Patient Information */}
             <div>
               <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
-                <div className="flex items-center gap-2 mb-6">
-                  <User className="w-5 h-5" style={{ color: '#0056B3' }} />
-                  <h2 style={{ fontSize: '24px', color: '#0056B3', fontWeight: '600' }}>Patient Information</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5" style={{ color: '#0056B3' }} />
+                    <h2 style={{ fontSize: '24px', color: '#0056B3', fontWeight: '600' }}>Patient Information</h2>
+                  </div>
+                  {/* UHID Display */}
+                  <div style={{ 
+                    backgroundColor: '#E8F4FD', 
+                    border: '2px solid #0056B3', 
+                    borderRadius: '8px', 
+                    padding: '8px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>UHID:</span>
+                    <span style={{ 
+                      fontSize: '16px', 
+                      color: '#0056B3', 
+                      fontWeight: '700',
+                      fontFamily: 'monospace',
+                      letterSpacing: '0.5px'
+                    }}>
+                      {uhidLoading ? 'Loading...' : (nextUhid || 'MH-2026-000001')}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Patient Photo Upload */}
@@ -1497,7 +1577,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                 {/* Aadhaar Number Field */}
                 <div className="mb-4">
                   <label style={{ display: 'block', fontSize: '14px', color: '#333333', marginBottom: '6px', fontWeight: '500' }}>
-                    Aadhaar Number
+                    Aadhaar Number <span style={{ fontSize: '12px', color: '#666', fontWeight: '400' }}>(optional)</span>
                   </label>
                   <input
                     type="text"
@@ -1511,19 +1591,46 @@ const NewFlexiblePatientEntry: React.FC = () => {
                       width: '100%',
                       padding: '10px 12px',
                       borderRadius: '8px',
-                      border: '1px solid #CCCCCC',
+                      border: `1px solid ${formData.aadhaar_number.length === 12 
+                        ? (validateAadhaarFormat(formData.aadhaar_number) ? '#22C55E' : '#EF4444') 
+                        : '#CCCCCC'}`,
                       fontSize: '16px',
                       color: '#333333',
-                      outline: 'none'
+                      outline: 'none',
+                      fontFamily: 'monospace',
+                      letterSpacing: '1px'
                     }}
-                    placeholder="Enter 12-digit Aadhaar number (optional)"
+                    placeholder="Enter 12-digit Aadhaar number"
                     maxLength={12}
                     onFocus={(e) => e.currentTarget.style.borderColor = '#0056B3'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#CCCCCC'}
+                    onBlur={(e) => {
+                      if (formData.aadhaar_number.length === 12) {
+                        e.currentTarget.style.borderColor = validateAadhaarFormat(formData.aadhaar_number) ? '#22C55E' : '#EF4444';
+                      } else {
+                        e.currentTarget.style.borderColor = '#CCCCCC';
+                      }
+                    }}
                   />
-                  <span style={{ fontSize: '12px', color: '#666666', marginTop: '4px', display: 'block' }}>
-                    Example: 123456789012
-                  </span>
+                  {/* Display masked Aadhaar after entry */}
+                  {formData.aadhaar_number.length === 12 && (
+                    <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ 
+                        fontSize: '14px', 
+                        color: validateAadhaarFormat(formData.aadhaar_number) ? '#22C55E' : '#EF4444',
+                        fontWeight: '500'
+                      }}>
+                        {validateAadhaarFormat(formData.aadhaar_number) ? '✓ Valid format' : '✗ Invalid Aadhaar number'}
+                      </span>
+                      <span style={{ fontSize: '13px', color: '#666', fontFamily: 'monospace' }}>
+                        Display: XXXX-XXXX-{formData.aadhaar_number.slice(-4)}
+                      </span>
+                    </div>
+                  )}
+                  {formData.aadhaar_number.length > 0 && formData.aadhaar_number.length < 12 && (
+                    <span style={{ fontSize: '12px', color: '#F59E0B', marginTop: '4px', display: 'block' }}>
+                      {12 - formData.aadhaar_number.length} more digits required
+                    </span>
+                  )}
                 </div>
 
                 {/* Date Fields */}

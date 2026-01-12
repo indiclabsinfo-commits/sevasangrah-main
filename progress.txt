@@ -1,0 +1,40 @@
+# Ralph Progress Log - Magnus Hospital HMS
+
+## Project: OPD Module Completion
+## Branch: ralph/opd-module-completion
+## Started: January 13, 2026
+
+---
+
+## Context for Future Iterations
+
+### Tech Stack
+- React 19 + TypeScript + Vite
+- Supabase (PostgreSQL) backend
+- TanStack Query for data fetching
+- Zustand for state management
+- Tailwind CSS + custom components
+
+### Key Directories
+- Components: src/components/
+- Pages: src/pages/
+- Services: src/services/
+- Types: src/types/
+
+### Development Commands
+- `npm run dev` - Start dev server
+- `npm run build` - Build for production
+- `npm run build:typecheck` - Build with TypeScript checking
+- `npm run lint` - Run ESLint
+
+### Database
+- All tables in Supabase PostgreSQL
+- RLS enabled on all tables
+- Use supabase client from src/lib/supabase.ts
+
+---
+
+## Learnings
+
+(Ralph will append learnings here after each iteration)
+
