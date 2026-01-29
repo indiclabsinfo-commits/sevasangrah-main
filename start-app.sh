@@ -27,7 +27,7 @@ fi
 echo -e "${BLUE}Starting backend server on port 3001...${NC}"
 cd backend && npm start &
 BACKEND_PID=$!
-cd ..
+
 
 # Wait for backend to start
 sleep 3

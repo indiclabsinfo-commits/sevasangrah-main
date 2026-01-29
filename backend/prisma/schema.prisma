@@ -7,6 +7,44 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique // For subdomains (e.g., 'magnus')
+  logoUrl     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users             User[]
+  patients          Patient[]
+  departments       Department[]
+  appointments      Appointment[]
+  bills             Bill[]
+  subscription      Subscription?
+  auditLogs         AuditLog[]
+  dischargeSummaries DischargeSummary[]
+  dischargeBills    DischargeBill[]
+  patientAdmissions PatientAdmission[]
+  uhidConfigs       UhidConfig[]
+}
+
+model Subscription {
+  id              String       @id @default(cuid())
+  orgId           String       @unique
+  organization    Organization @relation(fields: [orgId], references: [id])
+  isOpdEnabled    Boolean      @default(true)
+  isIpdEnabled    Boolean      @default(false)
+  isHrmEnabled    Boolean      @default(false)
+  isTallyEnabled  Boolean      @default(false)
+  isPharmaEnabled Boolean      @default(false)
+  isLabEnabled    Boolean      @default(false)
+  maxUsers        Int          @default(10)
+  maxBeds         Int          @default(20)
+  expiresAt       DateTime?
+  updatedAt       DateTime     @updatedAt
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -17,12 +55,16 @@ model User {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  patients  Patient[]
-  bills     Bill[]
+  
+  orgId          String
+  organization   Organization @relation(fields: [orgId], references: [id])
+  
+  patients           Patient[]
+  bills              Bill[]
   dischargeSummaries DischargeSummary[]
-  dischargeBills DischargeBill[]
-  departments Department[]
-  appointments Appointment[]
+  dischargeBills     DischargeBill[]
+  departments        Department[]
+  appointments       Appointment[]
 }
 
 model Patient {
@@ -45,8 +87,13 @@ model Patient {
   isActive              Boolean  @default(true)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+  
+  orgId          String
+  organization   Organization @relation(fields: [orgId], references: [id])
+  
   createdById           String
   createdBy             User     @relation(fields: [createdById], references: [id])
+  
   appointments          Appointment[]
   bills                 Bill[]
   dischargeSummaries    DischargeSummary[]
@@ -55,19 +102,29 @@ model Patient {
 
 model Department {
   id          String   @id @default(cuid())
-  name        String   @unique
+  name        String   
   description String?
-  headDoctor  User?    @relation(fields: [headDoctorId], references: [id])
-  headDoctorId String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  appointments Appointment[]
+  
+  orgId          String
+  organization   Organization @relation(fields: [orgId], references: [id])
+  
+  headDoctor     User?    @relation(fields: [headDoctorId], references: [id])
+  headDoctorId   String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  appointments   Appointment[]
+
+  @@unique([orgId, name])
 }
 
 model Appointment {
   id              String      @id @default(cuid())
   appointmentId   String      @unique
+  
+  orgId           String
+  organization    Organization @relation(fields: [orgId], references: [id])
+  
   patientId       String
   patient         Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctorId        String
@@ -93,6 +150,10 @@ model Appointment {
 model Bill {
   id              String      @id @default(cuid())
   billNumber      String      @unique
+  
+  orgId           String
+  organization    Organization @relation(fields: [orgId], references: [id])
+  
   patientId       String
   patient         Patient     @relation(fields: [patientId], references: [id])
   appointmentId   String      @unique
@@ -120,6 +181,10 @@ model Bill {
 
 model AuditLog {
   id         String   @id @default(cuid())
+  
+  orgId      String
+  organization Organization @relation(fields: [orgId], references: [id])
+  
   userId     String?
   action     String
   resource   String
@@ -134,6 +199,10 @@ model AuditLog {
 model DischargeSummary {
   id                      String   @id @default(cuid())
   admission_id            String
+  
+  orgId                   String
+  organization            Organization @relation(fields: [orgId], references: [id])
+  
   patient_id              String
   patient                 Patient  @relation(fields: [patient_id], references: [id])
   final_diagnosis         String
@@ -153,7 +222,6 @@ model DischargeSummary {
   discharge_notes         String?
   created_by              String
   createdBy               User     @relation(fields: [created_by], references: [id])
-  hospital_id             String
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
   dischargeBill           DischargeBill? 
@@ -162,6 +230,10 @@ model DischargeSummary {
 model DischargeBill {
   id                   String   @id @default(cuid())
   admission_id         String
+  
+  orgId                String
+  organization         Organization @relation(fields: [orgId], references: [id])
+  
   patient_id           String
   patient              Patient  @relation(fields: [patient_id], references: [id])
   discharge_summary_id String   @unique
@@ -185,27 +257,34 @@ model DischargeBill {
   stay_duration        Int
   created_by           String
   createdBy            User     @relation(fields: [created_by], references: [id])
-  hospital_id          String
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }
 
 model PatientAdmission {
     id             String @id @default(cuid())
+    
+    orgId          String
+    organization   Organization @relation(fields: [orgId], references: [id])
+    
     patient_id     String
     admission_date DateTime
     discharge_date DateTime?
     bed_id         String?
     status         String
-    hospital_id    String
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
 }
 
 model UhidConfig {
     id              String   @id @default(cuid())
+    
+    orgId           String
+    organization    Organization @relation(fields: [orgId], references: [id])
+    
     prefix          String   @default("MH")
     yearFormat      String   @default("YYYY")
     currentSequence Int      @default(0)
-    hospitalId      String?
     createdAt       DateTime @default(now())
     updatedAt       DateTime @updatedAt
 }

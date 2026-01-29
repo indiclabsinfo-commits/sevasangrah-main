@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { PatientService } from '../services/patientService';
 import { appointmentService } from '../services/appointmentService';
 import { supabase } from '../config/supabase';
+import AppointmentCalendar from './AppointmentCalendar';
 
 interface Appointment {
   id: string;
@@ -14,11 +15,18 @@ interface Appointment {
   appointment_date: string;
   appointment_time: string;
   appointment_type: 'consultation' | 'follow-up' | 'procedure' | 'emergency';
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   estimated_duration: number;
   estimated_cost: number;
   notes: string;
   created_at: string;
+  recurring_group_id?: string;
+  reminder_sent?: boolean;
+}
+
+interface RecurrenceConfig {
+  frequency: 'daily' | 'weekly' | 'monthly';
+  endDate: string;
 }
 
 const AppointmentManagement: React.FC = () => {
@@ -26,6 +34,9 @@ const AppointmentManagement: React.FC = () => {
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [isRecurring, setIsRecurring] = useState(false);
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm();
 
@@ -62,7 +73,7 @@ const AppointmentManagement: React.FC = () => {
   const loadAppointments = async () => {
     try {
       setLoading(true);
-      
+
       // Try to load from Supabase first
       try {
         const response = await appointmentService.getAppointments({
@@ -70,7 +81,7 @@ const AppointmentManagement: React.FC = () => {
           sortBy: 'scheduled_at',
           sortOrder: 'desc'
         });
-        
+
         if (response && response.data) {
           // Transform Supabase appointments to local format
           const supabaseAppointments = response.data.map((apt: any) => ({
@@ -88,7 +99,7 @@ const AppointmentManagement: React.FC = () => {
             notes: apt.notes || '',
             created_at: apt.created_at,
           }));
-          
+
           // Also save to localStorage for offline access
           localStorage.setItem('hospital_appointments', JSON.stringify(supabaseAppointments));
           setAppointments(supabaseAppointments);
@@ -97,7 +108,7 @@ const AppointmentManagement: React.FC = () => {
       } catch (supabaseError) {
         console.log('Could not fetch from Supabase, falling back to localStorage:', supabaseError);
       }
-      
+
       // Fallback to localStorage if Supabase fails
       const existingAppointments = localStorage.getItem('hospital_appointments');
       if (existingAppointments) {
@@ -116,7 +127,7 @@ const AppointmentManagement: React.FC = () => {
   const onSubmit = async (data: any) => {
     try {
       setLoading(true);
-      
+
       const newAppointment: Appointment = {
         id: Date.now().toString(),
         patient_id: 'manual-' + Date.now(),
@@ -131,19 +142,58 @@ const AppointmentManagement: React.FC = () => {
         estimated_cost: Number(data.estimated_cost) || 500,
         notes: data.notes || '',
         created_at: new Date().toISOString(),
+        recurring_group_id: isRecurring ? 'temp-' + Date.now() : undefined
       };
+
+      // API Payload with recurrence
+      const apiPayload = {
+        ...newAppointment,
+        recurrence: isRecurring ? {
+          frequency: data.recurrence_frequency,
+          endDate: data.recurrence_end_date
+        } : undefined
+      };
+
+      // In real implementation, we would send apiPayload to backend
+      // await appointmentService.createAppointment(apiPayload);
+
+      // For now, simulating backend recurrence generation for local storage fallback
+      const appointmentsToAdd = [newAppointment];
+
+      if (isRecurring && data.recurrence_end_date) {
+        // Logic to generate local recurring appointments for demo purposes
+        // (Backend handles this in real app)
+        const endDate = new Date(data.recurrence_end_date);
+        let currentDate = new Date(data.appointment_date);
+
+        // Simple loop to add 5 more for demo if local
+        for (let i = 0; i < 5; i++) {
+          if (data.recurrence_frequency === 'daily') currentDate.setDate(currentDate.getDate() + 1);
+          else if (data.recurrence_frequency === 'weekly') currentDate.setDate(currentDate.getDate() + 7);
+          else if (data.recurrence_frequency === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1);
+
+          if (currentDate > endDate) break;
+
+          appointmentsToAdd.push({
+            ...newAppointment,
+            id: Date.now().toString() + '-' + i,
+            appointment_date: currentDate.toISOString().split('T')[0],
+            recurring_group_id: newAppointment.recurring_group_id
+          });
+        }
+      }
 
       // Save to localStorage
       const existingAppointments = localStorage.getItem('hospital_appointments');
-      const appointments = existingAppointments ? JSON.parse(existingAppointments) : [];
-      appointments.push(newAppointment);
-      localStorage.setItem('hospital_appointments', JSON.stringify(appointments));
+      const currentAppointments = existingAppointments ? JSON.parse(existingAppointments) : [];
+      const updatedAppointments = [...currentAppointments, ...appointmentsToAdd];
+      localStorage.setItem('hospital_appointments', JSON.stringify(updatedAppointments));
 
-      setAppointments(appointments);
-      
+      setAppointments(updatedAppointments);
+
       // Dispatch custom event for same-tab updates
       window.dispatchEvent(new Event('appointmentUpdated'));
-      
+
       toast.success(`Appointment scheduled for ${data.patient_name} on ${new Date(data.appointment_date).toLocaleDateString('en-IN')}`);
       setShowNewAppointment(false);
       reset();
@@ -159,13 +209,13 @@ const AppointmentManagement: React.FC = () => {
     const updated = appointments.map(apt =>
       apt.id === appointmentId ? { ...apt, status: newStatus } : apt
     );
-    
+
     localStorage.setItem('hospital_appointments', JSON.stringify(updated));
     setAppointments(updated);
-    
+
     // Dispatch custom event for same-tab updates
     window.dispatchEvent(new Event('appointmentUpdated'));
-    
+
     toast.success(`Appointment status updated to ${newStatus}`);
   };
 
@@ -184,10 +234,10 @@ const AppointmentManagement: React.FC = () => {
       const updated = appointments.filter(apt => apt.id !== appointmentId);
       localStorage.setItem('hospital_appointments', JSON.stringify(updated));
       setAppointments(updated);
-      
+
       // Dispatch custom event for same-tab updates
       window.dispatchEvent(new Event('appointmentUpdated'));
-      
+
       toast.success('Appointment deleted successfully');
     } catch (error) {
       console.error('Error deleting appointment:', error);
@@ -201,7 +251,9 @@ const AppointmentManagement: React.FC = () => {
       case 'confirmed': return 'bg-green-100 text-green-800';
       case 'in_progress': return 'bg-yellow-100 text-yellow-800';
       case 'completed': return 'bg-gray-100 text-gray-800';
+      case 'completed': return 'bg-gray-100 text-gray-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'no_show': return 'bg-red-200 text-red-900 border border-red-300';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -266,22 +318,45 @@ const AppointmentManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="flex gap-4 items-center">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md"
+        </div>
+
+        {/* View Toggle */}
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              <option value="all">All Statuses</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+              📋 List View
+            </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'calendar' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              📅 Calendar View
+            </button>
+          </div>
+          <div>
+            {/* Filter kept on right */}
           </div>
         </div>
+
+        {/* Filters */}
+        <div className="flex gap-4 items-center">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md"
+          >
+            <option value="all">All Statuses</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+
 
         {/* New Appointment Form */}
         {showNewAppointment && (
@@ -390,6 +465,47 @@ const AppointmentManagement: React.FC = () => {
                 </div>
               </div>
 
+              {/* Recurrence Options */}
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="flex items-center mb-4">
+                  <input
+                    type="checkbox"
+                    id="recurrence"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="recurrence" className="ml-2 block text-sm font-medium text-gray-900">
+                    Uncheck to set One-time, Check to Repeat (Recurring)
+                  </label>
+                </div>
+
+                {isRecurring && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                      <select
+                        {...register('recurrence_frequency')}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      >
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                      <input
+                        type="date"
+                        {...register('recurrence_end_date')}
+                        min={new Date().toISOString().split('T')[0]}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                 <textarea
@@ -420,118 +536,142 @@ const AppointmentManagement: React.FC = () => {
           </div>
         )}
 
-        {/* Appointments List */}
-        <div className="overflow-x-auto">
-          {filteredAppointments.length > 0 ? (
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor & Department</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cost</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredAppointments.map((appointment) => (
-                  <tr key={appointment.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{appointment.patient_name}</div>
-                      <div className="text-sm text-gray-500">ID: {appointment.patient_id.slice(0, 8)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{appointment.doctor_name}</div>
-                      <div className="text-sm text-gray-500">{appointment.department}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-gray-900">
-                        {new Date(appointment.appointment_date).toLocaleDateString('en-IN')}
-                      </div>
-                      <div className="text-sm text-gray-500">{appointment.appointment_time}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="flex items-center gap-1">
-                        {getTypeIcon(appointment.appointment_type)}
-                        {appointment.appointment_type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(appointment.status)}`}>
-                        {appointment.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-semibold">₹{appointment.estimated_cost.toLocaleString()}</div>
-                      <div className="text-sm text-gray-500">{appointment.estimated_duration}min</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex gap-2 flex-wrap">
-                        {appointment.status === 'scheduled' && (
-                          <button
-                            onClick={() => updateAppointmentStatus(appointment.id, 'confirmed')}
-                            className="text-green-600 hover:text-green-800 font-medium"
-                          >
-                            Confirm
-                          </button>
-                        )}
-                        {appointment.status === 'confirmed' && (
-                          <button
-                            onClick={() => updateAppointmentStatus(appointment.id, 'in_progress')}
-                            className="text-blue-600 hover:text-blue-800 font-medium"
-                          >
-                            Start
-                          </button>
-                        )}
-                        {appointment.status === 'in_progress' && (
-                          <button
-                            onClick={() => updateAppointmentStatus(appointment.id, 'completed')}
-                            className="text-purple-600 hover:text-purple-800 font-medium"
-                          >
-                            Complete
-                          </button>
-                        )}
-                        {!['completed', 'cancelled'].includes(appointment.status) && (
-                          <button
-                            onClick={() => cancelAppointment(appointment.id)}
-                            className="text-orange-600 hover:text-orange-800 font-medium"
-                          >
-                            Cancel
-                          </button>
-                        )}
-                        <button
-                          onClick={() => deleteAppointment(appointment.id, appointment.patient_name)}
-                          className="text-red-600 hover:text-red-800 font-medium"
-                          title="Delete appointment permanently"
-                        >
-                          🗑️ Delete
-                        </button>
-                      </div>
-                    </td>
+        {/* Appointments List or Calendar */}
+        {viewMode === 'calendar' ? (
+          <div className="p-6">
+            <AppointmentCalendar
+              appointments={appointments}
+              onSelectDate={(date) => {
+                setSelectedDate(date.split('T')[0]);
+                setViewMode('list'); // Switch to list to show details for that day
+                // In a real app, maybe show a modal or side panel
+                setFilterStatus('all'); // Reset filter
+              }}
+              selectedDate={selectedDate}
+            />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            {filteredAppointments.length > 0 ? (
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor & Department</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cost</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">📅</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
-              <p className="text-gray-500 mb-4">
-                Get started by scheduling your first appointment
-              </p>
-              <button
-                onClick={() => setShowNewAppointment(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-              >
-                ➕ Schedule Appointment
-              </button>
-            </div>
-          )}
-        </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredAppointments.map((appointment) => (
+                    <tr key={appointment.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-medium text-gray-900">{appointment.patient_name}</div>
+                        <div className="text-sm text-gray-500">ID: {appointment.patient_id.slice(0, 8)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-medium text-gray-900">{appointment.doctor_name}</div>
+                        <div className="text-sm text-gray-500">{appointment.department}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-gray-900">
+                          {new Date(appointment.appointment_date).toLocaleDateString('en-IN')}
+                        </div>
+                        <div className="text-sm text-gray-500">{appointment.appointment_time}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="flex items-center gap-1">
+                          {getTypeIcon(appointment.appointment_type)}
+                          {appointment.appointment_type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(appointment.status)}`}>
+                          {appointment.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-semibold">₹{appointment.estimated_cost.toLocaleString()}</div>
+                        <div className="text-sm text-gray-500">{appointment.estimated_duration}min</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex gap-2 flex-wrap">
+                          {appointment.status === 'scheduled' && (
+                            <button
+                              onClick={() => updateAppointmentStatus(appointment.id, 'confirmed')}
+                              className="text-green-600 hover:text-green-800 font-medium"
+                            >
+                              Confirm
+                            </button>
+                          )}
+                          {appointment.status === 'confirmed' && (
+                            <button
+                              onClick={() => updateAppointmentStatus(appointment.id, 'in_progress')}
+                              className="text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              Start
+                            </button>
+                          )}
+                          {appointment.status === 'in_progress' && (
+                            <button
+                              onClick={() => updateAppointmentStatus(appointment.id, 'completed')}
+                              className="text-purple-600 hover:text-purple-800 font-medium"
+                            >
+                              Complete
+                            </button>
+                          )}
+                          {!['completed', 'cancelled', 'no_show'].includes(appointment.status) && (
+                            <button
+                              onClick={() => cancelAppointment(appointment.id)}
+                              className="text-orange-600 hover:text-orange-800 font-medium"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                          {!['completed', 'cancelled', 'no_show'].includes(appointment.status) && (
+                            <button
+                              onClick={() => updateAppointmentStatus(appointment.id, 'no_show')}
+                              className="text-gray-600 hover:text-gray-800 font-medium"
+                              title="Mark as No-Show"
+                            >
+                              🚫 No-Show
+                            </button>
+                          )}
+                          <button
+                            onClick={() => deleteAppointment(appointment.id, appointment.patient_name)}
+                            className="text-red-600 hover:text-red-800 font-medium"
+                            title="Delete appointment permanently"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📅</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
+                <p className="text-gray-500 mb-4">
+                  Get started by scheduling your first appointment
+                </p>
+                <button
+                  onClick={() => setShowNewAppointment(true)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                >
+                  ➕ Schedule Appointment
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </div>
+    </div >
   );
 };
 

@@ -1,0 +1,570 @@
+SOFTWARE DEVELOPMENT & SERVICE AGREEMENT
+Between Magnus Hospital and Indic Labs
+
+---
+
+This Agreement is made and entered into on this **26th** day of **January**, 20**26** (the "Effective Date"), by and between:
+
+**MAGNUS HOSPITAL**, located at **24 Meera Nagar, 80 Feet Road, Shobhagpura, Bhuwana, Udaipur**, represented by **Dr. Naveen Goyal** (hereinafter referred to as the "Client"),
+
+**AND**
+
+**INDIC LABS**, a company incorporated under the laws of India, having its **Company Registration No. 8006239876000002** and principal place of business at **4, Bahubali Colony, Manvakheda Road, Sector 4, Udaipur** (hereinafter referred to as the "Service Provider").
+
+---
+
+**1. RECITALS**
+
+WHEREAS, the Client wishes to implement a comprehensive Hospital Management System (HMS) to manage its operations including OPD, IPD, Billing, and Compliance;
+
+WHEREAS, the Service Provider has the expertise to design, develop, and maintain such software;
+
+NOW, THEREFORE, the parties agree as follows:
+
+---
+
+**2. SCOPE OF SERVICES**
+
+The Service Provider agrees to deliver the "Complete Hospital Management System" as detailed in Annexure A. The scope is divided into two phases:
+
+- Phase 1 (Core HMS): 14 Modules including OPD, IPD, Billing, Tally, Lab (Manual), Pharmacy, etc.
+- Phase 2 (Post-Implementation): Gate Entry Movement, Ambulance Management, and Canteen Management System.
+
+**System Capacity:** 50 Beds + 25 Users.
+
+**2.1. Annexure A Finality:** Annexure A, as finalized and signed by both parties on the Effective Date, shall be deemed final, binding, and not subject to unilateral modification.
+
+**2.2. Clinical Safety & Patient Care (Crucial Clause)**
+The Software is intended solely as a clinical support and hospital management tool and shall not replace professional medical judgment. Any defect, bug, or system failure that may directly or indirectly affect patient safety shall be classified as a **Critical Issue** and must be resolved within **twenty-four (24) hours**, or an acceptable workaround must be provided immediately at no additional cost.
+
+---
+
+**3. PROJECT TIMELINE & TESTING SCHEDULE (COMPRESSED)**
+
+The project shall be implemented over a period of **12 Weeks (3 Months)**. The specific readiness dates for testing each module (starting Jan 26, 2026) are defined below:
+
+| Module No. | Module Name | Ready for Testing (Tentative Date) |
+| :--- | :--- | :--- |
+| 1 | OPD Management | **10/02/2026** |
+| 2 | IPD Management | **20/03/2026** |
+| 3 | Billing & Accounts | **30/03/2026** |
+| 4 | Tally Integration | **10/04/2026** |
+| 5 | Reports & Analytics | **15/04/2026** |
+| 6 | Pharmacy Management | **05/02/2026** |
+| 7 | Inventory (General) | **15/02/2026** |
+| 8 | HRM - Human Resources | **20/02/2026** |
+| 9 | Security & Access Control | **05/03/2026** |
+| 10 | Floor Management & Nurse Station | **10/03/2026** |
+| 11 | Laboratory Management (Software) | **15/03/2026** |
+| 12 | NABH/ABHA Compliance | **10/04/2026** |
+| 13 | Blood Bank System | **15/04/2026** |
+| 14 | Communication Services | **Setup Included** |
+
+**3.1. Delay Penalty / Liquidated Damages (New Clause)**
+In the event of delay beyond the agreed project timelines or module delivery dates, the Service Provider shall be liable to pay a penalty of **1% of the total contract value per week of delay**, subject to a maximum cap of **15%**. The Client reserves the right to withhold milestone payments until delayed deliverables are completed.
+
+**3.2. Proportional Timeline Extension:** Project timelines shall be extended proportionately for any delay caused due to non-availability of hospital data, statutory approvals, infrastructure readiness, or user sign-offs attributable to the Client.
+
+---
+
+**4. COMMERCIAL TERMS**
+
+The Total Project Cost of **Rs. 2,50,000/-** is distributed across the modules based on complexity and scope as follows:
+
+No. | Module / Service Name | Allocated Cost (INR)
+--- | --- | ---
+1 | OPD Management | Rs. 35,000
+2 | IPD Management | Rs. 45,000
+3 | Billing & Accounts | Rs. 25,000
+4 | Tally Integration | Rs. 25,000
+5 | Reports & Analytics | Rs. 15,000
+6 | Pharmacy Management | Rs. 15,000
+7 | Inventory (General) | Rs. 15,000
+8 | HRM - Human Resources | Rs. 30,000
+9 | Security & Access Control | Rs. 5,000
+10 | Floor Management & Nurse Station | Rs. 12,000
+11 | Laboratory Management (Software Only) | Rs. 15,000
+12 | NABH/ABHA Compliance | Rs. 8,000
+13 | Blood Bank System | Rs. 5,000
+14 | Communication Services Integration | Included
+| | **Total Year 1 Implementation & License Fee** | **Rs. 2,50,000/-**
+
+**AMC & SECURITY UPDATES:**
+- Charges: 15% of the Project Cost (**Rs. 37,500/- per annum**) starting from Year 2.
+- AMC Scope: Covers bug fixes, security patches, performance tuning, and government compliance updates.
+- Price Escalation: Percentage/charges subject to periodic increase of 5% to 10% annually after the initial 3-year period.
+- **Grace Period (New Clause):** A grace period of **sixty (60) days** shall apply for any delayed AMC payments. During this period, critical security patches and vulnerability fixes shall continue to be provided.
+- Consequences of Non-Payment: Only non-critical support services may be suspended after the grace period. Critical security updates, patient safety–related fixes, and data integrity protections shall continue without interruption.
+
+---
+
+**5. SERVICE LEVEL AGREEMENT (SLA), SUPPORT & WARRANTY**
+
+**5.1. Disaster Recovery & Business Continuity (New Clause)**
+The Service Provider shall maintain a **Disaster Recovery (DR)** mechanism ensuring a maximum downtime of **four (4) hours per month**.
+- Recovery Time Objective (RTO): Shall not exceed **24 hours**.
+- Recovery Point Objective (RPO): Shall not exceed **12 hours**.
+- Quarterly backup restoration testing shall be conducted and reports shared with the Client.
+
+**5.2. Warranty (New Clause)**
+The Service Provider warrants that the software shall perform materially in accordance with the agreed specifications for a period of **twelve (12) months from Go-Live**. Any defects identified during the warranty period shall be rectified at no additional cost.
+
+**5.3. Support Response Times**
+- Critical Issue: Response within 2–4 hours.
+- Major Issue: Response within 24 hours.
+- Minor Issue: Response within 48–72 hours.
+- Bug Correction: Any software bugs identified will be corrected at no additional cost under the AMC.
+- Uptime Guarantee: Monthly system uptime of 99.5%.
+
+---
+
+**6. DATA PROTECTION, SECURITY & BACKUP**
+
+6.1 **Data Ownership:** The Hospital (Client) retains exclusive ownership of ALL patient and administrative data generated by the system.
+
+6.2 **Compliance:** The software is designed to align with the IT Act 2000, DPDP Act 2023 (India), ABDM Data Privacy Guidelines, and HIPAA best practices.
+
+6.3 **Security Measures:**
+- Encryption: Data shall be encrypted at rest and in transit.
+- Access Control: Super Admin rights reserved for the Hospital. Non-editable audit trails and downloadable access logs included.
+- Backup Policy: Automated daily backups (local + cloud option). Retrievable in a readable format.
+
+6.4 **Data Breach Liability:** Service Provider notified within 24 hours. No liability for breaches due to physical theft of server, staff negligence (password sharing), or hardware/local network vulnerabilities (e.g. Ransomware not related to software).
+
+6.5 **Data Accessibility (Revised Clause):** Notwithstanding any payment dispute, the Service Provider **shall not block or restrict access to patient medical records at any time**. The Service Provider may suspend support services or new data entry after providing written notice and a minimum grace period of thirty (30) days; however, **read-only access to historical patient data shall always remain available to the Client**.
+
+6.6 **Source Code Escrow & Access:** The complete source code shall be maintained in a secure private repository with periodic updates. The source code repository shall be a private, access-controlled version control system with regular commits not exceeding a gap of thirty (30) days. Access to the repository shall be released to the Client in the event of vendor non-support, insolvency, business closure, or sustained SLA breach exceeding thirty (30) days.
+
+---
+
+**7. USER ACCEPTANCE & GO-LIVE**
+- Final payment and Go-Live are subject to Client sign-off on User Acceptance Testing (UAT) and a "Bug-Free Certification" for critical functions.
+- Minimum performance benchmarks must be met before system is declared live.
+
+**7.1. Critical Bugs Definition:** Critical bugs shall mean defects affecting patient safety, billing accuracy, statutory compliance, or system availability.
+
+**8. CHANGE MANAGEMENT**
+- Changes to scope must be approved in writing via formal "Change Request" format documenting impact on cost and timeline.
+
+**9. EXPANSION, TRAINING & FUTURE UPDATES**
+- Capacity expansion or new branches quoted separately.
+- Additional training (staff turnover/expansion) charged at standard market prices.
+- Government Standards: updates to align with new regulations provided as part of ongoing services.
+
+**10. CUSTOMIZATION**
+- Implementation changes included in cost.
+- Post-Implementation: changes <= 1 hour are free. > 1 hour charged at Rs. 125/hour.
+
+**10.1. Customization Cap:** Chargeable customization hours shall not exceed forty (40) hours per annum without prior written approval from the Client.
+
+**10.2. Training Commitment:** A minimum of two (2) comprehensive training sessions covering administrative staff, doctors, and nursing staff shall be included.
+
+**11. SPECIFIC EXCLUSIONS**
+- **IMPORTANT:** Direct integration with laboratory equipment is NOT included. Module 11 functions on manual entry basis.
+
+**12. TECHNICAL SPECIFICATIONS & LICENSING**
+- Database: PostgreSQL. Environment: VS Code, Cursor, Antigravity.
+- The Client shall be granted a perpetual internal-use license. Ongoing support, updates, and enhancements shall be governed separately under the AMC.
+
+**13. LEGAL & TERMINATION**
+- **Exit & Data Migration (Strengthened Clause):** Upon termination, the Service Provider shall provide **complete data in SQL and CSV formats at no cost** and shall assist the Client in migration activities for a minimum period of **thirty (30) days**. Handover within 7 days.
+- IP: Source Code transferred exclusively to Client Owner (Dr. Naveen Goyal) upon full payment. Must be kept strictly private and confidential.
+- **Audit Rights (New Clause):** The Client reserves the right to conduct **security, compliance, NABH, or IT audits** of the system. The Service Provider shall cooperate fully and provide required documentation without additional charges.
+
+**13.1. Vendor Default & Pro-rata Refund:** In the event of vendor default, abandonment, or inability to complete the project, the Client shall be entitled to a pro-rata refund corresponding to undelivered milestones.
+- Jurisdiction: Courts in Udaipur.
+
+---
+
+**For MAGNUS HOSPITAL:**                                        **For INDIC LABS:**
+
+__________________________                                     __________________________
+**Dr. Naveen Goyal**                                            **Mr. Hitesh Chandra Rawal**
+(Authorized Signatory)                                          (Authorized Signatory)
+
+---
+
+### ANNEXURE A: DETAILED SCOPE OF SERVICES
+
+#### MODULE 1: OPD MANAGEMENT
+1	Patient Registration (Demographics, National ID, etc.)
+2	Doctor Consultation Management
+3	Appointment Scheduling
+4	Patient Search & History
+5	Digital Medical Records
+6	Prescription System (Multiple Templates)
+7	Chief Complaints Recording
+8	Examination & Diagnosis
+9	Patient Photo Upload
+10	WhatsApp appointment reminders
+11	SMS notifications for follow-ups
+12	Enhanced document upload
+13	Medical certificate generation
+14	Discharge summary automation
+15	ABHA linking / ABHA Creation
+16	Patient self-registration via kiosk
+17	Ticket display in waiting hall
+18	Mobile number verification (OTP)
+19	Unique Patient ID (UHID) Generation
+20	Configure UHID format
+21	Generate/Capture ABHA
+22	Duplicate patient registration check
+23	Offline mode registration support
+24	Episode of Care grouping
+25	Link records to UHID
+26	Share records with affiliates
+27	Referral Management
+28	Queue Waiting Time Display
+29	NABH Certification Display
+30	External Device Connection (Biometric/Print)
+31	Physical/Teleconsult Appointments
+32	Notification System (SMS/WhatsApp)
+33	Timestamp Recording (TAT)
+34	External Appointment Capture
+35	Doctor Schedule Display for Staff
+36	Patient Digital Booking
+37	Print Practitioner Schedule
+38	Queue Management (Token)
+39	Patient Condition Summary
+40	Pharmacy Points (OPD/IPD/OT)
+41	Complete OPD Reports & MIS
+
+#### MODULE 2: IPD MANAGEMENT
+1	Initial Assessment Record (OPD & IPD)
+2	Order Sets (Frequently prescribed meds)
+3	Medication/Radiology details
+4	Digital Signatures for Doctors
+5	e-Prescription / CPOE for Medicines
+6	Lab/Diagnostic Order Sets
+7	Import patient info for review
+8	Duplicate Order Alerts
+9	Patient access to prescriptions
+10	Access past medical records
+11	Link records to ABHA (Milestone 2)
+12	Access ABHA records (Milestone 3)
+13	Nursing Notes
+14	Digital Handover (Shift Change)
+15	Emergency Dept Registration
+16	MLC Labeling
+17	Ambulance Info Transmission
+18	Emergency Codes (Code Blue etc.)
+19	ICU Admission Criteria
+20	Risk Assessment (APACHE/SOFA)
+21	Monitoring Device Integration
+22	Patient Care Services (I/O Charts)
+23	Surgical Safety Checklist
+24	Pre-operative Assessment
+25	Patient Consent Recording
+26	Surgery Scheduling
+27	Surgery Timestamp Recording
+28	Anaesthesia Records
+29	Intra-operative Notes
+30	Dietary Screening
+31	Therapeutic Diet Records
+32	Infection Incidents (HAI)
+33	Antimicrobial Usage Policy
+34	Sentinel Events
+35	Staff Exposure Records
+36	Vulnerable Patient ID
+37	Remote Consultations
+38	Homecare Services
+39	Rehabilitation Assessment
+40	CDSS Support
+41	Critical Intervention Alerts
+42	Notifiable Disease Alerts
+43	Customized Care Plans
+44	50 Bed Management System
+45	Room Allocation & Tracking
+46	Patient Admission Process
+47	Bed Occupancy Dashboard
+48	IPD Billing System
+49	Deposit Management
+50	Daily Charges Tracking
+51	Discharge Process
+52	Final Bill Generation
+53	Bed Transfer Management
+54	Nurses Daily Notes
+55	Vital Signs Tracking
+56	Medication Chart
+57	IPD WhatsApp Notifications
+58	Discharge SMS Alerts
+59	TPA / Corporate Management
+60	IPD Reports & MIS
+
+#### MODULE 3: BILLING & ACCOUNTS
+1	OPD Billing
+2	IPD Billing
+3	Combined Patient Billing
+4	Receipt Generation
+5	Payment Modes (Cash, Card, UPI)
+6	Deposit Management
+7	Refund Processing
+8	Expense Tracking
+9	Operations Ledger
+10	Financial Dashboard
+11	GST Invoice Generation
+
+#### MODULE 4: TALLY INTEGRATION
+1	Integration Setup
+2	Automatic Voucher Generation
+3	Real-time Sync to Tally
+4	Payment/Receipt Vouchers
+5	Sales Vouchers for Billing
+6	Ledger Mapping
+7	GST Reports for Tally
+8	Reconciliation Reports
+
+#### MODULE 5: REPORTS & ANALYTICS
+- Real-time Dashboard
+- Patient Statistics
+- Revenue Analysis
+- Bed Occupancy Reports
+- Doctor-wise Revenue
+- Expense Reports
+- Financial Summary
+- PDF Export
+- Excel Export
+- Custom Report Builder
+
+#### MODULE 6: PHARMACY MANAGEMENT
+1	Medicine Master (Name, Generic, Company)
+2	Medicine Stock Management
+3	Batch Number Tracking
+4	Expiry Date Tracking
+5	Purchase Management (Supplier, GRN, Invoices)
+6	Medicine Billing Integration
+7	Low Stock Alerts
+8	Expiry Alerts (30/60/90 days)
+9	Stock Valuation (FIFO)
+10	Daily Stock Reports
+11	Pharmacy Sales Reports
+12	Profit & Loss Analysis
+13	Emergency/High Risk Medications & LASA identification
+14	Inventory Management (Search, Track, Monitor expiry, Locate items)
+15	Re-order level alerts to relevant staff/departments
+16	Real-time stock updates for prescription availability
+17	Dispensing Timestamp Capture
+18	High-risk medication alerts (Narcotics etc.)
+19	Stock Inventory Reports
+20	Formulary Management & Suggestions
+21	Non-Formulary Drug Highlighting
+22	Drug Allergy/Adverse Reaction History & Alerts
+23	Medication Reconciliation
+24	Near Expiry Notifications
+25	Return/Recall Management (Track reasons, safety)
+26	Patient Identification at Administration (Barcode/RFID)
+27	eMAR (Electronic Medication Administration Record)
+28	Medical Implant Records
+29	Emergency Medication Records (Crash Cart)
+30	Medication Error Records
+31	Medication Error Analytics Dashboard
+32	Emergency Medication Protocol Checklists
+33	Complete Pharma Reports & MIS
+
+#### MODULE 7: INVENTORY (GENERAL)
+1	Item Master
+2	Purchase Orders
+3	Stock In/Out Management
+4	Department-wise Issue
+5	Inventory Reports
+6	Procurement Management Workflows (Bids, Selection, Approval)
+7	Stock Movement Tracking (Inter-departmental)
+8	Indent Generation & Management
+9	Purchase Order Creation & Tracking
+10	Material Receipt Note (GRN) & Reconciliation
+11	Quality Concerns/Feedback on Goods
+12	Vendor Invoice Management
+13	Payments via Digital Channels
+14	Payables/Receivables Records
+15	Debit/Credit Note Generation
+16	Supplier Payment Scheduling
+17	Vendor Payables Monitoring
+18	Supplier Payment Notifications
+19	Rate Configuration for Services
+20	Patient Billing Templates
+21	Care/Service Estimates Generation
+22	Bill Generation (Goods, Services, Taxes)
+23	Payment Support (Multiple Modes)
+24	Patient Account Management
+25	System Notifications (Payer/Patient)
+26	Insurance Eligibility/Coverage Capture
+27	Patient Authentication (Digilocker etc.)
+28	Pre-authorization Capture
+29	Final Treatment Cost & Claim Submission
+30	Payor Transaction Status Checks
+31	Claim Status Notifications to Patients
+32	Payment Reconciliation (Payor)
+33	Claims Dashboard
+34	NHCX Claims Submission (National Health Claims Exchange)
+35	ASSET Management
+36	Maintenance Management
+37	Complete Inventory Reports & MIS
+
+#### MODULE 8: HRM - HUMAN RESOURCES
+1	Employee Master
+2	Attendance Tracking
+3	Leave Types
+4	User Roles
+5	Access Control
+6	Salary Structure
+7	Basic + Allowances
+8	Deductions (PF/ESI)
+9	Attendance Salary Calc
+10	Overtime Calc
+11	LWP Adjustments
+12	Salary Slip PDF
+13	Email Delivery
+14	PF Calculation
+15	ESI Calculation
+16	Monthly Processing
+17	Bank Report
+18	Payroll Register
+19	Shift Management
+20	Shift Attendance
+21	Staff Master Data
+22	Unique Staff ID
+23	Duty Rules
+24	Staff Roster
+25	Shift Communication
+26	Staffing Prediction
+27	Attendance Mgmt
+28	Appraisals
+29	Payroll Calculation
+30	Recruitment Rules
+31	Exit Process
+32	Induction Training
+33	Training Calendar
+34	Training Schedule
+35	Statutory Reports
+36	Reports & MIS
+
+#### MODULE 9: SECURITY & ACCESS CONTROL
+1	User Authentication
+2	Role-based Access
+3	25 User Accounts
+4	Permission Mgmt
+5	Audit Logs
+6	Data Encryption
+7	Training Mgmt
+8	Secure Password Storage
+9	Auto-logout
+10	Secure URL Access
+11	Multi-Device Support
+12	Cross-browser Support
+13	Digital Engagement
+14	Single Sign-On
+15	Mobile App
+16	Transit Encryption
+17	Data Role Access
+18	Audit Log Config
+19	Access Rights Config
+20	Help Section
+21	Vulnerability Protection
+22	Master Data Sharing
+23	Backup/Archiving
+24	Source Code Mgmt
+25	Timely Updates
+26	Maintenance Support
+27	Incident Logging
+28	Roll-back Capability
+29	Password Policy
+30	Auto Screen Lock
+31	Block User Security
+32	User Management
+33	MFA
+34	Migration Support
+
+#### MODULE 10: FLOOR MANAGEMENT & NURSE STATION
+1	Floor Management (Master, Occupancy)
+2	Nurse Management & Patient Alignment
+3	Patient Care Tracking
+4	Nurse Duty Management
+5	Floor-wise Reports
+6	Housekeeping Tracking
+7	Room Pre-requisite Tracking
+8	Reports & MIS
+
+#### MODULE 11: LABORATORY MANAGEMENT (SOFTWARE ONLY)
+1	Test Master (200+ Tests)
+2	Blood Tests
+3	Urine Tests
+4	Biochemistry Tests
+5	Microbiology Tests
+6	Imaging (X-Ray, CT, MRI)
+7	Sample Registration
+8	Sample Tracking
+9	Result Entry
+10	Normal Range Config
+11	Report Generation
+12	Email/SMS Delivery
+13	Critical Alerts
+14	TAT Tracking
+15	Revenue Reports
+16	Doctor-wise Analysis
+17	Specimen Tracking
+18	Label Printing
+19	Patient Download
+20	Outsourced Tracking
+21	Link to ABHA
+
+#### MODULE 12: NABH/ABHA COMPLIANCE
+1	Patient Safety Checklists
+2	Infection Control Checklists
+3	Medication Mgmt Checklist
+4	Quality Indicator Dashboard
+5	Incident Reporting
+6	Complaint Management
+7	Policy Library (Templates)
+8	Procedure Docs
+9	Audit Report Templates
+10	License Tracking
+11	Patient Rights Docs
+12	Consent Forms
+13	ABHA Compliance Checklist
+14	SOPs
+15	Healthcare Quality Indicators
+16	Satisfaction Surveys
+17	Quality Audit Reports
+18	ABDM FHIR Core
+19	ABDM FHIR Extended
+20	ABDM FHIR Advanced
+21	NHCX Integration
+22	ICD/SNOMED CT
+23	LOINC Codes
+24	DICOM Support
+25	Drug Registry Coding
+26	NABH KPI Computation
+27	Digital Health KPI
+28	Quarterly KPI Publication
+29	ISO 27001 Security
+30	ISO 82304 Health Software
+
+#### MODULE 13: BLOOD BANK SYSTEM
+1	Donor Records
+2	TAT Calculation
+3	Stock Management
+4	Transfusion Safety
+5	UHI Stock Check
+
+#### MODULE 14: COMMUNICATION SERVICES
+1	WhatsApp Business API Setup
+2	SMS Gateway Setup
+3	Email Service (50k/month)
+4	Automated Notifications
+5	Message Templates
+6	Appointment Reminders
+7	Receipt Notifications
+8	Lab Report Alerts
+9	Admission/Discharge Alerts
+10	WhatsApp/SMS usage charges are separate.
+11	Bulk Notification Support.
+
+---
+
+**PHASE 2 MODULES (Post-Implementation)**
+1. Gate Entry Movement Tracking
+2. Ambulance Management System
+3. Canteen Management System
+
+---
+*End of Agreement*

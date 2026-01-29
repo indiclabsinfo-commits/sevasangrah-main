@@ -1162,28 +1162,85 @@ app.get('/api/appointments', authenticateToken, async (req, res) => {
 });
 
 // Create appointment
+// Create appointment with Recurrence Support
 app.post('/api/appointments', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
     const {
       patient_id, doctor_id, department_id, scheduled_at, duration,
-      status, reason, appointment_type, notes
+      status, reason, appointment_type, notes, recurrence
+      // recurrence: { frequency: 'daily' | 'weekly' | 'monthly', endDate: string }
     } = req.body;
 
-    const result = await pool.query(
-      `INSERT INTO appointments(
-  patient_id, doctor_id, department_id, scheduled_at, duration,
-  status, reason, appointment_type, notes, created_by
-) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING * `,
-      [
-        patient_id, doctor_id, department_id, scheduled_at, duration,
-        status || 'SCHEDULED', reason, appointment_type, notes, req.user.id
-      ]
-    );
-    res.json(result.rows[0]);
+    const baseDate = new Date(scheduled_at);
+    const appointmentsToCreate = [];
+    const recurringGroupId = recurrence ? crypto.randomUUID() : null;
+
+    // Helper to add days
+    const addDays = (date, days) => {
+      const result = new Date(date);
+      result.setDate(result.getDate() + days);
+      return result;
+    };
+
+    // Helper to add months
+    const addMonths = (date, months) => {
+      const result = new Date(date);
+      result.setMonth(result.getMonth() + months);
+      return result;
+    };
+
+    if (recurrence && recurrence.endDate) {
+      const endDate = new Date(recurrence.endDate);
+      let currentDate = baseDate;
+      const MAX_OCCURRENCES = 52; // Safety limit
+      let count = 0;
+
+      while (currentDate <= endDate && count < MAX_OCCURRENCES) {
+        appointmentsToCreate.push(new Date(currentDate));
+
+        if (recurrence.frequency === 'daily') {
+          currentDate = addDays(currentDate, 1);
+        } else if (recurrence.frequency === 'weekly') {
+          currentDate = addDays(currentDate, 7);
+        } else if (recurrence.frequency === 'monthly') {
+          currentDate = addMonths(currentDate, 1);
+        } else {
+          break; // Unknown frequency
+        }
+        count++;
+      }
+    } else {
+      // Single appointment
+      appointmentsToCreate.push(baseDate);
+    }
+
+    let firstCreatedAppointment = null;
+
+    for (const aptDate of appointmentsToCreate) {
+      const result = await client.query(
+        `INSERT INTO appointments(
+            patient_id, doctor_id, department_id, scheduled_at, duration,
+            status, reason, appointment_type, notes, created_by, recurring_group_id
+          ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          RETURNING * `,
+        [
+          patient_id, doctor_id, department_id, aptDate.toISOString(), duration,
+          status || 'SCHEDULED', reason, appointment_type, notes, req.user.id, recurringGroupId
+        ]
+      );
+      if (!firstCreatedAppointment) firstCreatedAppointment = result.rows[0];
+    }
+
+    await client.query('COMMIT');
+    res.json(firstCreatedAppointment);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error creating appointment:', error);
     res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
   }
 });
 
@@ -1932,6 +1989,48 @@ app.get('/api/icd10', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// ==================== SCHEDULER: APPOINTMENT REMINDERS ====================
+const checkAppointmentReminders = async () => {
+  try {
+    console.log('⏰ Checking for appointment reminders...');
+
+    // Find appointments in the next 24 hours that haven't had a reminder sent
+    const result = await pool.query(
+      `SELECT * FROM appointments 
+             WHERE scheduled_at BETWEEN NOW() AND NOW() + INTERVAL '24 hours'
+             AND (reminder_sent IS NULL OR reminder_sent = false)
+             AND status = 'CONFIRMED'`
+    );
+
+    if (result.rows.length > 0) {
+      console.log(`Found ${result.rows.length} appointments needing reminders.`);
+
+      for (const apt of result.rows) {
+        // Mock sending reminder (SMS/Email)
+        console.log(`🔔 SENT REMINDER: Appointment for Patient ${apt.patient_id} at ${apt.scheduled_at}`);
+
+        // Mark reminder as sent
+        await pool.query(
+          `UPDATE appointments SET reminder_sent = true WHERE id = $1`,
+          [apt.id]
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Error checking reminders:', error);
+  }
+};
+
+
+// Run scheduler every 10 minutes (600000 ms) and once on startup
+setInterval(checkAppointmentReminders, 600000);
+setTimeout(checkAppointmentReminders, 5000); // Initial check after 5s
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+// Export for Vercel
+module.exports = app;

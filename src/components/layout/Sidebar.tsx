@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { classNames } from '@/utils';
 import { usePermissions } from '@/contexts/AuthContext';
+import { useSaas } from '@/contexts/SaasContext';
 
 interface SidebarProps {
   isMobileOpen: boolean;
@@ -22,22 +23,29 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: 'read_dashboard' },
-  { name: 'Patient Entry', href: '/patient-entry', icon: UserPlus, permission: 'create_patients' },
-  { name: 'Daily Operations', href: '/daily-operations', icon: Activity, permission: 'access_operations' },
-  { name: 'Revenue Dashboard', href: '/revenue', icon: TrendingUp, permission: 'read_dashboard' },
-  { name: 'Expense Entry', href: '/expense-entry', icon: FileText, permission: 'create_expenses' },
-  { name: 'Patients', href: '/patients', icon: Users, permission: 'read_patients' },
-  { name: 'Appointments', href: '/appointments', icon: Calendar, permission: 'read_appointments' },
-  { name: 'Billing', href: '/billing', icon: Receipt, permission: 'read_bills' },
+  { name: 'Patient Entry', href: '/patient-entry', icon: UserPlus, permission: 'create_patients', saasModule: 'isOpdEnabled' },
+  { name: 'Daily Operations', href: '/daily-operations', icon: Activity, permission: 'access_operations', saasModule: 'isOpdEnabled' },
+  { name: 'Revenue Dashboard', href: '/revenue', icon: TrendingUp, permission: 'read_dashboard', saasModule: 'isOpdEnabled' },
+  { name: 'Expense Entry', href: '/expense-entry', icon: FileText, permission: 'create_expenses', saasModule: 'isHrmEnabled' },
+  { name: 'Patients', href: '/patients', icon: Users, permission: 'read_patients', saasModule: 'isOpdEnabled' },
+  { name: 'Appointments', href: '/appointments', icon: Calendar, permission: 'read_appointments', saasModule: 'isOpdEnabled' },
+  { name: 'Billing', href: '/billing', icon: Receipt, permission: 'read_bills', saasModule: 'isOpdEnabled' },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, setIsMobileOpen }) => {
   const { hasPermission } = usePermissions();
+  const { isModuleEnabled } = useSaas();
 
-  // Filter navigation items based on user permissions
+  // Filter navigation items based on user permissions and SaaS modules
   const allowedNavigation = navigation.filter(item => {
-    if (!item.permission) return true; // Allow items without permission requirements
+    // 1. Check SaaS Module Subscription
+    if (item.saasModule && !isModuleEnabled(item.saasModule as any)) {
+      return false;
+    }
+
+    // 2. Check Permission requirements
+    if (!item.permission) return true;
     return hasPermission(item.permission);
   });
 
