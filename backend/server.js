@@ -449,7 +449,7 @@ app.post('/api/patients', authenticateToken, async (req, res) => {
       ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
       RETURNING *`,
       [
-        generatedPatientId, prefix || 'Mr', first_name, last_name, age, gender, phone, email, address,
+        generatedPatientId, prefix || 'Mr', first_name || '', last_name || '', age || '0', gender || 'other', phone || '', email, address,
         emergency_contact_name, emergency_contact_phone, medical_history,
         allergies, current_medications, blood_group, notes, date_of_entry, date_of_birth,
         photo_url, patient_tag, abha_id, aadhaar_number, assigned_doctor, assigned_department,
