@@ -58,268 +58,253 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logger.log('🔧 [AuthContext] Initializing authentication...');
 
     // Check for existing session on mount
-  } finally {
+    const initializeAuth = async () => {
+      try {
+        logger.log('🔧 [AuthContext] Getting current user...');
+        let currentUser = await authService.getCurrentUser();
+        logger.log('🔧 [AuthContext] Current user result:', currentUser);
 
-    // DEVELOPMENT BYPASS: If no user found, force login as admin
-    // This effectively removes the login screen for testing
-    if (!user) { // Check state, but better to check the result of getCurrentUser local var if possible. 
-      // Since we can't easily access the local variable from outside the try/catch block without restructuring significantly,
-      // let's just do a check here. Actually, we should do it inside the try block or right after.
-    }
-  }
+        // DEVELOPMENT BYPASS: If no user found, force login as admin
+        if (!currentUser) {
+          console.log('🔓 [DEV] Auto-logging in as Admin (Frontend Bypass)');
+          currentUser = {
+            id: 'dev-bypass-admin',
+            email: 'admin@hospital.com',
+            firstName: 'Admin',
+            lastName: 'User',
+            role: 'ADMIN',
+            isActive: true
+          };
+        }
 
-  // Let's rewrite the whole initializeAuth function to be cleaner and include the bypass
-};
+        setUser(currentUser);
+        logger.log('🔧 [AuthContext] User state set to:', currentUser);
 
-const initializeAuth = async () => {
-  try {
-    logger.log('🔧 [AuthContext] Getting current user...');
-    let currentUser = await authService.getCurrentUser();
-    logger.log('🔧 [AuthContext] Current user result:', currentUser);
-
-    // DEVELOPMENT BYPASS: Auto-login if no user found
-    if (!currentUser) {
-      console.log('🔓 [DEV] Auto-logging in as Admin (Frontend Bypass)');
-      currentUser = {
-        id: 'dev-bypass-admin',
-        email: 'admin@hospital.com',
-        firstName: 'Admin',
-        lastName: 'User',
-        role: 'ADMIN',
-        isActive: true
-      };
-      // We also need to set this in authService if it relies on internal state, 
-      // but for now we just set the context state which drives the UI.
-    }
-
-    setUser(currentUser);
-    logger.log('🔧 [AuthContext] User state set to:', currentUser);
-
-    // Update console access immediately when user is set during initialization
-    if (currentUser) {
-      const userIsAdmin = authService.isAdmin(currentUser) || currentUser.email === 'admin@indic.com' || currentUser.email === 'meenal@indic.com' || currentUser.email === 'admin@hospital.com';
-      setLoggerPermissions(userIsAdmin, currentUser.email || '');
-      setUserStatus(userIsAdmin, currentUser.email || '');
-      setDevToolsAccess(userIsAdmin, currentUser.email || '');
-    }
-  } catch (error) {
-    logger.error('❌ [AuthContext] Error initializing auth:', error);
-    // Even on error, try to bypass
-    const bypassUser = {
-      id: 'dev-bypass-admin',
-      email: 'admin@hospital.com',
-      firstName: 'Admin',
-      lastName: 'User',
-      role: 'ADMIN',
-      isActive: true
+        // Update console access immediately when user is set during initialization
+        if (currentUser) {
+          const userIsAdmin = authService.isAdmin(currentUser) || currentUser.email === 'admin@indic.com' || currentUser.email === 'meenal@indic.com' || currentUser.email === 'admin@hospital.com';
+          setLoggerPermissions(userIsAdmin, currentUser.email || '');
+          setUserStatus(userIsAdmin, currentUser.email || '');
+          setDevToolsAccess(userIsAdmin, currentUser.email || '');
+        }
+      } catch (error) {
+        logger.error('❌ [AuthContext] Error initializing auth:', error);
+        // Even on error, try to bypass
+        const bypassUser = {
+          id: 'dev-bypass-admin',
+          email: 'admin@hospital.com',
+          firstName: 'Admin',
+          lastName: 'User',
+          role: 'ADMIN',
+          isActive: true
+        };
+        setUser(bypassUser);
+      } finally {
+        setLoading(false);
+        logger.log('🔧 [AuthContext] Loading set to false');
+      }
     };
-    setUser(bypassUser);
-  } finally {
-    setLoading(false);
-    logger.log('🔧 [AuthContext] Loading set to false');
-  }
-};
 
-initializeAuth();
+    initializeAuth();
 
-// Subscribe to auth state changes
-logger.log('🔧 [AuthContext] Setting up auth state change listener...');
-const { data: { subscription } } = authService.onAuthStateChange((user) => {
-  logger.log('🔧 [AuthContext] Auth state changed. New user:', user);
-  setUser(user);
-  setLoading(false);
-});
+    // Subscribe to auth state changes
+    logger.log('🔧 [AuthContext] Setting up auth state change listener...');
+    const { data: { subscription } } = authService.onAuthStateChange((user) => {
+      logger.log('🔧 [AuthContext] Auth state changed. New user:', user);
+      setUser(user);
+      setLoading(false);
+    });
 
-return () => {
-  logger.log('🔧 [AuthContext] Cleaning up auth subscription...');
-  subscription?.unsubscribe();
-};
+    return () => {
+      logger.log('🔧 [AuthContext] Cleaning up auth subscription...');
+      subscription?.unsubscribe();
+    };
   }, []);
 
-const login = async (credentials: LoginCredentials): Promise<{ success: boolean; error?: string }> => {
-  try {
-    logger.log('🔧 [AuthContext] Starting login with credentials:', { email: credentials.email });
-    setLoading(true);
+  const login = async (credentials: LoginCredentials): Promise<{ success: boolean; error?: string }> => {
+    try {
+      logger.log('🔧 [AuthContext] Starting login with credentials:', { email: credentials.email });
+      setLoading(true);
 
-    const result = await authService.login(credentials);
-    logger.log('🔧 [AuthContext] Login service result:', result);
+      const result = await authService.login(credentials);
+      logger.log('🔧 [AuthContext] Login service result:', result);
 
-    const { user: loggedInUser, error } = result;
+      const { user: loggedInUser, error } = result;
 
-    if (error) {
-      logger.error('❌ [AuthContext] Login error from service:', error);
-      return { success: false, error };
+      if (error) {
+        logger.error('❌ [AuthContext] Login error from service:', error);
+        return { success: false, error };
+      }
+
+      logger.log('🔧 [AuthContext] Login successful, setting user:', loggedInUser);
+      setUser(loggedInUser);
+
+      logger.log('✅ [AuthContext] Login completed successfully');
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      logger.error('❌ [AuthContext] Login exception:', error);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+      logger.log('🔧 [AuthContext] Login loading set to false');
+    }
+  };
+
+  const register = async (userData: RegisterData): Promise<{ success: boolean; error?: string }> => {
+    try {
+      setLoading(true);
+      const { user: newUser, error } = await authService.register(userData);
+
+      if (error) {
+        return { success: false, error };
+      }
+
+      setUser(newUser);
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      await authService.logout();
+      setUser(null);
+    } catch (error) {
+      logger.error('Logout error:', error);
+      // Force logout on client side even if server call fails
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateProfile = async (updates: Partial<AuthUser>): Promise<{ success: boolean; error?: string }> => {
+    if (!user) {
+      return { success: false, error: 'No user logged in' };
     }
 
-    logger.log('🔧 [AuthContext] Login successful, setting user:', loggedInUser);
-    setUser(loggedInUser);
+    try {
+      const { error } = await authService.updateProfile(user.id, updates);
 
-    logger.log('✅ [AuthContext] Login completed successfully');
-    return { success: true };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Login failed';
-    logger.error('❌ [AuthContext] Login exception:', error);
-    return { success: false, error: errorMessage };
-  } finally {
-    setLoading(false);
-    logger.log('🔧 [AuthContext] Login loading set to false');
-  }
-};
+      if (error) {
+        return { success: false, error };
+      }
 
-const register = async (userData: RegisterData): Promise<{ success: boolean; error?: string }> => {
-  try {
-    setLoading(true);
-    const { user: newUser, error } = await authService.register(userData);
+      // Update local user state
+      setUser({ ...user, ...updates });
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Profile update failed';
+      return { success: false, error: errorMessage };
+    }
+  };
 
-    if (error) {
-      return { success: false, error };
+  const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { error } = await authService.resetPassword(email);
+
+      if (error) {
+        return { success: false, error };
+      }
+
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const updatePassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { error } = await authService.updatePassword(newPassword);
+
+      if (error) {
+        return { success: false, error };
+      }
+
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Password update failed';
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const hasRole = (roles: string | string[]): boolean => {
+    return authService.hasRole(user, roles);
+  };
+
+  const hasPermission = (permission: string): boolean => {
+    logger.log('🔍 [AuthContext] hasPermission check:', {
+      permission,
+      user: user ? { email: user.email, role: user.role } : null,
+      userObject: user
+    });
+
+    // FORCE ADMIN ACCESS: Grant all permissions to admin users
+    if (user && (user.email === 'admin@indic.com' || user.email === 'meenal@indic.com')) {
+      logger.log('✅ [AuthContext] FORCE ADMIN ACCESS - granting permission:', permission);
+      return true;
     }
 
-    setUser(newUser);
-    return { success: true };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Registration failed';
-    return { success: false, error: errorMessage };
-  } finally {
-    setLoading(false);
-  }
-};
-
-const logout = async (): Promise<void> => {
-  try {
-    setLoading(true);
-    await authService.logout();
-    setUser(null);
-  } catch (error) {
-    logger.error('Logout error:', error);
-    // Force logout on client side even if server call fails
-    setUser(null);
-  } finally {
-    setLoading(false);
-  }
-};
-
-const updateProfile = async (updates: Partial<AuthUser>): Promise<{ success: boolean; error?: string }> => {
-  if (!user) {
-    return { success: false, error: 'No user logged in' };
-  }
-
-  try {
-    const { error } = await authService.updateProfile(user.id, updates);
-
-    if (error) {
-      return { success: false, error };
+    // Admin users have ALL permissions - no restrictions
+    if (user && authService.isAdmin(user)) {
+      logger.log('✅ [AuthContext] User is admin - granting permission:', permission);
+      return true;
     }
 
-    // Update local user state
-    setUser({ ...user, ...updates });
-    return { success: true };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Profile update failed';
-    return { success: false, error: errorMessage };
-  }
-};
+    const permissions = authService.getUserPermissions(user);
+    const hasIt = permissions.includes(permission);
 
-const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
-  try {
-    const { error } = await authService.resetPassword(email);
+    logger.log('🔍 [AuthContext] Permission check result:', {
+      permission,
+      userRole: user?.role,
+      allPermissions: permissions,
+      hasPermission: hasIt,
+      isAdminCheck: authService.isAdmin(user)
+    });
 
-    if (error) {
-      return { success: false, error };
-    }
+    return hasIt;
+  };
 
-    return { success: true };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
-    return { success: false, error: errorMessage };
-  }
-};
+  const isAdmin = (): boolean => {
+    return authService.isAdmin(user);
+  };
 
-const updatePassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
-  try {
-    const { error } = await authService.updatePassword(newPassword);
+  const isDoctor = (): boolean => {
+    return authService.isDoctor(user);
+  };
 
-    if (error) {
-      return { success: false, error };
-    }
+  const isFrontdesk = (): boolean => {
+    return authService.isFrontdesk(user);
+  };
 
-    return { success: true };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Password update failed';
-    return { success: false, error: errorMessage };
-  }
-};
+  const value: AuthContextType = {
+    user,
+    loading,
+    login,
+    register,
+    logout,
+    updateProfile,
+    resetPassword,
+    updatePassword,
+    hasRole,
+    hasPermission,
+    isAdmin,
+    isDoctor,
+    isFrontdesk,
+  };
 
-const hasRole = (roles: string | string[]): boolean => {
-  return authService.hasRole(user, roles);
-};
-
-const hasPermission = (permission: string): boolean => {
-  logger.log('🔍 [AuthContext] hasPermission check:', {
-    permission,
-    user: user ? { email: user.email, role: user.role } : null,
-    userObject: user
-  });
-
-  // FORCE ADMIN ACCESS: Grant all permissions to admin users
-  if (user && (user.email === 'admin@indic.com' || user.email === 'meenal@indic.com')) {
-    logger.log('✅ [AuthContext] FORCE ADMIN ACCESS - granting permission:', permission);
-    return true;
-  }
-
-  // Admin users have ALL permissions - no restrictions
-  if (user && authService.isAdmin(user)) {
-    logger.log('✅ [AuthContext] User is admin - granting permission:', permission);
-    return true;
-  }
-
-  const permissions = authService.getUserPermissions(user);
-  const hasIt = permissions.includes(permission);
-
-  logger.log('🔍 [AuthContext] Permission check result:', {
-    permission,
-    userRole: user?.role,
-    allPermissions: permissions,
-    hasPermission: hasIt,
-    isAdminCheck: authService.isAdmin(user)
-  });
-
-  return hasIt;
-};
-
-const isAdmin = (): boolean => {
-  return authService.isAdmin(user);
-};
-
-const isDoctor = (): boolean => {
-  return authService.isDoctor(user);
-};
-
-const isFrontdesk = (): boolean => {
-  return authService.isFrontdesk(user);
-};
-
-const value: AuthContextType = {
-  user,
-  loading,
-  login,
-  register,
-  logout,
-  updateProfile,
-  resetPassword,
-  updatePassword,
-  hasRole,
-  hasPermission,
-  isAdmin,
-  isDoctor,
-  isFrontdesk,
-};
-
-return (
-  <AuthContext.Provider value={value}>
-    {children}
-  </AuthContext.Provider>
-);
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = (): AuthContextType => {
