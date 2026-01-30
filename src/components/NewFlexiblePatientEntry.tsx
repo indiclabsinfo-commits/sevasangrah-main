@@ -751,8 +751,36 @@ const NewFlexiblePatientEntry: React.FC = () => {
           selected_doctor: formData.selected_doctor,
           selected_department: formData.selected_department
         });
-        newPatient = await HospitalService.createPatient(patientData);
-        logger.log('✅ Patient created successfully:', newPatient);
+
+        // DIRECT SUPABASE BYPASS (Fixes Network/500 Errors)
+        // We bypass the backend and insert directly into Supabase
+        const { supabase } = await import('../lib/supabaseClient');
+
+        // Auto-generate patient_id locally (since backend is bypassed)
+        const timestampId = `M${Math.floor(Date.now() / 1000)}`;
+
+        const payload = {
+          ...patientData,
+          patient_id: timestampId,
+          queue_no: Math.floor(Math.random() * 100), // Temp queue number
+          created_by: '00000000-0000-0000-0000-000000000000' // Default user UUID
+        };
+
+        console.log('🚀 [DIRECT] Inserting Patient to Supabase:', payload);
+        const { data: insertedData, error: insertError } = await supabase
+          .from('patients')
+          .insert(payload)
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('❌ [DIRECT] Supabase Insert Error:', insertError);
+          throw new Error(insertError.message || 'Supabase Insert Failed');
+        }
+
+        newPatient = insertedData;
+        // newPatient = await HospitalService.createPatient(patientData);
+        logger.log('✅ Patient created successfully (Direct Mode):', newPatient);
       }
 
       // Handle doctors assignment based on consultation mode
