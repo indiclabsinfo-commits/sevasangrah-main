@@ -1846,7 +1846,7 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
   };
 
   const handleManageServices = (patient: PatientWithRelations) => {
-    setSelectedPatientForServices(patient);
+    setSelectedPatientForService(patient);
     setShowServiceManager(true);
   };
 
@@ -2945,12 +2945,12 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
       )}
 
       {/* Patient Service Manager Modal */}
-      {showServiceManager && selectedPatientForServices && (
+      {showServiceManager && selectedPatientForService && (
         <PatientServiceManager
-          patient={selectedPatientForServices}
+          patient={selectedPatientForService}
           onClose={() => {
             setShowServiceManager(false);
-            setSelectedPatientForServices(null);
+            setSelectedPatientForService(null);
           }}
           onServicesUpdated={() => {
             loadPatients(startDate, endDate); // Reload to update totals
@@ -2968,6 +2968,23 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
           }}
           onVisitCreated={() => {
             loadPatients(startDate, endDate); // Reload to update patient data and totals
+          }}
+        />
+      )}
+
+      {/* Add to Queue Modal */}
+      {showAddToQueueModal && selectedPatientForQueue && (
+        <AddToQueueModal
+          isOpen={showAddToQueueModal}
+          patient={selectedPatientForQueue}
+          doctors={doctors}
+          onClose={() => {
+            setShowAddToQueueModal(false);
+            setSelectedPatientForQueue(null);
+          }}
+          onSuccess={() => {
+            loadPatients(startDate, endDate); // Reload to update queue status
+            toast.success('Patient added to queue successfully');
           }}
         />
       )}
