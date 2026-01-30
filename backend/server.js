@@ -100,6 +100,17 @@ app.get('/api', (req, res) => {
   });
 });
 
+// Root path handler (to avoid "Not Found" on home page)
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Hospital CRM Backend is Running',
+    endpoints: {
+      health: '/api/health',
+      api_info: '/api'
+    }
+  });
+});
+
 // ==================== AUTH ROUTES ====================
 
 // Login
