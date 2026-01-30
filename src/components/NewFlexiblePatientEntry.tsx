@@ -759,23 +759,34 @@ const NewFlexiblePatientEntry: React.FC = () => {
         // Auto-generate patient_id locally (since backend is bypassed)
         const timestampId = `M${Math.floor(Date.now() / 1000)}`;
 
-        const payload = {
-          ...patientData,
+        // 🧪 DEBUG: Sending MINIMAL Data first to isolate the error
+        // We are excluding photo_url and hospital_id temporarily
+        const minimalPayload = {
           patient_id: timestampId,
-          queue_no: Math.floor(Math.random() * 100), // Temp queue number
-          created_by: '00000000-0000-0000-0000-000000000000' // Default user UUID
+          first_name: patientData.first_name,
+          last_name: patientData.last_name,
+          gender: patientData.gender,
+          phone: patientData.phone,
+          age: patientData.age?.toString() || '0', // Ensure string
+          date_of_entry: new Date().toISOString(), // Ensure valid timestamp
+          queue_no: Math.floor(Math.random() * 100),
+          created_by: '00000000-0000-0000-0000-000000000000',
+          is_active: true
         };
 
-        console.log('🚀 [DIRECT] Inserting Patient to Supabase:', payload);
+        console.log('🚀 [DIRECT] Inserting MINIMAL Payload:', minimalPayload);
+
         const { data: insertedData, error: insertError } = await supabase
           .from('patients')
-          .insert(payload)
+          .insert(minimalPayload)
           .select()
           .single();
 
         if (insertError) {
           console.error('❌ [DIRECT] Supabase Insert Error:', insertError);
-          throw new Error(insertError.message || 'Supabase Insert Failed');
+          // Unwrap the error object to show details to user
+          const errorMsg = insertError.message || JSON.stringify(insertError);
+          throw new Error(`Supabase Error: ${errorMsg}`);
         }
 
         newPatient = insertedData;
