@@ -48,11 +48,11 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
   const fetchReceiptData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch patient data and transactions
       const patient = await HospitalService.getPatientById(patientId);
       const transactions = await HospitalService.getTransactionsByPatient(patientId);
-      
+
       if (!patient) {
         toast.error('Patient not found');
         return;
@@ -69,29 +69,29 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
 
       // Filter out cancelled transactions
       const activeTransactions = transactions.filter(t => t.status !== 'CANCELLED');
-      
+
       // Analyze transactions to extract consultation fee and discount details
       activeTransactions.forEach(transaction => {
-        
+
         if (transaction.transaction_type === 'CONSULTATION' || transaction.transaction_type === 'consultation') {
           consultationTransactions.push(transaction);
-          
+
           // Extract original and net amounts from description for multiple doctors
           const description = transaction.description || '';
           const originalMatch = description.match(/Original:\s*₹([\d.]+)/i);
           const netMatch = description.match(/Net:\s*₹([\d.]+)/i);
           const discountMatch = description.match(/Discount:\s*(\d+)%\s*\(₹([\d.]+)\)/i);
-          
+
           if (originalMatch && netMatch && discountMatch) {
             // Multiple doctor format - extract from transaction description
             const transactionOriginal = parseFloat(originalMatch[1]);
             const transactionNet = parseFloat(netMatch[1]);
             const transactionDiscount = parseFloat(discountMatch[2]);
-            
+
             originalConsultationFee += transactionOriginal;
             consultationFee += transactionNet;
             totalDiscountAmount += transactionDiscount;
-            
+
             // Get discount details from the first transaction
             if (discountPercentage === 0) {
               discountPercentage = parseInt(discountMatch[1]);
@@ -105,14 +105,14 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
             const transactionAmount = transaction.amount;
             originalConsultationFee += transactionAmount;
             consultationFee += transactionAmount;
-            
+
             // Try to extract discount info from description
             if (discountMatch) {
               discountPercentage = parseInt(discountMatch[1]);
               const transactionDiscount = parseFloat(discountMatch[2]);
               totalDiscountAmount += transactionDiscount;
               consultationFee = originalConsultationFee - totalDiscountAmount;
-              
+
               const reasonMatch = description.match(/Reason:\s*([^|]+)/i);
               if (reasonMatch) {
                 discountReason = reasonMatch[1].trim();
@@ -122,14 +122,14 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
         } else if (transaction.transaction_type === 'DISCOUNT' || transaction.transaction_type === 'discount') {
           // Handle separate discount transactions
           totalDiscountAmount += Math.abs(transaction.amount);
-          
+
           // Extract discount percentage and reason from discount transaction
           const description = transaction.description || '';
           const percentMatch = description.match(/(\d+)%/);
           if (percentMatch) {
             discountPercentage = parseInt(percentMatch[1]);
           }
-          
+
           const reasonMatch = description.match(/-\s*(.+)$/);
           if (reasonMatch) {
             discountReason = reasonMatch[1].trim();
@@ -149,11 +149,11 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
           const description = transaction.description || '';
           return description.match(/(\d+)%\s*discount\s*applied/i);
         });
-        
+
         if (hasOldFormatDiscount) {
           const firstTransaction = consultationTransactions[0];
           const description = firstTransaction.description || '';
-          
+
           // Look for old format: "Consultation Fee - Dr. X (20% discount applied)"
           const oldDiscountMatch = description.match(/(\d+)%\s*discount\s*applied/i);
           if (oldDiscountMatch) {
@@ -181,12 +181,12 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
 
       // Generate bill number (could be enhanced with actual sequence)
       const billNo = `BILL-${Date.now().toString().slice(-6)}`;
-      
+
       // Get doctor name from patient assignment or transactions  
-      const doctor = patient.assigned_doctor || 
-                    activeTransactions.find(t => t.doctor_name)?.doctor_name || 
-                    'General Physician';
-      
+      const doctor = patient.assigned_doctor ||
+        activeTransactions.find(t => t.doctor_name)?.doctor_name ||
+        'General Physician';
+
       // Get payment mode from the most recent transaction
       const paymentMode = activeTransactions.length > 0 ? activeTransactions[0].payment_mode || 'Cash' : 'Cash';
 
@@ -224,11 +224,11 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
 
   const convertNumberToWords = (num: number): string => {
     if (num === 0) return 'Zero';
-    
+
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
     const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    
+
     const convertHundreds = (n: number): string => {
       let result = '';
       if (n >= 100) {
@@ -247,35 +247,35 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
       }
       return result;
     };
-    
+
     let result = '';
     const crores = Math.floor(num / 10000000);
     if (crores > 0) {
       result += convertHundreds(crores) + 'Crore ';
       num %= 10000000;
     }
-    
+
     const lakhs = Math.floor(num / 100000);
     if (lakhs > 0) {
       result += convertHundreds(lakhs) + 'Lakh ';
       num %= 100000;
     }
-    
+
     const thousands = Math.floor(num / 1000);
     if (thousands > 0) {
       result += convertHundreds(thousands) + 'Thousand ';
       num %= 1000;
     }
-    
+
     if (num > 0) {
       result += convertHundreds(num);
     }
-    
+
     return result.trim() + ' Rupees';
   };
 
   const convertTransactionsToServices = (
-    transactions: PatientTransaction[], 
+    transactions: PatientTransaction[],
     receiptData: ReceiptData
   ): ServiceItem[] => {
     const services: ServiceItem[] = [];
@@ -504,7 +504,7 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
           }
         `
       }} />
-      
+
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
         {/* Print and Close buttons */}
         <div className="flex justify-end gap-2 p-4 border-b print:hidden">
@@ -527,9 +527,9 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
           {/* Header */}
           <div className="text-center border-b-2 border-gray-300 pb-4 mb-6">
             <div className="flex items-center justify-center mb-4">
-              <img 
-                src="/logo.png" 
-                alt="VALANT Hospital Logo" 
+              <img
+                src="/logo.png"
+                alt="VALANT Hospital Logo"
                 className="h-16 w-auto"
                 style={{ maxHeight: '64px', height: 'auto', width: 'auto' }}
               />
@@ -562,7 +562,7 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p><strong>NAME:</strong> {patient.prefix ? `${patient.prefix} ` : ''}{patient.first_name} {patient.last_name}</p>
-                <p><strong>AGE/SEX:</strong> {patient.age && patient.age.trim() !== '' ? `${patient.age} years` : 'N/A'} / {patient.gender === 'MALE' ? 'M' : patient.gender === 'FEMALE' ? 'F' : patient.gender}</p>
+                <p><strong>AGE/SEX:</strong> {patient.age && String(patient.age).trim() !== '' ? `${patient.age} years` : 'N/A'} / {patient.gender === 'MALE' ? 'M' : patient.gender === 'FEMALE' ? 'F' : patient.gender}</p>
                 <p><strong>MOBILE:</strong> {patient.phone || 'N/A'}</p>
               </div>
               <div>
