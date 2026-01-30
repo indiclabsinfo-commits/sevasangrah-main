@@ -57,9 +57,38 @@ const authenticateToken = (req, res, next) => {
       return res.sendStatus(403);
     }
     req.user = user;
-    next();
   });
 };
+
+// ==================== HEALTH & INFO ROUTES ====================
+
+// Health check endpoint
+app.get('/api/health', async (req, res) => {
+  try {
+    // Test database connection
+    const result = await pool.query('SELECT NOW()');
+    res.json({
+      status: 'healthy',
+      database: 'connected',
+      timestamp: result.rows[0].now
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      database: 'disconnected',
+      error: error.message
+    });
+  }
+});
+
+// Root API endpoint
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'Hospital CRM API',
+    version: '1.0.0',
+    status: 'running'
+  });
+});
 
 // ==================== AUTH ROUTES ====================
 
