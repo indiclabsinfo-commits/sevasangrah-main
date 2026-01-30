@@ -159,8 +159,10 @@ CREATE TABLE IF NOT EXISTS medicines (
     name TEXT NOT NULL,
     generic_name TEXT,
     category TEXT NOT NULL,
+    dosage_form TEXT, -- tablet, syrup, injection, etc.
+    strength TEXT, -- e.g., 500mg, 10ml
     manufacturer TEXT,
-    unit_price NUMERIC(10,2) NOT NULL,
+    unit_price NUMERIC(10,2) DEFAULT 0,
     stock_quantity INTEGER NOT NULL DEFAULT 0,
     reorder_level INTEGER NOT NULL DEFAULT 10,
     expiry_date DATE,
@@ -272,6 +274,5 @@ INSERT INTO users (email, password_hash, first_name, last_name, role) VALUES
     ('admin@hospital.com', crypt('admin123', gen_salt('bf')), 'Admin', 'User', 'ADMIN')
 ON CONFLICT (email) DO NOTHING;
 
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO divyansh04;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO divyansh04;
-GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO divyansh04;
+-- GRANT statements removed - not needed for Supabase
+-- Supabase handles permissions automatically through RLS policies
