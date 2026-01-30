@@ -600,9 +600,9 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
                       <td className="border border-gray-300 px-3 py-2">{service.sr}</td>
                       <td className="border border-gray-300 px-3 py-2">{service.service}</td>
                       <td className="border border-gray-300 px-3 py-2 text-center">{service.qty}</td>
-                      <td className="border border-gray-300 px-3 py-2 text-right">₹{service.rate.toFixed(2)}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-right">₹{(service.rate || 0).toFixed(2)}</td>
                       <td className="border border-gray-300 px-3 py-2 text-right">{discountDisplay}</td>
-                      <td className="border border-gray-300 px-3 py-2 text-right">₹{service.amount.toFixed(2)}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-right">₹{(service.amount || 0).toFixed(2)}</td>
                       <td className="border border-gray-300 px-3 py-2 text-center">{service.paymentMode || 'CASH'}</td>
                     </tr>
                   );
