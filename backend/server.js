@@ -961,8 +961,8 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
       `INSERT INTO patient_transactions (
         patient_id, transaction_type, amount, payment_mode,
         doctor_id, doctor_name, department, description,
-        transaction_date, created_by, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        transaction_date, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
         patient_id,
@@ -974,8 +974,7 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
         department,
         description,
         transaction_date || new Date(),
-        req.user.id,
-        status || 'COMPLETED'
+        req.user.id
       ]
     );
 
