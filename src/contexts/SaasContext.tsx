@@ -39,17 +39,29 @@ export const SaasProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 logger.log(`🌍 Detected tenant slug: ${slug}`);
 
                 // 2. Fetch Organization and Subscription
-                const org = await SaasService.getOrganizationBySlug(slug);
-                if (org) {
-                    setOrganization(org);
-                    const sub = await SaasService.getSubscription(org.id);
-                    setSubscription(sub);
-                } else {
-                    logger.warn(`⚠️ Organization not found for slug: ${slug}. Using defaults.`);
+                // Wrap in try-catch to prevent crashes if backend is unavailable
+                try {
+                    const org = await SaasService.getOrganizationBySlug(slug);
+                    if (org) {
+                        setOrganization(org);
+                        try {
+                            const sub = await SaasService.getSubscription(org.id);
+                            setSubscription(sub);
+                        } catch (subError) {
+                            logger.warn(`⚠️ Could not fetch subscription. Using defaults.`);
+                            // Continue without subscription - app will use default enabled modules
+                        }
+                    } else {
+                        logger.warn(`⚠️ Organization not found for slug: ${slug}. Using defaults.`);
+                    }
+                } catch (orgError) {
+                    logger.warn(`⚠️ Could not fetch organization. Using defaults. Error:`, orgError);
+                    // Continue without organization - app will work with default settings
                 }
 
             } catch (error) {
                 logger.error('❌ Error resolving SaaS tenant:', error);
+                // Don't rethrow - let the app continue with default settings
             } finally {
                 setLoading(false);
             }
