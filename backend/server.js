@@ -949,27 +949,40 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
       doctor_name,
       department,
       description,
-      transaction_date
+      transaction_date,
+      discount_type,
+      discount_value,
+      discount_reason,
+      online_payment_method,
+      status
     } = req.body;
 
     const result = await pool.query(
       `INSERT INTO patient_transactions (
         patient_id, transaction_type, amount, payment_mode,
         doctor_id, doctor_name, department, description,
-        transaction_date, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        transaction_date, created_by, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *`,
       [
-        patient_id, transaction_type, amount, payment_mode,
-        doctor_id, doctor_name, department, description,
-        transaction_date || new Date(), req.user.id
+        patient_id,
+        transaction_type || 'CONSULTATION',
+        amount || 0,
+        payment_mode || 'CASH',
+        doctor_id,
+        doctor_name,
+        department,
+        description,
+        transaction_date || new Date(),
+        req.user.id,
+        status || 'COMPLETED'
       ]
     );
 
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error creating transaction:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 
