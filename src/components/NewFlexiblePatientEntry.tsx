@@ -756,7 +756,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
         // Using direct REST API instead of Supabase client library
 
         // Auto-generate patient_id locally (since backend is bypassed)
-        const timestampId = `M${Math.floor(Date.now() / 1000)}`;
+        // Use timestamp + random string for guaranteed uniqueness
+        const timestampId = `M${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
         // 🧪 DEBUG: Sending MINIMAL Data first to isolate the error
         // We are excluding photo_url and hospital_id temporarily
