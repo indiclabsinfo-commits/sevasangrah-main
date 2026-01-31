@@ -45,6 +45,12 @@ class AuditService {
    */
   async createAuditLog(params: CreateAuditLogParams): Promise<{ success: boolean; error?: string; id?: string }> {
     try {
+      // Check if supabase client is available (it's null when using backend API)
+      if (!supabase) {
+        console.log('📊 Audit log skipped - Supabase client not available (using backend API)');
+        return { success: true, id: 'backend-mode' }; // Return success to not block user flow
+      }
+
       // Calculate field changes
       const field_changes = this.calculateFieldChanges(params.old_values, params.new_values);
 
@@ -105,6 +111,12 @@ class AuditService {
     offset: number = 0
   ): Promise<{ logs: AuditLog[]; total: number; error?: string }> {
     try {
+      // Check if supabase client is available
+      if (!supabase) {
+        console.log('📊 Audit logs fetch skipped - Supabase client not available');
+        return { logs: [], total: 0 };
+      }
+
       let query = supabase
         .from('audit_logs')
         .select('*', { count: 'exact' });
@@ -176,6 +188,11 @@ class AuditService {
    */
   async getAuditLogById(id: string): Promise<{ log: AuditLog | null; error?: string }> {
     try {
+      // Check if supabase client is available
+      if (!supabase) {
+        return { log: null };
+      }
+
       const { data, error } = await supabase
         .from('audit_logs')
         .select('*')
@@ -200,6 +217,11 @@ class AuditService {
    */
   async getAuditStats(): Promise<{ stats: AuditLogStats | null; error?: string }> {
     try {
+      // Check if supabase client is available
+      if (!supabase) {
+        return { stats: null };
+      }
+
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -290,6 +312,11 @@ class AuditService {
    */
   async getAuditUsers(): Promise<{ users: string[]; error?: string }> {
     try {
+      // Check if supabase client is available
+      if (!supabase) {
+        return { users: [] };
+      }
+
       const { data, error } = await supabase
         .from('audit_logs')
         .select('user_email')
