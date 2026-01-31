@@ -169,7 +169,11 @@ const DailyOperationsView: React.FC = () => {
 
           // Map database transaction types to display types
           let displayType: 'entry' | 'consultation' | 'service' | 'admission' | 'discharge';
-          switch (transaction.transaction_type?.toUpperCase()) {
+
+          // SAFEGUARD: Ensure transaction_type is treated as string
+          const safeType = transaction.transaction_type ? String(transaction.transaction_type).toUpperCase() : '';
+
+          switch (safeType) {
             case 'SERVICE':
               displayType = 'service';
               break;

@@ -153,144 +153,153 @@ const OperationsLedger: React.FC = () => {
       }
 
       allTransactions.forEach((trans: any) => {
-        let cleanDescription = trans.description || `${trans.transaction_type} Payment`;
-        let originalAmount = trans.amount;
-        let discountAmount = 0;
-        let netAmount = trans.amount;
+        try {
+          // SAFEGUARD: Ensure description is a string
+          let cleanDescription = trans.description ? String(trans.description) : `${trans.transaction_type} Payment`;
+          let originalAmount = trans.amount;
+          let discountAmount = 0;
+          let netAmount = trans.amount;
 
-        // Parse existing description for discount information
-        if (cleanDescription.includes('Original:') && cleanDescription.includes('Discount:') && cleanDescription.includes('Net:')) {
-          // Extract original amount
-          const originalMatch = cleanDescription.match(/Original:\s*₹([\d,]+(?:\.\d{2})?)/);
-          if (originalMatch) {
-            originalAmount = parseFloat(originalMatch[1].replace(/,/g, ''));
+          // Parse existing description for discount information
+          if (cleanDescription.includes('Original:') && cleanDescription.includes('Discount:') && cleanDescription.includes('Net:')) {
+            // Extract original amount
+            const originalMatch = cleanDescription.match(/Original:\s*₹([\d,]+(?:\.\d{2})?)/);
+            if (originalMatch) {
+              originalAmount = parseFloat(originalMatch[1].replace(/,/g, ''));
+            }
+
+            // Extract discount amount
+            const discountMatch = cleanDescription.match(/Discount:\s*\d+%\s*\(₹([\d,]+(?:\.\d{2})?)\)/);
+            if (discountMatch) {
+              discountAmount = parseFloat(discountMatch[1].replace(/,/g, ''));
+            }
+
+            // Extract net amount
+            const netMatch = cleanDescription.match(/Net:\s*₹([\d,]+(?:\.\d{2})?)/);
+            if (netMatch) {
+              netAmount = parseFloat(netMatch[1].replace(/,/g, ''));
+            }
+
+            // Clean the description - remove discount calculations
+            cleanDescription = cleanDescription.replace(/\s*\|\s*Original:.*?Net:\s*₹[\d,]+(?:\.\d{2})?/, '');
           }
 
-          // Extract discount amount
-          const discountMatch = cleanDescription.match(/Discount:\s*\d+%\s*\(₹([\d,]+(?:\.\d{2})?)\)/);
-          if (discountMatch) {
-            discountAmount = parseFloat(discountMatch[1].replace(/,/g, ''));
+          // Extract consultant name and department
+          let consultantName = '';
+          let department = '';
+
+          // PRIORITY 1: Use transaction-specific doctor name if available
+          if (trans.doctor_name) {
+            consultantName = String(trans.doctor_name);
+          }
+          // PRIORITY 2: For consultations, try to extract from description
+          else if (trans.transaction_type === 'consultation') {
+            const doctorMatch = cleanDescription.match(/Consultation Fee - (.+?)(?:\s*-\s*Patient Age|$)/);
+            if (doctorMatch) {
+              consultantName = doctorMatch[1];
+              cleanDescription = `Consultation Fee - ${consultantName}`;
+            } else if (trans.patient?.assigned_doctor) {
+              consultantName = String(trans.patient.assigned_doctor);
+              cleanDescription = `Consultation Fee - ${consultantName}`;
+            }
+          }
+          // PRIORITY 3: Fall back to patient's assigned doctor
+          else if (trans.patient?.assigned_doctor) {
+            consultantName = String(trans.patient.assigned_doctor);
           }
 
-          // Extract net amount
-          const netMatch = cleanDescription.match(/Net:\s*₹([\d,]+(?:\.\d{2})?)/);
-          if (netMatch) {
-            netAmount = parseFloat(netMatch[1].replace(/,/g, ''));
+          // Map doctor to correct department based on hospital's doctor-department assignments
+          if (consultantName) {
+            // Create doctor-to-department mapping based on hospital's actual assignments
+            const doctorDepartmentMapping: { [key: string]: string } = {
+              'DR. HEMANT KHAJJA': 'ORTHOPEDIC',
+              'DR. BATUL PEEPAWALA': 'GENERAL PHYSICIAN',
+              'DR. POONAM JAIN': 'PHYSIOTHERAPY',
+              'DR. MILIND KIRIT AKHANI': 'GASTRO',
+              'DR. SAURABH GUPTA': 'ENDOCRINOLOGY',
+              'DR. RAJESH KUMAR': 'CARDIOLOGY',
+              'DR. PRIYA SHARMA': 'GYNECOLOGY',
+              'DR. AMIT PATEL': 'NEUROLOGY',
+              'DR. SUNITA AGARWAL': 'DERMATOLOGY',
+              'DR. RAHUL VERMA': 'PULMONOLOGY'
+            };
+
+            // Use mapping first, then fallback to patient's assigned department
+            department = doctorDepartmentMapping[consultantName.toUpperCase()] ||
+              trans.patient?.assigned_department ||
+              'GENERAL';
+          } else if (trans.patient?.assigned_department) {
+            department = trans.patient.assigned_department;
           }
 
-          // Clean the description - remove discount calculations
-          cleanDescription = cleanDescription.replace(/\s*\|\s*Original:.*?Net:\s*₹[\d,]+(?:\.\d{2})?/, '');
-        }
-
-        // Extract consultant name and department
-        let consultantName = '';
-        let department = '';
-
-        // PRIORITY 1: Use transaction-specific doctor name if available
-        if (trans.doctor_name) {
-          consultantName = trans.doctor_name;
-        }
-        // PRIORITY 2: For consultations, try to extract from description
-        else if (trans.transaction_type === 'consultation') {
-          const doctorMatch = cleanDescription.match(/Consultation Fee - (.+?)(?:\s*-\s*Patient Age|$)/);
-          if (doctorMatch) {
-            consultantName = doctorMatch[1];
-            cleanDescription = `Consultation Fee - ${consultantName}`;
-          } else if (trans.patient?.assigned_doctor) {
-            consultantName = trans.patient.assigned_doctor;
-            cleanDescription = `Consultation Fee - ${consultantName}`;
+          // Add patient age to description (keep for backward compatibility)
+          if (trans.patient?.age) {
+            cleanDescription += ` - Patient Age: ${trans.patient.age} years`;
           }
+
+          let effectiveDate = new Date();
+          let effectiveDateStr = '';
+
+          // SAFEGUARD: Handle created_at being potentially missing or invalid
+          const createdAtSafe = trans.created_at || new Date().toISOString();
+          const transactionDateTime = new Date(createdAtSafe);
+
+          const transactionDateStr = trans.transaction_date ? String(trans.transaction_date).trim() : '';
+
+          if (transactionDateStr !== '') {
+            effectiveDateStr = transactionDateStr.includes('T')
+              ? transactionDateStr.split('T')[0]
+              : transactionDateStr;
+            const dateParts = effectiveDateStr.split('-');
+            effectiveDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+          } else if (trans.patient?.date_of_entry && String(trans.patient.date_of_entry).trim() !== '') {
+            const entryDateStr = String(trans.patient.date_of_entry);
+            effectiveDateStr = entryDateStr.includes('T')
+              ? entryDateStr.split('T')[0]
+              : entryDateStr;
+            const dateParts = effectiveDateStr.split('-');
+            effectiveDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+          } else {
+            effectiveDate = transactionDateTime;
+            effectiveDateStr = createdAtSafe.includes('T') ? createdAtSafe.split('T')[0] : createdAtSafe;
+          }
+
+          const day = effectiveDate.getDate().toString().padStart(2, '0');
+          const month = (effectiveDate.getMonth() + 1).toString().padStart(2, '0');
+          const year = effectiveDate.getFullYear();
+          const istDate = `${day}/${month}/${year}`;
+
+          const localTime = formatLocalTime(transactionDateTime);
+
+          const isRefund = trans.amount < 0;
+          const entryType = isRefund ? 'REFUND' : 'REVENUE';
+          const displayAmount = Math.abs(trans.amount);
+
+          allEntries.push({
+            id: trans.id,
+            date: istDate,
+            time: localTime,
+            type: entryType,
+            category: isRefund ? 'REFUND' : trans.transaction_type,
+            description: cleanDescription,
+            amount: displayAmount,
+            original_amount: Math.abs(originalAmount),
+            discount_amount: discountAmount,
+            net_amount: Math.abs(netAmount),
+            payment_mode: trans.payment_mode || 'CASH',
+            patient_name: trans.patient ? `${trans.patient.first_name} ${trans.patient.last_name}` : 'Unknown',
+            patient_id: trans.patient?.patient_id,
+            patient_age: trans.patient?.age || '',
+            patient_gender: trans.patient?.gender || '',
+            consultant_name: consultantName,
+            department: department,
+            patient_tag: trans.patient?.patient_tag || '',
+            reference_id: trans.id,
+            created_at: createdAtSafe
+          });
+        } catch (itemError) {
+          console.error('⚠️ Skipping malformed transaction:', trans.id, itemError);
         }
-        // PRIORITY 3: Fall back to patient's assigned doctor
-        else if (trans.patient?.assigned_doctor) {
-          consultantName = trans.patient.assigned_doctor;
-        }
-
-        // Map doctor to correct department based on hospital's doctor-department assignments
-        if (consultantName) {
-          // Create doctor-to-department mapping based on hospital's actual assignments
-          const doctorDepartmentMapping: { [key: string]: string } = {
-            'DR. HEMANT KHAJJA': 'ORTHOPEDIC',
-            'DR. BATUL PEEPAWALA': 'GENERAL PHYSICIAN',
-            'DR. POONAM JAIN': 'PHYSIOTHERAPY',
-            'DR. MILIND KIRIT AKHANI': 'GASTRO',
-            'DR. SAURABH GUPTA': 'ENDOCRINOLOGY',
-            'DR. RAJESH KUMAR': 'CARDIOLOGY',
-            'DR. PRIYA SHARMA': 'GYNECOLOGY',
-            'DR. AMIT PATEL': 'NEUROLOGY',
-            'DR. SUNITA AGARWAL': 'DERMATOLOGY',
-            'DR. RAHUL VERMA': 'PULMONOLOGY'
-          };
-
-          // Use mapping first, then fallback to patient's assigned department
-          department = doctorDepartmentMapping[consultantName.toUpperCase()] ||
-            trans.patient?.assigned_department ||
-            'GENERAL';
-        } else if (trans.patient?.assigned_department) {
-          department = trans.patient.assigned_department;
-        }
-
-        // Add patient age to description (keep for backward compatibility)
-        if (trans.patient?.age) {
-          cleanDescription += ` - Patient Age: ${trans.patient.age} years`;
-        }
-
-        let effectiveDate = new Date();
-        let effectiveDateStr = '';
-        const transactionDateTime = new Date(trans.created_at);
-
-        const transactionDateStr = trans.transaction_date ? String(trans.transaction_date).trim() : '';
-
-        if (transactionDateStr !== '') {
-          effectiveDateStr = transactionDateStr.includes('T')
-            ? transactionDateStr.split('T')[0]
-            : transactionDateStr;
-          const dateParts = effectiveDateStr.split('-');
-          effectiveDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-        } else if (trans.patient?.date_of_entry && trans.patient.date_of_entry.trim() !== '') {
-          effectiveDateStr = trans.patient.date_of_entry.includes('T')
-            ? trans.patient.date_of_entry.split('T')[0]
-            : trans.patient.date_of_entry;
-          const dateParts = effectiveDateStr.split('-');
-          effectiveDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-        } else {
-          effectiveDate = new Date(trans.created_at);
-          effectiveDateStr = trans.created_at.split('T')[0];
-        }
-
-        const day = effectiveDate.getDate().toString().padStart(2, '0');
-        const month = (effectiveDate.getMonth() + 1).toString().padStart(2, '0');
-        const year = effectiveDate.getFullYear();
-        const istDate = `${day}/${month}/${year}`;
-
-        const localTime = formatLocalTime(transactionDateTime);
-
-        const isRefund = trans.amount < 0;
-        const entryType = isRefund ? 'REFUND' : 'REVENUE';
-        const displayAmount = Math.abs(trans.amount);
-
-        allEntries.push({
-          id: trans.id,
-          date: istDate,
-          time: localTime,
-          type: entryType,
-          category: isRefund ? 'REFUND' : trans.transaction_type,
-          description: cleanDescription,
-          amount: displayAmount,
-          original_amount: Math.abs(originalAmount),
-          discount_amount: discountAmount,
-          net_amount: Math.abs(netAmount),
-          payment_mode: trans.payment_mode || 'CASH',
-          patient_name: trans.patient ? `${trans.patient.first_name} ${trans.patient.last_name}` : 'Unknown',
-          patient_id: trans.patient?.patient_id,
-          patient_age: trans.patient?.age || '',
-          patient_gender: trans.patient?.gender || '',
-          consultant_name: consultantName,
-          department: department,
-          patient_tag: trans.patient?.patient_tag || '',
-          reference_id: trans.id,
-          created_at: trans.created_at
-        });
       });
 
       // Load daily expenses from backend API
@@ -1218,8 +1227,8 @@ const OperationsLedger: React.FC = () => {
                   setSortOrder(newSortOrder);
                 }}
                 className={`px-2 py-2 border rounded-md text-sm transition-colors ${sortOrder === 'asc'
-                    ? 'border-blue-300 bg-blue-50 hover:bg-blue-100'
-                    : 'border-red-300 bg-red-50 hover:bg-red-100'
+                  ? 'border-blue-300 bg-blue-50 hover:bg-blue-100'
+                  : 'border-red-300 bg-red-50 hover:bg-red-100'
                   }`}
                 title={`Currently: ${sortOrder === 'asc' ? 'Ascending' : 'Descending'} - Click to toggle`}
               >
@@ -1382,16 +1391,16 @@ const OperationsLedger: React.FC = () => {
                       </td>
                       <td className="p-3 text-center" style={{ width: '80px' }}>
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${entry.type === 'REVENUE' ? 'bg-green-100 text-green-800' :
-                            entry.type === 'EXPENSE' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'
+                          entry.type === 'EXPENSE' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
                           }`}>
                           {entry.type === 'REVENUE' ? '💰' : entry.type === 'EXPENSE' ? '💸' : '↩️'} {entry.type}
                         </span>
                       </td>
                       <td className="p-3 text-center" style={{ width: '80px' }}>
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${entry.payment_mode?.toLowerCase() === 'cash' ? 'bg-green-100 text-green-800' :
-                            ['online', 'card', 'upi'].includes(entry.payment_mode?.toLowerCase()) ? 'bg-blue-100 text-blue-800' :
-                              'bg-gray-100 text-gray-800'
+                          ['online', 'card', 'upi'].includes(entry.payment_mode?.toLowerCase()) ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
                           }`}>
                           {entry.payment_mode?.toLowerCase() === 'cash' ? '💵' :
                             entry.payment_mode?.toLowerCase() === 'online' ? '🌐' :
