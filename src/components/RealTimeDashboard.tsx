@@ -73,7 +73,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ patients, appointments 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
       <h3 className="text-lg font-semibold text-gray-800 mb-4">🕒 Recent Activity</h3>
-      
+
       <div className="space-y-4">
         {/* Recent Patients */}
         <div>
@@ -121,11 +121,10 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ patients, appointments 
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-medium">{appointment.appointment_time}</div>
-                    <div className={`text-xs px-2 py-1 rounded ${
-                      appointment.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
+                    <div className={`text-xs px-2 py-1 rounded ${appointment.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
                       appointment.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
+                        'bg-gray-100 text-gray-700'
+                      }`}>
                       {appointment.status}
                     </div>
                   </div>
@@ -149,11 +148,11 @@ interface RevenueChartProps {
 
 const RevenueChart: React.FC<RevenueChartProps> = ({ dailyRevenue, weeklyRevenue, monthlyRevenue }) => {
   const maxRevenue = Math.max(dailyRevenue, weeklyRevenue, monthlyRevenue);
-  
+
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
       <h3 className="text-lg font-semibold text-gray-800 mb-4">💰 Revenue Overview</h3>
-      
+
       <div className="space-y-4">
         <div>
           <div className="flex justify-between items-center mb-1">
@@ -161,33 +160,33 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ dailyRevenue, weeklyRevenue
             <span className="text-sm font-medium">₹{dailyRevenue.toLocaleString()}</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
+            <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-500"
               style={{ width: `${maxRevenue > 0 ? (dailyRevenue / maxRevenue) * 100 : 0}%` }}
             />
           </div>
         </div>
-        
+
         <div>
           <div className="flex justify-between items-center mb-1">
             <span className="text-sm text-gray-600">This Week</span>
             <span className="text-sm font-medium">₹{weeklyRevenue.toLocaleString()}</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
+            <div
               className="bg-green-600 h-2 rounded-full transition-all duration-500"
               style={{ width: `${maxRevenue > 0 ? (weeklyRevenue / maxRevenue) * 100 : 0}%` }}
             />
           </div>
         </div>
-        
+
         <div>
           <div className="flex justify-between items-center mb-1">
             <span className="text-sm text-gray-600">This Month</span>
             <span className="text-sm font-medium">₹{monthlyRevenue.toLocaleString()}</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
+            <div
               className="bg-purple-600 h-2 rounded-full transition-all duration-500"
               style={{ width: `100%` }}
             />
@@ -215,7 +214,7 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
     patientGrowthRate: 0,
     revenueGrowthRate: 0
   });
-  
+
   const [patients, setPatients] = useState<PatientWithRelations[]>([]);
   const [appointments, setAppointments] = useState<FutureAppointment[]>([]);
   const [dailyExpenses, setDailyExpenses] = useState<any[]>([]);
@@ -227,12 +226,12 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
 
   useEffect(() => {
     loadDashboardData();
-    
+
     // Set up auto-refresh every 30 seconds
     const interval = setInterval(() => {
       refreshData();
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -240,10 +239,10 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
     try {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
-      
+
       const [
-        statsData, 
-        patientsData, 
+        statsData,
+        patientsData,
         appointmentsData,
         expensesData,
         refundsData
@@ -251,28 +250,29 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
         HospitalService.getDashboardStats(),
         HospitalService.getPatients(50),
         HospitalService.getAppointments(100),
-        // Load today's expenses
-        supabase
-          .from('daily_expenses')
-          .select('*')
-          .eq('expense_date', today),
-        // Load today's refunds (negative PROCEDURE amounts)
-        supabase
-          .from('patient_transactions')
-          .select('*')
-          .eq('transaction_type', 'PROCEDURE')
-          .lt('amount', 0) // Only negative amounts (refunds)
-          .gte('created_at', `${today}T00:00:00.000Z`)
-          .lt('created_at', `${today}T23:59:59.999Z`)
+        // Load today's expenses via backend API instead of Supabase
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/daily_expenses?date=${today}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          }
+        }).then(res => res.ok ? res.json() : []).catch(() => []),
+        // Load today's refunds via backend API
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/transactions/for-ledger?start_date=${today}&end_date=${today}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          }
+        }).then(res => res.ok ? res.json() : [])
+          .then(data => data.filter((t: any) => t.transaction_type === 'PROCEDURE' && parseFloat(t.amount) < 0))
+          .catch(() => [])
       ]);
-      
+
       setStats(statsData);
       setPatients(patientsData);
       setAppointments(appointmentsData);
-      setDailyExpenses(expensesData.data || []);
-      setDailyRefunds(refundsData.data || []);
+      setDailyExpenses(Array.isArray(expensesData) ? expensesData : []);
+      setDailyRefunds(Array.isArray(refundsData) ? refundsData : []);
       setLastUpdate(new Date());
-      
+
     } catch (error: any) {
       console.error('Dashboard load error:', error);
       toast.error(`Failed to load dashboard: ${error.message}`);
@@ -297,7 +297,7 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
   const calculateWeeklyRevenue = () => {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    
+
     return patients.reduce((sum, patient) => {
       const patientWeeklyRevenue = (patient.transactions || [])
         .filter(t => new Date(t.created_at) >= weekAgo)
@@ -339,9 +339,8 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
         <button
           onClick={refreshData}
           disabled={refreshing}
-          className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 ${
-            refreshing ? 'animate-pulse' : ''
-          }`}
+          className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 ${refreshing ? 'animate-pulse' : ''
+            }`}
         >
           {refreshing ? '⟳ Updating...' : '🔄 Refresh'}
         </button>
@@ -363,19 +362,16 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
             <div className="text-2xl font-bold text-orange-700">₹{todayRefunds.toLocaleString()}</div>
             <div className="text-orange-600 text-sm">Refunds (-)</div>
           </div>
-          <div className={`p-4 rounded-lg border-2 ${
-            netDailyValue >= 0 
-              ? 'bg-blue-50 border-blue-200' 
-              : 'bg-red-50 border-red-200'
-          }`}>
-            <div className={`text-2xl font-bold ${
-              netDailyValue >= 0 ? 'text-blue-700' : 'text-red-700'
+          <div className={`p-4 rounded-lg border-2 ${netDailyValue >= 0
+            ? 'bg-blue-50 border-blue-200'
+            : 'bg-red-50 border-red-200'
             }`}>
+            <div className={`text-2xl font-bold ${netDailyValue >= 0 ? 'text-blue-700' : 'text-red-700'
+              }`}>
               ₹{netDailyValue.toLocaleString()}
             </div>
-            <div className={`text-sm ${
-              netDailyValue >= 0 ? 'text-blue-600' : 'text-red-600'
-            }`}>
+            <div className={`text-sm ${netDailyValue >= 0 ? 'text-blue-600' : 'text-red-600'
+              }`}>
               Net Daily Value {netDailyValue >= 0 ? '(+)' : '(-)'}
             </div>
           </div>
