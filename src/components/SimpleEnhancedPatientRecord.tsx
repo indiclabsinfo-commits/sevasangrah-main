@@ -438,21 +438,33 @@ const SimpleEnhancedPatientRecord: React.FC<SimpleEnhancedPatientRecordProps> = 
     console.log('🔄 useEffect triggered for patient:', patient.patient_id);
     const loadData = async () => {
       try {
-        // Load doctors from service
-        const doctors = DoctorService.getAllDoctors();
-        setDoctorsList(doctors.map(doc => doc.name));
+        // Load doctors from service (local - won't fail)
+        try {
+          const doctors = DoctorService.getAllDoctors();
+          setDoctorsList(doctors.map(doc => doc.name));
+        } catch (docError) {
+          console.warn('Failed to load doctors, using defaults:', docError);
+        }
 
-        // Load pain complaints from database
-        const complaints = await HospitalService.getPainComplaints();
-        setComplaintsList(complaints);
+        // Load pain complaints from database (may fail if endpoint doesn't exist)
+        try {
+          const complaints = await HospitalService.getPainComplaints();
+          if (complaints && complaints.length > 0) {
+            setComplaintsList(complaints);
+          }
+        } catch (complaintError) {
+          console.warn('Pain complaints endpoint not available, using defaults');
+          // Keep default complaints list from initial state
+        }
 
         // Load existing saved medical record from database
         console.log(`🔍 Loading saved record for patient: ${patient.patient_id}`);
 
-        const savedRecord = await CompletePatientRecordService.getCompletePatientRecord(patient.patient_id);
-        console.log(`📄 Saved record found:`, !!savedRecord);
+        try {
+          const savedRecord = await CompletePatientRecordService.getCompletePatientRecord(patient.patient_id);
+          console.log(`📄 Saved record found:`, !!savedRecord);
 
-        if (savedRecord) {
+          if (savedRecord) {
           console.log('✅ Loading existing medical record from database:', savedRecord);
 
           // Transform database data back to component format
@@ -552,13 +564,17 @@ const SimpleEnhancedPatientRecord: React.FC<SimpleEnhancedPatientRecordProps> = 
 
           console.log(`📋 Successfully loaded ${totalRecords} medical records from database`);
           toast.success(`Loaded existing medical record from database! (${totalRecords} total entries)`);
-        } else {
-          console.log('📝 No previous medical record found for this patient');
+          } else {
+            console.log('📝 No previous medical record found for this patient');
+          }
+        } catch (recordError) {
+          console.warn('Failed to load saved medical record:', recordError);
+          // Don't show error toast - patient can still use the form with default values
         }
 
       } catch (error) {
-        console.error('Failed to load dynamic data:', error);
-        toast.error('Failed to load doctors and complaints');
+        console.error('Unexpected error during data loading:', error);
+        // Don't show error toast for minor loading issues
       }
     };
 

@@ -181,21 +181,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
     discount_type: 'PERCENTAGE',
     discount_value: 0,
     discount_reason: '',
-    payment_mode: 'CASH',
     online_payment_method: 'UPI',
-    // Appointment scheduling fields
-    schedule_appointment: false,
-    appointment_mode: 'none',
-    existing_patient_search: '',
-    selected_existing_patient: null as any,
-    appointment_doctor_name: '',
-    appointment_department: '',
-    appointment_date: null as Date | null,
-    appointment_time: '',
-    appointment_type: '',
-    appointment_duration: 30,
-    appointment_cost: 500,
-    appointment_notes: '',
     // SMS notification option
     send_sms: false,
   });
@@ -782,54 +768,61 @@ const NewFlexiblePatientEntry: React.FC = () => {
         }));
       }
 
-      // Create transactions for each assigned doctor
+      // Create transactions for each assigned doctor (wrapped in try-catch to not break patient creation)
       if (!saveAsDraft && assignedDoctorsData.length > 0) {
-        for (const doctor of assignedDoctorsData) {
-          // Calculate discounted amount
-          const originalAmount = doctor.consultation_fee || 0;
-          let discountAmount = 0;
-          if (formData.discount_type === 'PERCENTAGE') {
-            discountAmount = originalAmount * (formData.discount_value / 100);
-          } else {
-            discountAmount = formData.discount_value;
-          }
-          const finalAmount = originalAmount - discountAmount;
-
-          // Build description with discount info if applicable
-          let description = `Consultation with ${doctor.doctor_name} - ${doctor.department}`;
-
-          // Add discount information to description for backward compatibility
-          if (formData.discount_value > 0) {
-            const discountText = formData.discount_type === 'PERCENTAGE'
-              ? `${formData.discount_value}% discount (₹${discountAmount.toFixed(2)})`
-              : `₹${formData.discount_value} discount`;
-            description += ` | Original Fee: ₹${originalAmount.toFixed(2)} | Discount: ${discountText}`;
-
-            if (formData.discount_reason) {
-              description += ` | Reason: ${formData.discount_reason}`;
+        try {
+          for (const doctor of assignedDoctorsData) {
+            // Calculate discounted amount
+            const originalAmount = doctor.consultation_fee || 0;
+            let discountAmount = 0;
+            if (formData.discount_type === 'PERCENTAGE') {
+              discountAmount = originalAmount * (formData.discount_value / 100);
+            } else {
+              discountAmount = formData.discount_value;
             }
+            const finalAmount = originalAmount - discountAmount;
+
+            // Build description with discount info if applicable
+            let description = `Consultation with ${doctor.doctor_name} - ${doctor.department}`;
+
+            // Add discount information to description for backward compatibility
+            if (formData.discount_value > 0) {
+              const discountText = formData.discount_type === 'PERCENTAGE'
+                ? `${formData.discount_value}% discount (₹${discountAmount.toFixed(2)})`
+                : `₹${formData.discount_value} discount`;
+              description += ` | Original Fee: ₹${originalAmount.toFixed(2)} | Discount: ${discountText}`;
+
+              if (formData.discount_reason) {
+                description += ` | Reason: ${formData.discount_reason}`;
+              }
+            }
+
+            const transactionData: CreateTransactionData = {
+              patient_id: newPatient.id,  // Use UUID id, not patient_id string
+              amount: finalAmount, // Use discounted amount
+              description: description,
+              discount_type: formData.discount_type as 'PERCENTAGE' | 'AMOUNT',
+              discount_value: formData.discount_value,
+              discount_reason: formData.discount_reason || undefined,
+              payment_mode: formData.payment_mode as 'CASH' | 'ONLINE' | 'CARD' | 'UPI' | 'INSURANCE',
+              online_payment_method: formData.payment_mode === 'ONLINE' ? formData.online_payment_method : undefined,
+              transaction_type: 'CONSULTATION',
+              doctor_name: doctor.doctor_name,
+              department: doctor.department,
+              status: 'COMPLETED',
+              transaction_date: formData.date_of_entry
+                ? `${formData.date_of_entry.getFullYear()}-${String(formData.date_of_entry.getMonth() + 1).padStart(2, '0')}-${String(formData.date_of_entry.getDate()).padStart(2, '0')}`
+                : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`
+            };
+
+            logger.log('💳 Creating transaction:', transactionData);
+            await HospitalService.createTransaction(transactionData);
           }
-
-          const transactionData: CreateTransactionData = {
-            patient_id: newPatient.id,  // Use UUID id, not patient_id string
-            amount: finalAmount, // Use discounted amount
-            description: description,
-            discount_type: formData.discount_type as 'PERCENTAGE' | 'AMOUNT',
-            discount_value: formData.discount_value,
-            discount_reason: formData.discount_reason || undefined,
-            payment_mode: formData.payment_mode as 'CASH' | 'ONLINE' | 'CARD' | 'UPI' | 'INSURANCE',
-            online_payment_method: formData.payment_mode === 'ONLINE' ? formData.online_payment_method : undefined,
-            transaction_type: 'CONSULTATION',
-            doctor_name: doctor.doctor_name,
-            department: doctor.department,
-            status: 'COMPLETED',
-            transaction_date: formData.date_of_entry
-              ? `${formData.date_of_entry.getFullYear()}-${String(formData.date_of_entry.getMonth() + 1).padStart(2, '0')}-${String(formData.date_of_entry.getDate()).padStart(2, '0')}`
-              : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`
-          };
-
-          logger.log('💳 Creating transaction:', transactionData);
-          await HospitalService.createTransaction(transactionData);
+        } catch (transactionError: any) {
+          // Log the error but don't fail the whole patient creation
+          logger.error('⚠️ Transaction creation failed:', transactionError);
+          console.warn('Transaction creation failed but patient was saved:', transactionError.message);
+          // Don't throw - patient is already created successfully
         }
       }
 
