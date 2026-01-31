@@ -1191,6 +1191,123 @@ app.get('/api/beds', authenticateToken, async (req, res) => {
   }
 });
 
+// Get single bed by ID
+app.get('/api/beds/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('SELECT * FROM beds WHERE id = $1', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Bed not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching bed:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update bed (for admissions, discharges, status changes)
+app.put('/api/beds/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      status,
+      patient_id,
+      ipd_number,
+      admission_date,
+      admission_id,
+      tat_status,
+      tat_remaining_seconds,
+      consent_form_submitted,
+      clinical_record_submitted,
+      progress_sheet_submitted,
+      nurses_orders_submitted
+    } = req.body;
+
+    // Build dynamic update query
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+
+    if (status !== undefined) {
+      updates.push(`status = $${paramCount}`);
+      values.push(status);
+      paramCount++;
+    }
+    if (patient_id !== undefined) {
+      updates.push(`patient_id = $${paramCount}`);
+      values.push(patient_id);
+      paramCount++;
+    }
+    if (ipd_number !== undefined) {
+      updates.push(`ipd_number = $${paramCount}`);
+      values.push(ipd_number);
+      paramCount++;
+    }
+    if (admission_date !== undefined) {
+      updates.push(`admission_date = $${paramCount}`);
+      values.push(admission_date);
+      paramCount++;
+    }
+    if (admission_id !== undefined) {
+      updates.push(`admission_id = $${paramCount}`);
+      values.push(admission_id);
+      paramCount++;
+    }
+    if (tat_status !== undefined) {
+      updates.push(`tat_status = $${paramCount}`);
+      values.push(tat_status);
+      paramCount++;
+    }
+    if (tat_remaining_seconds !== undefined) {
+      updates.push(`tat_remaining_seconds = $${paramCount}`);
+      values.push(tat_remaining_seconds);
+      paramCount++;
+    }
+    if (consent_form_submitted !== undefined) {
+      updates.push(`consent_form_submitted = $${paramCount}`);
+      values.push(consent_form_submitted);
+      paramCount++;
+    }
+    if (clinical_record_submitted !== undefined) {
+      updates.push(`clinical_record_submitted = $${paramCount}`);
+      values.push(clinical_record_submitted);
+      paramCount++;
+    }
+    if (progress_sheet_submitted !== undefined) {
+      updates.push(`progress_sheet_submitted = $${paramCount}`);
+      values.push(progress_sheet_submitted);
+      paramCount++;
+    }
+    if (nurses_orders_submitted !== undefined) {
+      updates.push(`nurses_orders_submitted = $${paramCount}`);
+      values.push(nurses_orders_submitted);
+      paramCount++;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    values.push(id);
+    const query = `UPDATE beds SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Bed not found' });
+    }
+
+    console.log(`✅ Bed ${id} updated successfully`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating bed:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
 // ==================== DASHBOARD ROUTES ====================
 
 // Get dashboard stats

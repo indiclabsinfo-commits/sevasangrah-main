@@ -1864,9 +1864,14 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
     // Navigate to IPD Beds tab
     if (onNavigate) {
       onNavigate('ipd-beds');
-      toast.success(`Navigating to IPD Beds to admit ${patient.first_name} ${patient.last_name}`);
+      toast(`Opening IPD Beds - Please select an available bed and admit ${patient.first_name} ${patient.last_name}`, {
+        icon: '🛏️',
+        duration: 4000
+      });
     } else {
-      toast.success(`Patient ${patient.first_name} ${patient.last_name} selected for IPD admission`);
+      toast(`Please go to IPD Beds tab to admit ${patient.first_name} ${patient.last_name}`, {
+        icon: '🛏️'
+      });
     }
   };
 
