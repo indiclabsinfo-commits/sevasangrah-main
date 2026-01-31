@@ -966,13 +966,13 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
       RETURNING *`,
       [
         patient_id,
-        transaction_type || 'CONSULTATION',
+        (transaction_type || 'consultation').toLowerCase(),
         amount || 0,
         (payment_mode || 'cash').toLowerCase(),
         doctor_id,
         doctor_name || 'Unassigned',
         department || 'General',
-        description || `${transaction_type || 'CONSULTATION'} - ${doctor_name || 'Unassigned'}`,
+        description || `${transaction_type || 'consultation'} - ${doctor_name || 'Unassigned'}`,
         transaction_date || new Date(),
         req.user.id
       ]
