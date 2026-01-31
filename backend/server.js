@@ -2310,6 +2310,8 @@ app.post('/api/daily_expenses', authenticateToken, async (req, res) => {
       description,
       amount,
       payment_mode,
+      receipt_number,
+      hospital_id,
       approved_by,
       notes
     } = req.body;
@@ -2317,15 +2319,17 @@ app.post('/api/daily_expenses', authenticateToken, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO daily_expenses (
         expense_date, expense_category, description, amount,
-        payment_mode, approved_by, notes, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        payment_mode, receipt_number, hospital_id, approved_by, notes, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
         expense_date || new Date().toISOString().split('T')[0],
         expense_category || 'GENERAL',
         description || '',
         amount || 0,
-        (payment_mode || 'cash').toLowerCase(),
+        (payment_mode || 'CASH').toUpperCase(),
+        receipt_number || null,
+        hospital_id || '550e8400-e29b-41d4-a716-446655440000',
         approved_by || req.user.email,
         notes || '',
         req.user.id
@@ -2343,10 +2347,12 @@ app.post('/api/daily_expenses', authenticateToken, async (req, res) => {
           CREATE TABLE IF NOT EXISTS daily_expenses (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
-            expense_category VARCHAR(100),
-            description TEXT,
+            expense_category VARCHAR(100) NOT NULL,
+            description TEXT NOT NULL,
             amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-            payment_mode VARCHAR(50) DEFAULT 'cash',
+            payment_mode VARCHAR(50) DEFAULT 'CASH',
+            receipt_number VARCHAR(100),
+            hospital_id UUID,
             approved_by VARCHAR(255),
             notes TEXT,
             created_by UUID,
@@ -2355,11 +2361,22 @@ app.post('/api/daily_expenses', authenticateToken, async (req, res) => {
           )
         `);
         // Retry the insert
-        const { expense_date, expense_category, description, amount, payment_mode, approved_by, notes } = req.body;
+        const { expense_date, expense_category, description, amount, payment_mode, receipt_number, hospital_id, approved_by, notes } = req.body;
         const result = await pool.query(
-          `INSERT INTO daily_expenses (expense_date, expense_category, description, amount, payment_mode, approved_by, notes, created_by)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-          [expense_date || new Date().toISOString().split('T')[0], expense_category || 'GENERAL', description || '', amount || 0, (payment_mode || 'cash').toLowerCase(), approved_by || req.user.email, notes || '', req.user.id]
+          `INSERT INTO daily_expenses (expense_date, expense_category, description, amount, payment_mode, receipt_number, hospital_id, approved_by, notes, created_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+          [
+            expense_date || new Date().toISOString().split('T')[0],
+            expense_category || 'GENERAL',
+            description || '',
+            amount || 0,
+            (payment_mode || 'CASH').toUpperCase(),
+            receipt_number || null,
+            hospital_id || '550e8400-e29b-41d4-a716-446655440000',
+            approved_by || req.user.email,
+            notes || '',
+            req.user.id
+          ]
         );
         return res.json(result.rows[0]);
       } catch (createError) {
