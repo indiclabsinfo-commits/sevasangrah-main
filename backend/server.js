@@ -906,6 +906,50 @@ app.get('/api/patient_refunds', authenticateToken, async (req, res) => {
 
 // ==================== TRANSACTION ROUTES ====================
 
+// Get transactions for operations ledger (with patient info)
+app.get('/api/transactions/for-ledger', authenticateToken, async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+
+    if (!start_date || !end_date) {
+      return res.status(400).json({ error: 'Start date and end date are required' });
+    }
+
+    // Get transactions with patient info, filtered by transaction_date
+    const result = await pool.query(`
+      SELECT
+        t.*,
+        json_build_object(
+          'id', p.id,
+          'patient_id', p.patient_id,
+          'first_name', p.first_name,
+          'last_name', p.last_name,
+          'age', p.age,
+          'gender', p.gender,
+          'phone', p.phone,
+          'patient_tag', p.patient_tag,
+          'assigned_doctor', p.assigned_doctor,
+          'assigned_department', p.assigned_department,
+          'date_of_entry', p.date_of_entry
+        ) as patient
+      FROM patient_transactions t
+      LEFT JOIN patients p ON t.patient_id = p.id
+      WHERE (
+        (t.transaction_date IS NOT NULL AND t.transaction_date >= $1 AND t.transaction_date <= $2)
+        OR
+        (t.transaction_date IS NULL AND DATE(t.created_at) >= $1 AND DATE(t.created_at) <= $2)
+      )
+      ORDER BY t.created_at DESC
+    `, [start_date, end_date]);
+
+    console.log(`✅ Found ${result.rows.length} transactions for ledger between ${start_date} and ${end_date}`);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching transactions for ledger:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
 // Get all transactions
 app.get('/api/transactions', authenticateToken, async (req, res) => {
   try {

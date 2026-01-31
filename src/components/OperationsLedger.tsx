@@ -104,61 +104,50 @@ const OperationsLedger: React.FC = () => {
     try {
       const allEntries: LedgerEntry[] = [];
 
-      // Use same data source as Patient List
-      let patientsData: any[] = [];
+      // Fetch transactions directly by date range (with patient info)
+      let allTransactions: any[] = [];
       try {
-        patientsData = await ExactDateService.getPatientsForDateRange(dateFrom, dateTo);
-        console.log(`✅ Loaded ${patientsData.length} patients for operations ledger`);
-      } catch (patientError: any) {
-        console.error('Error loading patients for ledger:', patientError);
-        // Continue with empty patients - we can still show expenses
-      }
+        const transResponse = await axios.get(`${getBaseUrl()}/api/transactions/for-ledger`, {
+          headers: getAuthHeaders(),
+          params: { start_date: dateFrom, end_date: dateTo }
+        });
+        const rawTransactions = transResponse.data || [];
+        console.log(`✅ Loaded ${rawTransactions.length} transactions for operations ledger`);
 
-      // Extract all transactions from all patients
-      const allTransactions: any[] = [];
-      patientsData.forEach((patient: any) => {
-        const transactions = patient.transactions || [];
-        transactions.forEach((trans: any) => {
+        // Filter transactions
+        allTransactions = rawTransactions.filter((trans: any) => {
           // Filter out ORTHO + DR. HEMANT patients
-          const filterDoctorName = patient.assigned_doctor?.toUpperCase()?.trim() || '';
-          const filterDepartment = patient.assigned_department?.toUpperCase()?.trim() || '';
+          const filterDoctorName = trans.patient?.assigned_doctor?.toUpperCase()?.trim() || '';
+          const filterDepartment = trans.patient?.assigned_department?.toUpperCase()?.trim() || '';
           const isOrthoDeptOnly = filterDepartment === 'ORTHO';
           const isDrHemantOnly = filterDoctorName === 'DR. HEMANT' || filterDoctorName === 'DR HEMANT';
 
           if (isOrthoDeptOnly && isDrHemantOnly) {
-            return; // Skip ORTHO + DR. HEMANT
+            return false; // Skip ORTHO + DR. HEMANT
           }
 
           // Only include COMPLETED transactions
           if (trans.status !== 'COMPLETED') {
-            return;
+            return false;
           }
 
           // Exclude only IPD Bills (SERVICE with [IPD_BILL] in description)
-          // Keep DEPOSIT, ADMISSION_FEE, ADVANCE_PAYMENT and regular SERVICE transactions
           const isIPDBill = trans.transaction_type === 'SERVICE' &&
                            trans.description?.includes('[IPD_BILL]');
 
           if (isIPDBill) {
             console.log('🚫 EXCLUDED IPD_BILL transaction:', trans.id, trans.amount);
-            return;
+            return false;
           }
 
-          // Filter by transaction_date (most important filter!)
-          let transactionDateStr = trans.transaction_date || trans.created_at || '';
-          if (typeof transactionDateStr === 'string' && transactionDateStr.includes('T')) {
-            transactionDateStr = transactionDateStr.split('T')[0];
-          }
-
-          // Only include transactions within the selected date range
-          if (transactionDateStr >= dateFrom && transactionDateStr <= dateTo) {
-            allTransactions.push({
-              ...trans,
-              patient: patient
-            });
-          }
+          return true;
         });
-      });
+
+        console.log(`✅ After filtering: ${allTransactions.length} transactions`);
+      } catch (transError: any) {
+        console.error('Error loading transactions for ledger:', transError);
+        // Continue with empty transactions - we can still show expenses
+      }
 
       allTransactions.forEach((trans: any) => {
           let cleanDescription = trans.description || `${trans.transaction_type} Payment`;
