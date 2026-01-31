@@ -33,7 +33,12 @@ interface DailyStats {
 }
 
 // Utility function to check if a patient should be excluded (ORTHO/DR HEMANT)
+// Utility function to check if a patient should be excluded (ORTHO/DR HEMANT)
 const shouldExcludePatient = (patient: any): boolean => {
+  // DISABLED FILTER: We want to show ALL patients now, including default Ortho/Hemant ones
+  return false;
+
+  /* Previous logic:
   if (!patient) return false;
   
   const department = patient.assigned_department?.toUpperCase()?.trim() || '';
@@ -43,6 +48,7 @@ const shouldExcludePatient = (patient: any): boolean => {
   const isHemant = doctor.includes('HEMANT') || doctor === 'DR HEMANT' || doctor === 'DR. HEMANT';
   
   return isOrtho && isHemant;
+  */
 };
 
 const DailyOperationsView: React.FC = () => {
@@ -74,7 +80,7 @@ const DailyOperationsView: React.FC = () => {
         dataService.getActiveAdmissions(),
         dataService.getExpensesByDate(selectedDate),
       ]);
-      
+
       console.log('🏥 DailyOperationsView - Data fetched:', {
         date: selectedDate,
         transactionCount: transactions.length,
@@ -88,7 +94,7 @@ const DailyOperationsView: React.FC = () => {
           patientName: t.patients ? `${t.patients.first_name} ${t.patients.last_name}` : 'No patient data'
         }))
       });
-      
+
       setExpenses(dailyExpenses);
 
       // Transactions are already filtered at the database level
@@ -114,12 +120,12 @@ const DailyOperationsView: React.FC = () => {
 
       // Create patient journeys
       const journeys: PatientJourney[] = [];
-      
+
       for (const [patientId, patientTransactions] of patientTransactionMap.entries()) {
         // Get patient data from the first transaction (since transactions come with patient data)
         const firstTransaction = patientTransactions[0];
         const patient = firstTransaction.patients || patients.find(p => p.id === patientId);
-        
+
         if (!patient) {
           console.log(`⚠️ No patient data found for patient ID: ${patientId}`);
           continue;
@@ -130,7 +136,7 @@ const DailyOperationsView: React.FC = () => {
           console.log(`🚫 SAFETY CHECK: Excluding patient ${patient.first_name} ${patient.last_name} - ORTHO/HEMANT (this should not happen if DB filtering worked)`);
           continue;
         }
-        
+
         console.log(`✅ Including patient ${patient.first_name} ${patient.last_name} - Dept: ${patient.assigned_department}, Doc: ${patient.assigned_doctor}`);
 
         const patientAdmission = admissions.find(a => a.patient_id === patientId);
@@ -150,7 +156,7 @@ const DailyOperationsView: React.FC = () => {
             const utcTime = transactionDateTime.getTime();
             const localTimezoneOffset = new Date().getTimezoneOffset() * 60 * 1000;
             const localTime = new Date(utcTime - localTimezoneOffset);
-            
+
             formattedTime = localTime.toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
@@ -160,7 +166,7 @@ const DailyOperationsView: React.FC = () => {
             // Fallback to date-fns format if formatting fails
             formattedTime = format(new Date(transaction.created_at), 'hh:mm a');
           }
-          
+
           // Map database transaction types to display types
           let displayType: 'entry' | 'consultation' | 'service' | 'admission' | 'discharge';
           switch (transaction.transaction_type?.toUpperCase()) {
@@ -179,7 +185,7 @@ const DailyOperationsView: React.FC = () => {
             default:
               displayType = 'service'; // Default fallback
           }
-          
+
           return {
             time: formattedTime,
             type: displayType,
@@ -213,19 +219,19 @@ const DailyOperationsView: React.FC = () => {
         // Get the earliest transaction date for each patient
         const getEarliestTransactionTime = (transactions: any[]) => {
           if (!transactions || transactions.length === 0) return 0;
-          
+
           const sortedTransactions = [...transactions].sort((t1, t2) => {
             const date1 = t1.transaction_date ? new Date(t1.transaction_date).getTime() : new Date(t1.created_at).getTime();
             const date2 = t2.transaction_date ? new Date(t2.transaction_date).getTime() : new Date(t2.created_at).getTime();
             return date1 - date2;
           });
-          
+
           const firstTransaction = sortedTransactions[0];
-          return firstTransaction.transaction_date ? 
-            new Date(firstTransaction.transaction_date).getTime() : 
+          return firstTransaction.transaction_date ?
+            new Date(firstTransaction.transaction_date).getTime() :
             new Date(firstTransaction.created_at).getTime();
         };
-        
+
         const timeA = getEarliestTransactionTime(a.transactions);
         const timeB = getEarliestTransactionTime(b.transactions);
         return timeA - timeB;
@@ -241,7 +247,7 @@ const DailyOperationsView: React.FC = () => {
       const cashPayments = filteredTransactions
         .filter(t => t.payment_mode === 'cash' && t.amount > 0)
         .reduce((sum, t) => sum + t.amount, 0);
-      
+
       const digitalPayments = filteredTransactions
         .filter(t => ['online', 'card', 'upi'].includes(t.payment_mode) && t.amount > 0)
         .reduce((sum, t) => sum + t.amount, 0);
@@ -400,7 +406,7 @@ const DailyOperationsView: React.FC = () => {
       {/* Patient Journeys */}
       <Card className="p-6">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Patient Journeys Timeline</h2>
-        
+
         {loading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -415,9 +421,8 @@ const DailyOperationsView: React.FC = () => {
             {patientJourneys.map((journey) => (
               <div
                 key={journey.patient.id}
-                className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                  expandedPatient === journey.patient.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className={`border rounded-lg p-4 cursor-pointer transition-all ${expandedPatient === journey.patient.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
                 onClick={() => setExpandedPatient(
                   expandedPatient === journey.patient.id ? null : journey.patient.id
                 )}
@@ -445,10 +450,10 @@ const DailyOperationsView: React.FC = () => {
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(journey.status)}`}>
                       {journey.status.charAt(0).toUpperCase() + journey.status.slice(1)}
                     </span>
-                    <svg 
-                      className={`w-5 h-5 text-gray-400 transition-transform ${expandedPatient === journey.patient.id ? 'rotate-180' : ''}`} 
-                      fill="none" 
-                      stroke="currentColor" 
+                    <svg
+                      className={`w-5 h-5 text-gray-400 transition-transform ${expandedPatient === journey.patient.id ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
