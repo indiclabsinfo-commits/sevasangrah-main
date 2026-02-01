@@ -129,8 +129,9 @@ const OperationsLedger: React.FC = () => {
           }
           */
 
-          // Only include COMPLETED transactions
-          if (trans.status !== 'COMPLETED') {
+          // Include COMPLETED transactions or transactions without status (default is completed)
+          // Skip only if explicitly CANCELLED
+          if (trans.status === 'CANCELLED') {
             return false;
           }
 
