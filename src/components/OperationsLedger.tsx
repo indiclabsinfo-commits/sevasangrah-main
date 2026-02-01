@@ -327,44 +327,48 @@ const OperationsLedger: React.FC = () => {
 
       if (expenses && expenses.length > 0) {
         expenses.forEach((expense: any) => {
-          const expenseDate = new Date(expense.expense_date);
-          const expenseDateTime = new Date(expense.created_at);
+          try {
+            const expenseDate = new Date(expense.expense_date);
+            const expenseDateTime = new Date(expense.created_at);
 
-          const istDate = expenseDate.toLocaleDateString('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-          });
+            const istDate = expenseDate.toLocaleDateString('en-IN', {
+              timeZone: 'Asia/Kolkata',
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric'
+            });
 
-          const localTime = formatLocalTime(expenseDateTime);
+            const localTime = formatLocalTime(expenseDateTime);
 
-          let expenseName = 'Daily Expense';
-          if (expense.description && expense.description.trim()) {
-            expenseName = expense.description.trim();
-          } else if (expense.expense_category && expense.expense_category.trim()) {
-            expenseName = expense.expense_category.trim();
+            let expenseName = 'Daily Expense';
+            if (expense.description && expense.description.trim()) {
+              expenseName = expense.description.trim();
+            } else if (expense.expense_category && expense.expense_category.trim()) {
+              expenseName = expense.expense_category.trim();
+            }
+
+            allEntries.push({
+              id: expense.id,
+              date: istDate,
+              time: localTime,
+              type: 'EXPENSE',
+              category: expense.expense_category,
+              description: expense.description,
+              amount: Number(expense.amount), // Ensure number type
+              payment_mode: expense.payment_mode || 'CASH',
+              patient_name: expenseName, // Show expense name
+              patient_id: 'N/A', // Expenses don't have patient IDs
+              patient_age: 'N/A', // Expenses don't have patient age
+              patient_gender: 'N/A', // Expenses don't have patient gender
+              consultant_name: expense.approved_by || 'System',
+              department: 'Administration',
+              patient_tag: 'N/A',
+              reference_id: expense.id,
+              created_at: expense.created_at
+            });
+          } catch (err) {
+            console.error('⚠️ Skipping malformed expense:', expense.id, err);
           }
-
-          allEntries.push({
-            id: expense.id,
-            date: istDate,
-            time: localTime,
-            type: 'EXPENSE',
-            category: expense.expense_category,
-            description: expense.description,
-            amount: expense.amount,
-            payment_mode: expense.payment_mode || 'CASH',
-            patient_name: expenseName, // Show expense name
-            patient_id: 'N/A', // Expenses don't have patient IDs
-            patient_age: 'N/A', // Expenses don't have patient age
-            patient_gender: 'N/A', // Expenses don't have patient gender
-            consultant_name: expense.approved_by || 'System',
-            department: 'Administration',
-            patient_tag: 'N/A',
-            reference_id: expense.id,
-            created_at: expense.created_at
-          });
         });
       }
 
@@ -381,51 +385,55 @@ const OperationsLedger: React.FC = () => {
 
       if (refunds && refunds.length > 0) {
         refunds.forEach((refund: any) => {
-          // CRITICAL FIX: Use patient's date_of_entry for refunds too
-          let effectiveDate = new Date();
-          const refundDateTime = new Date(refund.created_at); // Always use refund time for time display
+          try {
+            // CRITICAL FIX: Use patient's date_of_entry for refunds too
+            let effectiveDate = new Date();
+            const refundDateTime = new Date(refund.created_at); // Always use refund time for time display
 
-          if (refund.patient?.date_of_entry && refund.patient.date_of_entry.trim() !== '') {
-            // Priority 1: Patient's date_of_entry (for backdated entries)
-            const dateStr = refund.patient.date_of_entry.includes('T')
-              ? refund.patient.date_of_entry.split('T')[0]
-              : refund.patient.date_of_entry;
-            effectiveDate = new Date(dateStr + 'T00:00:00');
-          } else {
-            // Priority 2: Refund's created_at date (fallback)
-            effectiveDate = new Date(refund.created_at);
+            if (refund.patient?.date_of_entry && refund.patient.date_of_entry.trim() !== '') {
+              // Priority 1: Patient's date_of_entry (for backdated entries)
+              const dateStr = refund.patient.date_of_entry.includes('T')
+                ? refund.patient.date_of_entry.split('T')[0]
+                : refund.patient.date_of_entry;
+              effectiveDate = new Date(dateStr + 'T00:00:00');
+            } else {
+              // Priority 2: Refund's created_at date (fallback)
+              effectiveDate = new Date(refund.created_at);
+            }
+
+            // CRITICAL FIX: Format date and time in IST 12-hour format
+            const istDate = effectiveDate.toLocaleDateString('en-IN', {
+              timeZone: 'Asia/Kolkata',
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric'
+            });
+
+            // Convert UTC database time to local time
+            const localTime = formatLocalTime(refundDateTime);
+
+            allEntries.push({
+              id: refund.id,
+              date: istDate,
+              time: localTime,
+              type: 'REFUND',
+              category: 'REFUND',
+              description: refund.reason || 'Patient Refund',
+              amount: Number(refund.amount), // Ensure number type
+              payment_mode: refund.payment_mode || 'CASH',
+              patient_name: refund.patient ? `${refund.patient.first_name} ${refund.patient.last_name}` : 'Unknown',
+              patient_id: refund.patient?.patient_id,
+              patient_age: refund.patient?.age || '',
+              patient_gender: refund.patient?.gender || '',
+              consultant_name: refund.patient?.assigned_doctor || '',
+              department: refund.patient?.assigned_department || '',
+              patient_tag: refund.patient?.patient_tag || '',
+              reference_id: refund.id,
+              created_at: refund.created_at
+            });
+          } catch (err) {
+            console.error('⚠️ Skipping malformed refund:', refund.id, err);
           }
-
-          // CRITICAL FIX: Format date and time in IST 12-hour format
-          const istDate = effectiveDate.toLocaleDateString('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-          });
-
-          // Convert UTC database time to local time
-          const localTime = formatLocalTime(refundDateTime);
-
-          allEntries.push({
-            id: refund.id,
-            date: istDate,
-            time: localTime,
-            type: 'REFUND',
-            category: 'REFUND',
-            description: refund.reason || 'Patient Refund',
-            amount: refund.amount,
-            payment_mode: refund.payment_mode || 'CASH',
-            patient_name: refund.patient ? `${refund.patient.first_name} ${refund.patient.last_name}` : 'Unknown',
-            patient_id: refund.patient?.patient_id,
-            patient_age: refund.patient?.age || '',
-            patient_gender: refund.patient?.gender || '',
-            consultant_name: refund.patient?.assigned_doctor || '',
-            department: refund.patient?.assigned_department || '',
-            patient_tag: refund.patient?.patient_tag || '',
-            reference_id: refund.id,
-            created_at: refund.created_at
-          });
         });
       }
 
