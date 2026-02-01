@@ -2460,6 +2460,33 @@ app.get('/api/saas/organizations/:orgId', authenticateToken, async (req, res) =>
   }
 });
 
+// Get subscription details for an organization
+app.get('/api/saas/subscriptions/:orgId', authenticateToken, async (req, res) => {
+  try {
+    const { orgId } = req.params;
+
+    // Return subscription configuration
+    // In a real SaaS app, this would come from a database
+    const subscription = {
+      orgId: orgId,
+      isOpdEnabled: true,
+      isIpdEnabled: true,
+      isHrmEnabled: true,
+      isTallyEnabled: true,
+      isPharmaEnabled: true,
+      isLabEnabled: true,
+      maxUsers: 50,
+      maxBeds: 100
+    };
+
+    res.json(subscription);
+  } catch (error) {
+    console.error('Error fetching subscription:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+
 // ==================== SCHEDULER: APPOINTMENT REMINDERS ====================
 const checkAppointmentReminders = async () => {
   try {
