@@ -2257,9 +2257,10 @@ app.get('/api/uhid/next', authenticateToken, async (req, res) => {
 });
 
 // Catch-all handler: send back React's index.html file for client-side routing
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
+// DISABLED FOR VERCEL: Frontend is deployed separately, backend only serves API routes
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join(__dirname, '../dist/index.html'));
+// });
 
 // ==================== ICD-10 ROUTES ====================
 
