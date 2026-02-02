@@ -156,7 +156,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
     appointment_notes: '',
 
     // Payment
-    payment_mode: 'CASH', // 'CASH', 'UPI', 'CARD', 'NET_BANKING'
+    payment_mode: 'CASH', // 'CASH', 'UPI', 'CARD', 'NET_BANKING', 'RGHS'
+    rghs_number: '', // RGHS Card Number
     address: '',
     blood_group: '',
     medical_history: '',
@@ -804,8 +805,9 @@ const NewFlexiblePatientEntry: React.FC = () => {
               discount_type: formData.discount_type as 'PERCENTAGE' | 'AMOUNT',
               discount_value: formData.discount_value,
               discount_reason: formData.discount_reason || undefined,
-              payment_mode: formData.payment_mode as 'CASH' | 'ONLINE' | 'CARD' | 'UPI' | 'INSURANCE',
+              payment_mode: formData.payment_mode as 'CASH' | 'ONLINE' | 'CARD' | 'UPI' | 'INSURANCE' | 'RGHS',
               online_payment_method: formData.payment_mode === 'ONLINE' ? formData.online_payment_method : undefined,
+              rghs_number: formData.payment_mode === 'RGHS' ? formData.rghs_number : undefined,
               transaction_type: 'CONSULTATION',
               doctor_name: doctor.doctor_name,
               department: doctor.department,
@@ -2360,8 +2362,33 @@ const NewFlexiblePatientEntry: React.FC = () => {
                       <option value="UPI">UPI</option>
                       <option value="CARD">Card</option>
                       <option value="NET_BANKING">Net Banking</option>
+                      <option value="RGHS">RGHS</option>
                     </select>
                   </div>
+                  {formData.payment_mode === 'RGHS' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', color: '#333333', marginBottom: '6px', fontWeight: '500' }}>
+                        RGHS Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.rghs_number || ''}
+                        onChange={(e) => setFormData({ ...formData, rghs_number: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #CCCCCC',
+                          fontSize: '16px',
+                          color: '#333333',
+                          outline: 'none'
+                        }}
+                        placeholder="Enter RGHS Number"
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#0056B3'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#CCCCCC'}
+                      />
+                    </div>
+                  )}
                   {formData.payment_mode === 'ONLINE' && (
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', color: '#333333', marginBottom: '6px', fontWeight: '500' }}>
