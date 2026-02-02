@@ -154,7 +154,7 @@ export interface PatientTransaction {
   admission_id?: string;
   transaction_type: 'ENTRY_FEE' | 'CONSULTATION' | 'LAB_TEST' | 'XRAY' | 'MEDICINE' | 'PROCEDURE' | 'ADMISSION_FEE' | 'DAILY_CHARGE' | 'SERVICE' | 'REFUND';
   amount: number;
-  payment_mode: 'CASH' | 'CARD' | 'UPI' | 'ONLINE' | 'BANK_TRANSFER' | 'INSURANCE';
+  payment_mode: 'CASH' | 'CARD' | 'UPI' | 'ONLINE' | 'BANK_TRANSFER' | 'INSURANCE' | 'RGHS';
   description: string;
   doctor_id?: string;
   department?: string;
@@ -165,6 +165,11 @@ export interface PatientTransaction {
   transaction_date?: string;
   created_at: string;
   created_by: string;
+  rghs_number?: string;
+  doctor_name?: string;
+  discount_type?: 'PERCENTAGE' | 'AMOUNT';
+  discount_value?: number;
+  online_payment_method?: string;
 }
 
 export interface DailyExpense {
@@ -320,7 +325,7 @@ export interface CreateTransactionData {
   patient_id: string;
   transaction_type: 'ENTRY_FEE' | 'CONSULTATION' | 'LAB_TEST' | 'XRAY' | 'MEDICINE' | 'PROCEDURE' | 'ADMISSION_FEE' | 'DAILY_CHARGE' | 'SERVICE' | 'REFUND';
   amount: number;
-  payment_mode: 'CASH' | 'CARD' | 'UPI' | 'ONLINE' | 'BANK_TRANSFER' | 'INSURANCE';
+  payment_mode: 'CASH' | 'CARD' | 'UPI' | 'ONLINE' | 'BANK_TRANSFER' | 'INSURANCE' | 'RGHS';
   description: string;
   doctor_id?: string;
   doctor_name?: string;
@@ -332,6 +337,7 @@ export interface CreateTransactionData {
   discount_value?: number;
   discount_reason?: string;
   online_payment_method?: string;
+  rghs_number?: string;
 }
 
 // CREATE APPOINTMENT DATA TYPE

@@ -617,6 +617,7 @@ export class HospitalService {
     logger.log('📅 Transaction date:', data.transaction_date);
     logger.log('👨‍⚕️ Doctor:', data.doctor_name);
     logger.log('🏥 Department:', data.department);
+    if (data.rghs_number) logger.log('🆔 RGHS Number:', data.rghs_number);
 
     try {
       const response = await axios.post(`${this.getBaseUrl()}/api/transactions`, data, {

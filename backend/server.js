@@ -1034,6 +1034,7 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
       discount_value,
       discount_reason,
       online_payment_method,
+      rghs_number, // Added RGHS number
       status
     } = req.body;
 
@@ -1041,8 +1042,8 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
       `INSERT INTO patient_transactions (
         patient_id, transaction_type, amount, payment_mode,
         doctor_id, doctor_name, department, description,
-        transaction_date, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        transaction_date, rghs_number, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *`,
       [
         patient_id,
@@ -1054,6 +1055,7 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
         department || 'General',
         description || `${transaction_type || 'consultation'} - ${doctor_name || 'Unassigned'}`,
         transaction_date || new Date(),
+        rghs_number || null,
         req.user.id
       ]
     );

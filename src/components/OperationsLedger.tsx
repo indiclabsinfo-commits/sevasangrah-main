@@ -49,7 +49,8 @@ interface LedgerEntry {
   original_amount?: number;
   discount_amount?: number;
   net_amount?: number;
-  payment_mode: 'CASH' | 'ONLINE';
+  payment_mode: 'CASH' | 'ONLINE' | 'RGHS';
+  rghs_number?: string;
   patient_name?: string;
   patient_id?: string;
   patient_age?: string;
@@ -66,7 +67,7 @@ const OperationsLedger: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState(new Date().toISOString().split('T')[0]); // Default to today
   const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0]);
-  const [filterPaymentMode, setFilterPaymentMode] = useState<'all' | 'CASH' | 'ONLINE'>('all');
+  const [filterPaymentMode, setFilterPaymentMode] = useState<'all' | 'CASH' | 'ONLINE' | 'RGHS'>('all');
   const [filterType, setFilterType] = useState<'all' | 'REVENUE' | 'EXPENSE' | 'REFUND'>('all');
   const [filterPatientTag, setFilterPatientTag] = useState<string>('all');
   const [filterDoctor, setFilterDoctor] = useState<string>('all');
@@ -296,6 +297,7 @@ const OperationsLedger: React.FC = () => {
             discount_amount: discountAmount,
             net_amount: Math.abs(netAmount),
             payment_mode: trans.payment_mode || 'CASH',
+            rghs_number: trans.rghs_number || '',
             patient_name: trans.patient ? `${trans.patient.first_name} ${trans.patient.last_name}` : 'Unknown',
             patient_id: trans.patient?.patient_id,
             patient_age: trans.patient?.age || '',
@@ -490,12 +492,14 @@ const OperationsLedger: React.FC = () => {
       const cashRevenue = revenueEntries.filter(e => e.payment_mode?.toLowerCase() === 'cash').reduce((sum, e) => sum + e.amount, 0);
       const upiRevenue = revenueEntries.filter(e => e.payment_mode?.toUpperCase() === 'UPI').reduce((sum, e) => sum + e.amount, 0);
       const onlineRevenue = revenueEntries.filter(e => ['online', 'card'].includes(e.payment_mode?.toLowerCase())).reduce((sum, e) => sum + e.amount, 0);
+      const rghsRevenue = revenueEntries.filter(e => e.payment_mode?.toUpperCase() === 'RGHS').reduce((sum, e) => sum + e.amount, 0);
 
       console.log('💳 Payment mode breakdown:');
       console.log('  - CASH:', cashRevenue, '(', revenueEntries.filter(e => e.payment_mode?.toLowerCase() === 'cash').length, 'transactions)');
       console.log('  - UPI:', upiRevenue, '(', revenueEntries.filter(e => e.payment_mode?.toUpperCase() === 'UPI').length, 'transactions)');
       console.log('  - ONLINE:', onlineRevenue, '(', revenueEntries.filter(e => ['online', 'card'].includes(e.payment_mode?.toLowerCase())).length, 'transactions)');
-      console.log('  - TOTAL:', cashRevenue + upiRevenue + onlineRevenue);
+      console.log('  - RGHS:', rghsRevenue, '(', revenueEntries.filter(e => e.payment_mode?.toUpperCase() === 'RGHS').length, 'transactions)');
+      console.log('  - TOTAL:', cashRevenue + upiRevenue + onlineRevenue + rghsRevenue);
 
       setEntries(allEntries);
     } catch (error: any) {
@@ -543,7 +547,10 @@ const OperationsLedger: React.FC = () => {
       cashExpenses: 0,
       onlineExpenses: 0,
       cashRefunds: 0,
-      onlineRefunds: 0
+      onlineRefunds: 0,
+      rghsRevenue: 0,
+      rghsExpenses: 0,
+      rghsRefunds: 0
     };
 
     filteredEntries.forEach(entry => {
@@ -553,6 +560,8 @@ const OperationsLedger: React.FC = () => {
           totals.cashRevenue += entry.amount;
         } else if (['online', 'card', 'upi'].includes(entry.payment_mode?.toLowerCase())) {
           totals.onlineRevenue += entry.amount;
+        } else if (entry.payment_mode?.toUpperCase() === 'RGHS') {
+          totals.rghsRevenue += entry.amount;
         }
       } else if (entry.type === 'EXPENSE') {
         totals.expenses += entry.amount;
@@ -560,6 +569,8 @@ const OperationsLedger: React.FC = () => {
           totals.cashExpenses += entry.amount;
         } else if (['online', 'card', 'upi'].includes(entry.payment_mode?.toLowerCase())) {
           totals.onlineExpenses += entry.amount;
+        } else if (entry.payment_mode?.toUpperCase() === 'RGHS') {
+          totals.rghsExpenses += entry.amount;
         }
       } else if (entry.type === 'REFUND') {
         totals.refunds += entry.amount;
@@ -567,6 +578,8 @@ const OperationsLedger: React.FC = () => {
           totals.cashRefunds += entry.amount;
         } else if (['online', 'card', 'upi'].includes(entry.payment_mode?.toLowerCase())) {
           totals.onlineRefunds += entry.amount;
+        } else if (entry.payment_mode?.toUpperCase() === 'RGHS') {
+          totals.rghsRefunds += entry.amount;
         }
       }
     });
@@ -575,6 +588,7 @@ const OperationsLedger: React.FC = () => {
     // Deduct ALL expenses and refunds from cash (regardless of their payment mode)
     const netCash = totals.cashRevenue - totals.expenses - totals.refunds;
     const netOnline = totals.onlineRevenue;
+    const netRghs = totals.rghsRevenue;
 
     // Debug logging
     console.log('💰 OPERATIONS CALCULATION DEBUG:', {
@@ -586,6 +600,7 @@ const OperationsLedger: React.FC = () => {
       onlineRevenue: totals.onlineRevenue,
       netCash: netCash,
       netOnline: netOnline,
+      netRghs: netRghs,
       netRevenue: netRevenue,
       sampleEntries: filteredEntries.slice(0, 5).map(e => ({
         type: e.type,
@@ -594,7 +609,7 @@ const OperationsLedger: React.FC = () => {
       }))
     });
 
-    return { ...totals, netRevenue, netCash, netOnline };
+    return { ...totals, netRevenue, netCash, netOnline, netRghs };
   };
 
   const filteredEntries = getFilteredEntries();
@@ -722,6 +737,7 @@ const OperationsLedger: React.FC = () => {
           description: entry.description,
           patient_tag: entry.patient_tag || '',
           payment_mode: entry.payment_mode,
+          rghs_number: entry.rghs_number || '',
           original_amount: signedOriginalAmount,
           discount_amount: discountAmount,
           net_amount: signedNetAmount
@@ -756,6 +772,7 @@ const OperationsLedger: React.FC = () => {
           'Description',
           'Patient Tag',
           'Payment Mode',
+          'RGHS Number',
           'Original Amount',
           'Discount Amount',
           'Net Amount'
@@ -1291,7 +1308,7 @@ const OperationsLedger: React.FC = () => {
           <div className="text-sm text-green-600">Total Revenue</div>
           <div className="text-2xl font-bold text-green-700">₹{totals.revenue.toLocaleString()}</div>
           <div className="text-xs text-green-600 mt-1">
-            Cash: ₹{totals.cashRevenue.toLocaleString()} | Online: ₹{totals.onlineRevenue.toLocaleString()}
+            Cash: ₹{totals.cashRevenue.toLocaleString()} | Online: ₹{totals.onlineRevenue.toLocaleString()} | RGHS: ₹{totals.rghsRevenue.toLocaleString()}
           </div>
         </div>
 
@@ -1299,7 +1316,7 @@ const OperationsLedger: React.FC = () => {
           <div className="text-sm text-red-600">Total Expenses</div>
           <div className="text-2xl font-bold text-red-700">₹{totals.expenses.toLocaleString()}</div>
           <div className="text-xs text-red-600 mt-1">
-            Cash: ₹{totals.cashExpenses.toLocaleString()} | Online: ₹{totals.onlineExpenses.toLocaleString()}
+            Cash: ₹{totals.cashExpenses.toLocaleString()} | Online: ₹{totals.onlineExpenses.toLocaleString()} | RGHS: ₹{totals.rghsExpenses.toLocaleString()}
           </div>
         </div>
 
@@ -1307,7 +1324,7 @@ const OperationsLedger: React.FC = () => {
           <div className="text-sm text-orange-600">Total Refunds</div>
           <div className="text-2xl font-bold text-orange-700">₹{totals.refunds.toLocaleString()}</div>
           <div className="text-xs text-orange-600 mt-1">
-            Cash: ₹{totals.cashRefunds.toLocaleString()} | Online: ₹{totals.onlineRefunds.toLocaleString()}
+            Cash: ₹{totals.cashRefunds.toLocaleString()} | Online: ₹{totals.onlineRefunds.toLocaleString()} | RGHS: ₹{totals.rghsRefunds.toLocaleString()}
           </div>
         </div>
 
@@ -1318,7 +1335,7 @@ const OperationsLedger: React.FC = () => {
             {totals.netRevenue < 0 && ' (Loss)'}
           </div>
           <div className={`text-xs mt-1 ${totals.netRevenue >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-            Cash: ₹{totals.netCash.toLocaleString()} | Online: ₹{totals.netOnline.toLocaleString()}
+            Cash: ₹{totals.netCash.toLocaleString()} | Online: ₹{totals.netOnline.toLocaleString()} | RGHS: ₹{totals.netRghs.toLocaleString()}
           </div>
         </div>
       </div>

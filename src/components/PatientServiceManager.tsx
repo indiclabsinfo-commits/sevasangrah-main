@@ -21,9 +21,10 @@ interface ServiceItem {
   discount: number; // Discount percentage (0-100)
   notes?: string;
   serviceDate?: string; // Date when service was provided
-  paymentMode: 'CASH' | 'CARD' | 'UPI' | 'ONLINE' | 'BANK_TRANSFER' | 'INSURANCE';
+  paymentMode: 'CASH' | 'CARD' | 'UPI' | 'ONLINE' | 'BANK_TRANSFER' | 'INSURANCE' | 'RGHS';
   doctorName?: string; // Manually selected doctor name
   transactionId?: string; // For existing services
+  rghsNumber?: string; // RGHS Card Number
 }
 
 // Predefined medical services catalog
@@ -81,7 +82,8 @@ const PatientServiceManager: React.FC<PatientServiceManagerProps> = ({
     discount: 0,
     serviceDate: new Date().toISOString().split('T')[0], // Today's date
     paymentMode: 'CASH',
-    doctorName: patient.assigned_doctor || '' // Default to patient's assigned doctor
+    doctorName: patient.assigned_doctor || '', // Default to patient's assigned doctor
+    rghsNumber: ''
   });
   const [selectedCategory, setSelectedCategory] = useState<ServiceItem['category']>('LAB_TEST');
   const [isCustomService, setIsCustomService] = useState(false);
@@ -238,7 +240,8 @@ const PatientServiceManager: React.FC<PatientServiceManagerProps> = ({
         transaction_date: finalServiceDate, // 🔍 CRITICAL FIX: Set actual transaction_date field
         discount_type: 'PERCENTAGE', // Store discount type for receipt calculation
         discount_value: newService.discount || 0, // Store discount value
-        doctor_name: newService.doctorName || null // Save the selected doctor name
+        doctor_name: newService.doctorName || null, // Save the selected doctor name
+        rghs_number: newService.rghsNumber || null // Save RGHS number
       };
 
       console.log('📤 SENDING TRANSACTION DATA:', {
@@ -274,7 +277,8 @@ const PatientServiceManager: React.FC<PatientServiceManagerProps> = ({
         discount: 0,
         serviceDate: new Date().toISOString().split('T')[0],
         paymentMode: 'CASH',
-        doctorName: patient.assigned_doctor || '' // Reset to patient's assigned doctor
+        doctorName: patient.assigned_doctor || '', // Reset to patient's assigned doctor
+        rghsNumber: ''
       });
       setIsCustomService(false);
 
@@ -343,7 +347,8 @@ const PatientServiceManager: React.FC<PatientServiceManagerProps> = ({
           transaction_date: finalUpdateDate, // 🔥 CRITICAL FIX: Update transaction_date field
           discount_type: 'PERCENTAGE', // Store discount type for receipt calculation
           discount_value: editingService.discount || 0, // Store discount value
-          doctor_name: editingService.doctorName || null // Save the selected doctor name
+          doctor_name: editingService.doctorName || null, // Save the selected doctor name
+          rghs_number: editingService.rghsNumber || null // Save RGHS number
         });
 
         console.log('🔥 UPDATED TRANSACTION_DATE:', editingService.serviceDate);
@@ -449,8 +454,8 @@ const PatientServiceManager: React.FC<PatientServiceManagerProps> = ({
                     setNewService({ ...newService, category });
                   }}
                   className={`px-3 py-2 rounded text-sm font-medium transition-colors ${selectedCategory === category
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-white text-gray-700 border hover:bg-gray-100'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white text-gray-700 border hover:bg-gray-100'
                     }`}
                 >
                   {category.replace('_', ' ')}
@@ -586,8 +591,25 @@ const PatientServiceManager: React.FC<PatientServiceManagerProps> = ({
                   <option value="ONLINE">Online</option>
                   <option value="BANK_TRANSFER">Bank Transfer</option>
                   <option value="INSURANCE">Insurance</option>
+                  <option value="RGHS">RGHS</option>
                 </select>
               </div>
+
+              {/* RGHS Number Input - ONLY VISIBLE WHEN RGHS SELECTED */}
+              {newService.paymentMode === 'RGHS' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    RGHS Number
+                  </label>
+                  <input
+                    type="text"
+                    value={newService.rghsNumber || ''}
+                    onChange={(e) => setNewService({ ...newService, rghsNumber: e.target.value })}
+                    placeholder="Enter RGHS Number"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              )}
 
               {/* Doctor Selection */}
               <div>
@@ -747,8 +769,21 @@ const PatientServiceManager: React.FC<PatientServiceManagerProps> = ({
                               <option value="ONLINE">Online</option>
                               <option value="BANK_TRANSFER">Bank Transfer</option>
                               <option value="INSURANCE">Insurance</option>
+                              <option value="RGHS">RGHS</option>
                             </select>
                           </div>
+                          {editingService?.paymentMode === 'RGHS' && (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">RGHS Number</label>
+                              <input
+                                type="text"
+                                value={editingService.rghsNumber || ''}
+                                onChange={(e) => setEditingService(prev => prev ? { ...prev, rghsNumber: e.target.value } : null)}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                placeholder="RGHS Number"
+                              />
+                            </div>
+                          )}
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">👨‍⚕️ Doctor</label>
                             <select
