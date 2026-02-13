@@ -1,4 +1,4 @@
-// Version 2.0 - Fixed null safety issues
+// Version 2.1 - Added OPD Consultation Form integration
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Reorder } from 'framer-motion';
@@ -12,7 +12,8 @@ import {
     UserPlus,
     RefreshCw,
     Phone,
-    Settings
+    Settings,
+    Stethoscope
 } from 'lucide-react';
 import HospitalService from '../../services/hospitalService';
 import { logger } from '../../utils/logger';
@@ -21,6 +22,7 @@ import { ElevenLabsService } from '../../services/elevenLabsService';
 import type { User } from '../../config/supabaseNew';
 import VitalsRecordingModal from './VitalsRecordingModal';
 import WalkInQueueModal from './WalkInQueueModal';
+import OPDConsultationForm from './OPDConsultationForm';
 
 const OPDQueueManager: React.FC = () => {
     const [queue, setQueue] = useState<any[]>([]); // Renamed from queues to queue
@@ -39,6 +41,16 @@ const OPDQueueManager: React.FC = () => {
     // Call Patient Modal State
     const [showCallModal, setShowCallModal] = useState(false);
     const [selectedPatientForCall, setSelectedPatientForCall] = useState<{ name: string, phone: string } | null>(null);
+
+    // Consultation Modal State
+    const [showConsultationModal, setShowConsultationModal] = useState(false);
+    const [selectedPatientForConsultation, setSelectedPatientForConsultation] = useState<{
+        patientId: string,
+        patientName: string,
+        doctorId: string,
+        doctorName: string,
+        queueId: string
+    } | null>(null);
 
     // Settings Modal State
     const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -334,6 +346,25 @@ const OPDQueueManager: React.FC = () => {
                                                     </button>
                                                 )}
 
+                                                {(item.status === 'VITALS_DONE' || item.status === 'IN_CONSULTATION') && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedPatientForConsultation({
+                                                                patientId: item.patient?.id,
+                                                                patientName: `${item.patient?.first_name} ${item.patient?.last_name}`,
+                                                                doctorId: item.doctor?.id || item.assigned_doctor,
+                                                                doctorName: `Dr. ${item.doctor?.first_name || item.assigned_doctor} ${item.doctor?.last_name || ''}`,
+                                                                queueId: item.id
+                                                            });
+                                                            setShowConsultationModal(true);
+                                                        }}
+                                                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 p-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors"
+                                                        title="Record Consultation"
+                                                    >
+                                                        <Stethoscope size={14} /> Consult
+                                                    </button>
+                                                )}
+
                                                 {item.status === 'IN_CONSULTATION' && (
                                                     <button
                                                         onClick={() => updateStatus(item.id, 'COMPLETED')}
@@ -384,6 +415,29 @@ const OPDQueueManager: React.FC = () => {
                     onSuccess={() => {
                         setShowVitalsModal(false);
                         loadQueues();
+                    }}
+                />
+            )}
+
+            {/* Consultation Modal */}
+            {selectedPatientForConsultation && (
+                <OPDConsultationForm
+                    isOpen={showConsultationModal}
+                    onClose={() => {
+                        setShowConsultationModal(false);
+                        setSelectedPatientForConsultation(null);
+                    }}
+                    patientId={selectedPatientForConsultation.patientId}
+                    patientName={selectedPatientForConsultation.patientName}
+                    doctorId={selectedPatientForConsultation.doctorId}
+                    doctorName={selectedPatientForConsultation.doctorName}
+                    queueId={selectedPatientForConsultation.queueId}
+                    onSuccess={(consultationId) => {
+                        logger.log('✅ Consultation created:', consultationId);
+                        setShowConsultationModal(false);
+                        setSelectedPatientForConsultation(null);
+                        loadQueues();
+                        toast.success('Consultation recorded successfully!');
                     }}
                 />
             )}
