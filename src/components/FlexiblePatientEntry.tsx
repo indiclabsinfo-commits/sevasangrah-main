@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import dataService from '../services/dataService';
 import PatientService from '../services/patientService';
-import FixedPatientService from '../services/patientServiceFixed';
+import SupabasePatientService from '../services/supabasePatientService';
 import type { Patient, PatientTransaction, Gender, PaymentMode } from '../types/index';
 
 const FlexiblePatientEntry: React.FC = () => {
@@ -62,7 +62,7 @@ const FlexiblePatientEntry: React.FC = () => {
     if (input instanceof Date && !isNaN(input.getTime())) {
       // clone at midnight
       const d = new Date(input.getTime());
-      d.setHours(0,0,0,0);
+      d.setHours(0, 0, 0, 0);
       return d;
     }
 
@@ -72,7 +72,7 @@ const FlexiblePatientEntry: React.FC = () => {
     if (isoMatch) {
       const [_, y, m, d] = isoMatch;
       const dt = new Date(Number(y), Number(m) - 1, Number(d));
-      dt.setHours(0,0,0,0);
+      dt.setHours(0, 0, 0, 0);
       return dt;
     }
     // If DD-MM-YYYY
@@ -80,13 +80,13 @@ const FlexiblePatientEntry: React.FC = () => {
     if (dmYMatch) {
       const [_, d, m, y] = dmYMatch;
       const dt = new Date(Number(y), Number(m) - 1, Number(d));
-      dt.setHours(0,0,0,0);
+      dt.setHours(0, 0, 0, 0);
       return dt;
     }
     // Fallback: Date parse
     const parsed = new Date(s);
     if (!isNaN(parsed.getTime())) {
-      parsed.setHours(0,0,0,0);
+      parsed.setHours(0, 0, 0, 0);
       return parsed;
     }
     return null;
@@ -112,7 +112,7 @@ const FlexiblePatientEntry: React.FC = () => {
       let to: Date | null = null;
       if (toRaw) {
         const t = new Date(toRaw.getTime());
-        t.setHours(23,59,59,999);
+        t.setHours(23, 59, 59, 999);
         to = t;
       }
 
@@ -146,7 +146,7 @@ const FlexiblePatientEntry: React.FC = () => {
       });
 
       // sort by date desc (most recent first) if possible
-      filtered.sort((a,b) => {
+      filtered.sort((a, b) => {
         const da = parseDateFlexible(a.date_of_entry) || parseDateFlexible(a.created_at) || new Date(0);
         const db = parseDateFlexible(b.date_of_entry) || parseDateFlexible(b.created_at) || new Date(0);
         return db.getTime() - da.getTime();
@@ -163,7 +163,7 @@ const FlexiblePatientEntry: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent, saveAsDraft = false) => {
     e.preventDefault();
-    
+
     // Validate minimum required fields
     if (!formData.first_name.trim()) {
       toast.error('First name is required');
@@ -179,25 +179,20 @@ const FlexiblePatientEntry: React.FC = () => {
     setIsDraft(saveAsDraft);
 
     try {
-      // Create patient with only provided information
-      const patientData: any = {
-        first_name: formData.first_name.trim(),
-        last_name: formData.last_name.trim(),
-        phone: formData.phone.trim(),
-        address: formData.address.trim(),
-        gender: formData.gender,
-        is_active: true,
+      // Create patient with Supabase-compatible fields
+      const patientData = {
+        full_name: `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim(),
+        age: formData.date_of_birth ? new Date().getFullYear() - new Date(formData.date_of_birth).getFullYear() : undefined,
+        gender: formData.gender === 'M' ? 'Male' : formData.gender === 'F' ? 'Female' : 'Other',
+        phone: formData.phone.trim() || undefined,
+        email: formData.email.trim() || undefined,
+        address: formData.address.trim() || undefined,
+        date_of_birth: formData.date_of_birth || undefined,
+        patient_tag: formData.patient_tag || 'Regular',
       };
 
-      // Add optional fields only if provided
-      if (formData.date_of_birth) patientData.date_of_birth = formData.date_of_birth;
-      if (formData.patient_tag) patientData.patient_tag = formData.patient_tag;
-      if (formData.emergency_contact_name) patientData.emergency_contact_name = formData.emergency_contact_name;
-      if (formData.emergency_contact_phone) patientData.emergency_contact_phone = formData.emergency_contact_phone;
-      if (formData.email) patientData.email = formData.email;
-
-      // Use the column-compatible patient service
-      const newPatient = await FixedPatientService.createPatient(patientData);
+      // Use Supabase patient service
+      const newPatient = await SupabasePatientService.createPatient(patientData);
 
       // Create transactions only if amounts are specified
       const transactions = [];
@@ -215,10 +210,10 @@ const FlexiblePatientEntry: React.FC = () => {
       }
 
       if (formData.consultation_fee > 0) {
-        const doctorName = formData.selected_doctor === 'custom' 
-          ? formData.custom_doctor_name 
+        const doctorName = formData.selected_doctor === 'custom'
+          ? formData.custom_doctor_name
           : doctors.find(d => d.id === formData.selected_doctor)?.name || 'Doctor';
-        
+
         transactions.push({
           patient_id: newPatient.id,
           transaction_type: 'consultation' as const,
@@ -259,13 +254,13 @@ const FlexiblePatientEntry: React.FC = () => {
       }
 
       const totalAmount = totalFeesForDiscount - calculatedDiscountAmount; // Update total amount calculation
-      
+
       if (saveAsDraft) {
         toast.success(`Patient draft saved! ${formData.first_name} ${formData.last_name}`);
       } else {
         toast.success(`Patient registered successfully! ${formData.first_name} ${formData.last_name} - Total: ₹${totalAmount}`);
       }
-      
+
       // Reset form
       setFormData({
         first_name: '',
@@ -285,7 +280,8 @@ const FlexiblePatientEntry: React.FC = () => {
         discount_reason: '',
         notes: '',
         email: '',
-        discount_type: 'amount'
+        discount_type: 'amount',
+        discount_value: 0,
       });
 
       // Reset form UI
