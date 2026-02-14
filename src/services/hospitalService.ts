@@ -29,7 +29,8 @@ export class HospitalService {
   }
 
   private static getBaseUrl() {
-    return import.meta.env.VITE_API_URL || 'http://localhost:3002';
+    // Use relative path by default for Vercel compatibility
+    return import.meta.env.VITE_API_URL || '';
   }
 
   // Interceptor to handle auth errors globally

@@ -6,7 +6,7 @@
 
 // Backend API configuration
 export const AZURE_CONFIG = {
-  API_URL: import.meta.env.VITE_API_URL || 'http://localhost:3002',
+  API_URL: '', // Relative path for Vercel
   DB_HOST: 'sevasangraha.postgres.database.azure.com',
   DB_NAME: 'postgres',
   DB_PORT: 5432,

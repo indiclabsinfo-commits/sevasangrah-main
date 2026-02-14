@@ -54,23 +54,13 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Database connection
 // Prefer DATABASE_URL for Supabase, fallback to individual params
-const pool = process.env.DATABASE_URL
-  ? new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  })
-  : new Pool({
-    host: process.env.AZURE_DB_HOST || 'sevasangraha.postgres.database.azure.com',
-    port: parseInt(process.env.AZURE_DB_PORT || '5432'),
-    database: process.env.AZURE_DB_NAME || 'postgres',
-    user: process.env.AZURE_DB_USER || 'divyansh04',
-    password: process.env.AZURE_DB_PASSWORD || 'Rawal@00',
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
+// Database connection with hardcoded credentials for Vercel
+const pool = new Pool({
+  connectionString: 'postgresql://postgres:indicwings%4000@db.plkbxjedbjpmbfrekmrr.supabase.co:5432/postgres?sslmode=require',
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 // Test database connection
 pool.connect((err, client, release) => {
