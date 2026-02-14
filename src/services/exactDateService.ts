@@ -1,67 +1,41 @@
-import axios from 'axios';
-import type { PatientWithRelations } from '../config/supabaseNew';
+import { supabase } from '../lib/supabaseClient';
+import type { PatientWithRelations, PatientTransaction, PatientAdmission } from '../config/supabaseNew';
 
 export class ExactDateService {
-  private static getHeaders() {
-    const token = localStorage.getItem('auth_token');
-    return { Authorization: `Bearer ${token}` };
-  }
-
-  private static getBaseUrl() {
-    return import.meta.env.VITE_API_URL || 'http://localhost:3002';
-  }
 
   static async getPatientsForExactDate(dateStr: string, limit = 100): Promise<PatientWithRelations[]> {
     try {
-      console.log('🔍 Getting patients for exact date:', dateStr);
+      console.log('🔍 Getting patients for exact date via Supabase:', dateStr);
 
-      const response = await axios.get(`${this.getBaseUrl()}/api/patients/by-date/${dateStr}`, {
-        headers: this.getHeaders(),
-        params: { limit }
-      });
+      // Start of day and end of day for the given date
+      const startOfDay = new Date(dateStr);
+      startOfDay.setHours(0, 0, 0, 0);
 
-      const patients = response.data || [];
-      console.log(`✅ Retrieved ${patients.length} patients for ${dateStr}`);
+      const endOfDay = new Date(dateStr);
+      endOfDay.setHours(23, 59, 59, 999);
 
-      // Enhance patients with calculated fields
-      const enhancedPatients = patients.map((patient: any) => {
-        const transactions = patient.transactions || [];
-        const admissions = patient.admissions || [];
+      // Query patients who were created on this date OR have transactions/admissions on this date
+      // For simplicity/performance in this direct mode, let's primarily look at patients created or updated
+      // But a comprehensive "Patient List" usually expects purely registration date or visit date.
+      // Let's query patients created within the date range first, as that's the primary "List" view.
 
-        // Only count completed transactions (exclude cancelled)
-        const totalSpent = transactions
-          .filter((t: any) => t.status !== 'CANCELLED')
-          .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+      const { data: patients, error } = await supabase
+        .from('patients')
+        .select(`
+          *,
+          patient_transactions (*),
+          patient_admissions (*)
+        `)
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(limit);
 
-        // Count patient entries/registrations and consultations
-        const registrationVisits = transactions.filter((t: any) =>
-          (t.transaction_type === 'ENTRY_FEE' ||
-            t.transaction_type === 'entry_fee' ||
-            t.transaction_type === 'CONSULTATION' ||
-            t.transaction_type === 'consultation' ||
-            t.transaction_type === 'LAB_TEST' ||
-            t.transaction_type === 'XRAY' ||
-            t.transaction_type === 'PROCEDURE') &&
-          t.status !== 'CANCELLED'
-        ).length;
+      if (error) throw error;
 
-        const visitCount = Math.max(registrationVisits, 1);
+      console.log(`✅ Retrieved ${patients?.length || 0} patients for ${dateStr}`);
 
-        // Get last transaction/visit date
-        const lastTransactionDate = transactions.length > 0
-          ? new Date(Math.max(...transactions.map((t: any) => new Date(t.created_at).getTime())))
-          : new Date(patient.created_at);
-
-        return {
-          ...patient,
-          totalSpent,
-          visitCount,
-          lastVisit: lastTransactionDate.toISOString().split('T')[0],
-          departmentStatus: patient.ipd_status === 'ADMITTED' || patient.ipd_status === 'DISCHARGED' ? 'IPD' as const : 'OPD' as const
-        };
-      });
-
-      return enhancedPatients as PatientWithRelations[];
+      return (patients || []).map(this.enhancePatientData);
 
     } catch (error: any) {
       console.error('❌ Error getting patients for exact date:', error);
@@ -71,55 +45,28 @@ export class ExactDateService {
 
   static async getPatientsForDateRange(startDateStr: string, endDateStr: string): Promise<PatientWithRelations[]> {
     try {
-      console.log('🔍 getPatientsForDateRange - Input:', { startDateStr, endDateStr });
+      console.log('🔍 getPatientsForDateRange via Supabase:', { startDateStr, endDateStr });
 
-      const response = await axios.get(`${this.getBaseUrl()}/api/patients/by-date-range`, {
-        headers: this.getHeaders(),
-        params: {
-          start_date: startDateStr,
-          end_date: endDateStr
-        }
-      });
+      // Adjust end date to include the full day
+      const endDate = new Date(endDateStr);
+      endDate.setHours(23, 59, 59, 999);
 
-      const patients = response.data || [];
-      console.log(`📊 Retrieved ${patients.length} patients for date range`);
+      const { data: patients, error } = await supabase
+        .from('patients')
+        .select(`
+          *,
+          patient_transactions (*),
+          patient_admissions (*)
+        `)
+        .gte('created_at', new Date(startDateStr).toISOString())
+        .lte('created_at', endDate.toISOString())
+        .order('created_at', { ascending: false });
 
-      // Enhance patients with calculated fields
-      const enhancedPatients = patients.map((patient: any) => {
-        const transactions = patient.transactions || [];
-        const admissions = patient.admissions || [];
+      if (error) throw error;
 
-        const totalSpent = transactions
-          .filter((t: any) => t.status !== 'CANCELLED')
-          .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+      console.log(`📊 Retrieved ${patients?.length || 0} patients for date range`);
 
-        const registrationVisits = transactions.filter((t: any) =>
-          (t.transaction_type === 'ENTRY_FEE' ||
-            t.transaction_type === 'entry_fee' ||
-            t.transaction_type === 'CONSULTATION' ||
-            t.transaction_type === 'consultation' ||
-            t.transaction_type === 'LAB_TEST' ||
-            t.transaction_type === 'XRAY' ||
-            t.transaction_type === 'PROCEDURE') &&
-          t.status !== 'CANCELLED'
-        ).length;
-
-        const visitCount = Math.max(registrationVisits, 1);
-
-        const lastTransactionDate = transactions.length > 0
-          ? new Date(Math.max(...transactions.map((t: any) => new Date(t.created_at).getTime())))
-          : new Date(patient.created_at);
-
-        return {
-          ...patient,
-          totalSpent,
-          visitCount,
-          lastVisit: lastTransactionDate.toISOString().split('T')[0],
-          departmentStatus: patient.ipd_status === 'ADMITTED' || patient.ipd_status === 'DISCHARGED' ? 'IPD' as const : 'OPD' as const
-        };
-      });
-
-      return enhancedPatients as PatientWithRelations[];
+      return (patients || []).map(this.enhancePatientData);
 
     } catch (error: any) {
       console.error('❌ Error getting patients for date range:', error);
@@ -129,23 +76,73 @@ export class ExactDateService {
 
   static async getPatientRefunds(startDateStr: string, endDateStr: string): Promise<any[]> {
     try {
-      console.log('🔍 getPatientRefunds - Input:', { startDateStr, endDateStr });
+      console.log('🔍 getPatientRefunds via Supabase:', { startDateStr, endDateStr });
 
-      const response = await axios.get(`${this.getBaseUrl()}/api/patient_refunds`, {
-        headers: this.getHeaders(),
-        params: {
-          start_date: startDateStr,
-          end_date: endDateStr
-        }
-      });
+      const endDate = new Date(endDateStr);
+      endDate.setHours(23, 59, 59, 999);
 
-      const refunds = response.data || [];
-      console.log(`💸 Retrieved ${refunds.length} refunds for date range`);
-      return refunds;
+      const { data: refunds, error } = await supabase
+        .from('patient_transactions')
+        .select(`
+          *,
+          patients (
+            full_name,
+            patient_id
+          )
+        `)
+        .eq('transaction_type', 'REFUND')
+        .gte('created_at', new Date(startDateStr).toISOString())
+        .lte('created_at', endDate.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      console.log(`💸 Retrieved ${refunds?.length || 0} refunds for date range`);
+      return refunds || [];
 
     } catch (error: any) {
       console.error('❌ Error getting patient refunds:', error);
       return [];
     }
+  }
+
+  // Helper to enhance patient data with calculated fields
+  private static enhancePatientData(patient: any): PatientWithRelations {
+    const transactions = patient.patient_transactions || [];
+    const admissions = patient.patient_admissions || [];
+
+    // Only count completed transactions (exclude cancelled)
+    const totalSpent = transactions
+      .filter((t: any) => t.status !== 'CANCELLED')
+      .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+
+    // Count patient entries/registrations and consultations
+    const registrationVisits = transactions.filter((t: any) =>
+      (t.transaction_type === 'ENTRY_FEE' ||
+        t.transaction_type === 'entry_fee' ||
+        t.transaction_type === 'CONSULTATION' ||
+        t.transaction_type === 'consultation' ||
+        t.transaction_type === 'LAB_TEST' ||
+        t.transaction_type === 'XRAY' ||
+        t.transaction_type === 'PROCEDURE') &&
+      t.status !== 'CANCELLED'
+    ).length;
+
+    const visitCount = Math.max(registrationVisits, 1);
+
+    // Get last transaction/visit date
+    const lastTransactionDate = transactions.length > 0
+      ? new Date(Math.max(...transactions.map((t: any) => new Date(t.created_at).getTime())))
+      : new Date(patient.created_at);
+
+    return {
+      ...patient,
+      transactions, // Keep raw relations if needed
+      admissions,
+      totalSpent,
+      visitCount,
+      lastVisit: lastTransactionDate.toISOString().split('T')[0],
+      departmentStatus: patient.ipd_status === 'ADMITTED' || patient.ipd_status === 'DISCHARGED' ? 'IPD' as const : 'OPD' as const
+    };
   }
 }

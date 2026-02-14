@@ -13,7 +13,7 @@ import {
     CheckCircle
 } from 'lucide-react';
 import opdService, { type CreateConsultationData } from '../../services/opdService';
-import HospitalService from '../../services/hospitalService';
+
 import { logger } from '../../utils/logger';
 
 interface OPDConsultationFormProps {

@@ -5,7 +5,7 @@ export interface ReceiptData {
   receiptNumber: string;
   date: string;
   time: string;
-  
+
   // Hospital Information
   hospital: {
     name: string;
@@ -16,7 +16,7 @@ export interface ReceiptData {
     gst: string;
     website?: string;
   };
-  
+
   // Patient Information
   patient: {
     id: string;
@@ -30,7 +30,7 @@ export interface ReceiptData {
     past_medical_history?: string;
     procedure_planned?: string;
   };
-  
+
   // Medical Information (for discharge)
   medical?: {
     diagnosis?: string;
@@ -43,7 +43,7 @@ export interface ReceiptData {
     stayDuration?: number;
     medications?: string;
   };
-  
+
   // Financial Information
   charges: {
     description: string;
@@ -53,14 +53,14 @@ export interface ReceiptData {
     discountPercentage?: number;
     discountAmount?: number;
   }[];
-  
+
   payments: {
-    mode: 'CASH' | 'ONLINE' | 'INSURANCE';
+    mode: 'CASH' | 'CARD' | 'UPI' | 'ONLINE' | 'BANK_TRANSFER' | 'INSURANCE' | 'RGHS';
     amount: number;
     reference?: string;
     date?: string;
   }[];
-  
+
   totals: {
     subtotal: number;
     discount: number;
@@ -69,13 +69,13 @@ export interface ReceiptData {
     amountPaid: number;
     balance: number;
   };
-  
+
   // Staff Information
   staff: {
     processedBy?: string;
     authorizedBy?: string;
   };
-  
+
   // Additional Information
   notes?: string;
   isOriginal?: boolean;
@@ -89,11 +89,11 @@ interface ReceiptTemplateProps {
 // Function to convert number to words
 const convertToWords = (num: number): string => {
   if (num === 0) return 'Zero Rupees Only';
-  
+
   const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
   const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
   const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-  
+
   const convertHundreds = (n: number): string => {
     let result = '';
     if (n >= 100) {
@@ -112,30 +112,30 @@ const convertToWords = (num: number): string => {
     }
     return result;
   };
-  
+
   let result = '';
   const crores = Math.floor(num / 10000000);
   if (crores > 0) {
     result += convertHundreds(crores) + 'Crore ';
     num %= 10000000;
   }
-  
+
   const lakhs = Math.floor(num / 100000);
   if (lakhs > 0) {
     result += convertHundreds(lakhs) + 'Lakh ';
     num %= 100000;
   }
-  
+
   const thousands = Math.floor(num / 1000);
   if (thousands > 0) {
     result += convertHundreds(thousands) + 'Thousand ';
     num %= 1000;
   }
-  
+
   if (num > 0) {
     result += convertHundreds(num);
   }
-  
+
   return result.trim() + ' Rupees Only';
 };
 
@@ -325,142 +325,142 @@ const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({ data, className = '' 
       {/* FIRST PAGE */}
       <div className="receipt-page bg-white p-6 max-w-4xl mx-auto print:p-0 print:max-w-none">
 
-      {/* Header */}
-      <div className="text-center border-b-2 border-gray-300 pb-4 mb-6 print:border-black">
-        <div className="flex flex-col items-center justify-center mb-4">
-          {/* Logo - Optional */}
-          <img 
-            src="/logo.png" 
-            alt="Hospital Logo" 
-            className="h-16 w-auto print:block"
-            style={{ maxHeight: '64px', height: 'auto', width: 'auto' }}
-            onError={(e) => {
-              // Hide image if it fails to load
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-            }}
-          />
+        {/* Header */}
+        <div className="text-center border-b-2 border-gray-300 pb-4 mb-6 print:border-black">
+          <div className="flex flex-col items-center justify-center mb-4">
+            {/* Logo - Optional */}
+            <img
+              src="/logo.png"
+              alt="Hospital Logo"
+              className="h-16 w-auto print:block"
+              style={{ maxHeight: '64px', height: 'auto', width: 'auto' }}
+              onError={(e) => {
+                // Hide image if it fails to load
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+          </div>
+          <div className="text-sm text-gray-700 mt-4 print:text-black">
+            <p className="print:text-black">{data.hospital.address}</p>
+            <p className="print:text-black">Phone: {data.hospital.phone} | Email: {data.hospital.email}</p>
+            {data.hospital.website && <p className="print:text-black">Website: {data.hospital.website}</p>}
+          </div>
         </div>
-        <div className="text-sm text-gray-700 mt-4 print:text-black">
-          <p className="print:text-black">{data.hospital.address}</p>
-          <p className="print:text-black">Phone: {data.hospital.phone} | Email: {data.hospital.email}</p>
-          {data.hospital.website && <p className="print:text-black">Website: {data.hospital.website}</p>}
-        </div>
-      </div>
 
-      {/* Bill Header */}
-      <div className="mb-6">
-        <div className="text-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">{getReceiptTitle()}</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p><strong>RECEIPT NO:</strong> {data.receiptNumber}</p>
-            <p><strong>DATE:</strong> {data.date}</p>
-            <p><strong>TIME:</strong> {getCurrentTime()}</p>
-          </div>
-          <div className="text-right">
-            <p><strong>Patient ID:</strong> {data.patient.id}</p>
-            <p><strong>PAYMENT MODE:</strong> {data.payments[0]?.mode || 'CASH'}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Patient Information */}
-      <div className="bg-gray-50 p-4 rounded-lg mb-6 print:bg-gray-100 print:p-4">
-        <h3 className="font-semibold mb-3 text-gray-800 print:text-black print:font-bold">Patient Information</h3>
-        <div className="grid grid-cols-2 gap-4 text-sm print:grid-cols-2 print:gap-4">
-          <div>
-            <p className="print:text-black"><strong>NAME:</strong> {data.patient.name || 'N/A'}</p>
-            <p className="print:text-black"><strong>AGE/SEX:</strong> {data.patient.age || 'N/A'} years / {data.patient.gender || 'N/A'}</p>
-            <p className="print:text-black"><strong>MOBILE:</strong> {data.patient.phone || 'N/A'}</p>
-            {data.type === 'IP_STICKER' && data.patient.history_present_illness && (
-              <p><strong>HPI:</strong> {data.patient.history_present_illness}</p>
-            )}
-            {data.type === 'IP_STICKER' && data.patient.past_medical_history && (
-              <p><strong>PMH:</strong> {data.patient.past_medical_history}</p>
-            )}
-          </div>
-          <div>
-            {data.staff.processedBy && <p className="print:text-black"><strong>PROCESSED BY:</strong> {data.staff.processedBy}</p>}
-            {data.type === 'IP_STICKER' && data.patient.procedure_planned && (
-              <p><strong>Procedure:</strong> {data.patient.procedure_planned}</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Medical Information (for discharge receipts) */}
-      {data.medical && data.type === 'DISCHARGE' && (
-        <div className="bg-blue-50 p-4 rounded-lg mb-6">
-          <h3 className="font-semibold mb-3 text-gray-800">Medical Summary</h3>
-          <div className="text-sm space-y-2">
-            {data.medical.diagnosis && (
-              <p><strong>Diagnosis:</strong> {data.medical.diagnosis}</p>
-            )}
-            {data.medical.treatment && (
-              <p><strong>Treatment:</strong> {data.medical.treatment}</p>
-            )}
-            {data.medical.condition && (
-              <p><strong>Condition at Discharge:</strong> {data.medical.condition}</p>
-            )}
-            {data.medical.doctor && (
-              <p><strong>Attending Doctor:</strong> {data.medical.doctor}</p>
-            )}
-            {data.medical.admissionDate && data.medical.dischargeDate && (
-              <p>
-                <strong>Stay Duration:</strong> {data.medical.admissionDate} to {data.medical.dischargeDate}
-                {data.medical.stayDuration && ` (${data.medical.stayDuration} days)`}
-              </p>
-            )}
-            {data.medical.followUp && (
-              <p><strong>Follow-up Instructions:</strong> {data.medical.followUp}</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Discharge Medications Table */}
-      {data.medical?.medications && data.type === 'DISCHARGE' && (
+        {/* Bill Header */}
         <div className="mb-6">
-          <h3 className="font-semibold mb-3 text-gray-800">💊 Discharge Medications</h3>
-          <div className="border border-gray-300 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="border-b border-gray-300 px-3 py-2 text-left font-semibold">Drug Name & Dose</th>
-                  <th className="border-b border-gray-300 px-3 py-2 text-center font-semibold">Morning</th>
-                  <th className="border-b border-gray-300 px-3 py-2 text-center font-semibold">Afternoon</th>
-                  <th className="border-b border-gray-300 px-3 py-2 text-center font-semibold">Night</th>
-                  <th className="border-b border-gray-300 px-3 py-2 text-center font-semibold">Days</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.medical.medications.split('\n').filter(line => line.trim()).map((medication, index) => {
-                  const parts = medication.trim().split(/\s+/);
-                  const drugName = parts.slice(0, -4).join(' ') || parts[0] || '';
-                  const morning = parts[parts.length - 4] || '0';
-                  const afternoon = parts[parts.length - 3] || '0';
-                  const night = parts[parts.length - 2] || '0';
-                  const days = parts[parts.length - 1] || '0';
-                  
-                  return (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="border-b border-gray-200 px-3 py-2">{drugName}</td>
-                      <td className="border-b border-gray-200 px-3 py-2 text-center">{morning}</td>
-                      <td className="border-b border-gray-200 px-3 py-2 text-center">{afternoon}</td>
-                      <td className="border-b border-gray-200 px-3 py-2 text-center">{night}</td>
-                      <td className="border-b border-gray-200 px-3 py-2 text-center">{days}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="text-center mb-4">
+            <h2 className="text-xl font-bold text-gray-800">{getReceiptTitle()}</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p><strong>RECEIPT NO:</strong> {data.receiptNumber}</p>
+              <p><strong>DATE:</strong> {data.date}</p>
+              <p><strong>TIME:</strong> {getCurrentTime()}</p>
+            </div>
+            <div className="text-right">
+              <p><strong>Patient ID:</strong> {data.patient.id}</p>
+              <p><strong>PAYMENT MODE:</strong> {data.payments[0]?.mode || 'CASH'}</p>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Close first page header content */}
+        {/* Patient Information */}
+        <div className="bg-gray-50 p-4 rounded-lg mb-6 print:bg-gray-100 print:p-4">
+          <h3 className="font-semibold mb-3 text-gray-800 print:text-black print:font-bold">Patient Information</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm print:grid-cols-2 print:gap-4">
+            <div>
+              <p className="print:text-black"><strong>NAME:</strong> {data.patient.name || 'N/A'}</p>
+              <p className="print:text-black"><strong>AGE/SEX:</strong> {data.patient.age || 'N/A'} years / {data.patient.gender || 'N/A'}</p>
+              <p className="print:text-black"><strong>MOBILE:</strong> {data.patient.phone || 'N/A'}</p>
+              {data.type === 'IP_STICKER' && data.patient.history_present_illness && (
+                <p><strong>HPI:</strong> {data.patient.history_present_illness}</p>
+              )}
+              {data.type === 'IP_STICKER' && data.patient.past_medical_history && (
+                <p><strong>PMH:</strong> {data.patient.past_medical_history}</p>
+              )}
+            </div>
+            <div>
+              {data.staff.processedBy && <p className="print:text-black"><strong>PROCESSED BY:</strong> {data.staff.processedBy}</p>}
+              {data.type === 'IP_STICKER' && data.patient.procedure_planned && (
+                <p><strong>Procedure:</strong> {data.patient.procedure_planned}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Medical Information (for discharge receipts) */}
+        {data.medical && data.type === 'DISCHARGE' && (
+          <div className="bg-blue-50 p-4 rounded-lg mb-6">
+            <h3 className="font-semibold mb-3 text-gray-800">Medical Summary</h3>
+            <div className="text-sm space-y-2">
+              {data.medical.diagnosis && (
+                <p><strong>Diagnosis:</strong> {data.medical.diagnosis}</p>
+              )}
+              {data.medical.treatment && (
+                <p><strong>Treatment:</strong> {data.medical.treatment}</p>
+              )}
+              {data.medical.condition && (
+                <p><strong>Condition at Discharge:</strong> {data.medical.condition}</p>
+              )}
+              {data.medical.doctor && (
+                <p><strong>Attending Doctor:</strong> {data.medical.doctor}</p>
+              )}
+              {data.medical.admissionDate && data.medical.dischargeDate && (
+                <p>
+                  <strong>Stay Duration:</strong> {data.medical.admissionDate} to {data.medical.dischargeDate}
+                  {data.medical.stayDuration && ` (${data.medical.stayDuration} days)`}
+                </p>
+              )}
+              {data.medical.followUp && (
+                <p><strong>Follow-up Instructions:</strong> {data.medical.followUp}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Discharge Medications Table */}
+        {data.medical?.medications && data.type === 'DISCHARGE' && (
+          <div className="mb-6">
+            <h3 className="font-semibold mb-3 text-gray-800">💊 Discharge Medications</h3>
+            <div className="border border-gray-300 rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="border-b border-gray-300 px-3 py-2 text-left font-semibold">Drug Name & Dose</th>
+                    <th className="border-b border-gray-300 px-3 py-2 text-center font-semibold">Morning</th>
+                    <th className="border-b border-gray-300 px-3 py-2 text-center font-semibold">Afternoon</th>
+                    <th className="border-b border-gray-300 px-3 py-2 text-center font-semibold">Night</th>
+                    <th className="border-b border-gray-300 px-3 py-2 text-center font-semibold">Days</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.medical.medications.split('\n').filter(line => line.trim()).map((medication, index) => {
+                    const parts = medication.trim().split(/\s+/);
+                    const drugName = parts.slice(0, -4).join(' ') || parts[0] || '';
+                    const morning = parts[parts.length - 4] || '0';
+                    const afternoon = parts[parts.length - 3] || '0';
+                    const night = parts[parts.length - 2] || '0';
+                    const days = parts[parts.length - 1] || '0';
+
+                    return (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="border-b border-gray-200 px-3 py-2">{drugName}</td>
+                        <td className="border-b border-gray-200 px-3 py-2 text-center">{morning}</td>
+                        <td className="border-b border-gray-200 px-3 py-2 text-center">{afternoon}</td>
+                        <td className="border-b border-gray-200 px-3 py-2 text-center">{night}</td>
+                        <td className="border-b border-gray-200 px-3 py-2 text-center">{days}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Close first page header content */}
       </div>
 
       {/* Services Table - Paginated */}
@@ -596,4 +596,3 @@ const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({ data, className = '' 
 };
 
 export default ReceiptTemplate;
-export type { ReceiptData };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import HospitalService from '../services/hospitalService';
+import SupabasePatientService from '../services/supabasePatientService';
 import EmailService from '../services/emailService';
 import { ExactDateService } from '../services/exactDateService';
 import type { PatientWithRelations } from '../config/supabaseNew';
@@ -23,7 +23,7 @@ import { createRoot } from 'react-dom/client';
 import ReceiptTemplate from './receipts/ReceiptTemplate';
 import type { ReceiptData } from './receipts/ReceiptTemplate';
 import { usePermissions, useAuth } from '../contexts/AuthContext';
-import { supabase } from '../config/supabase';
+import { supabase } from '../lib/supabaseClient';
 import { logger } from '../utils/logger';
 
 interface PatientHistoryModalProps {
@@ -267,7 +267,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ patient, isOp
       patient: {
         id: patient.patient_id || 'N/A',
         name: `${patient.first_name} ${patient.last_name}`,
-        age: patient.age,
+        age: patient.age ? parseInt(patient.age) : undefined,
         gender: patient.gender,
         phone: patient.phone,
         address: patient.address,
@@ -967,7 +967,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ patient, isOp
       setDeletingTransactionId(transactionId);
 
       // Permanently delete the transaction
-      await HospitalService.deleteTransaction(transactionId);
+      await SupabasePatientService.deleteTransaction(transactionId);
 
       toast.success('Transaction deleted permanently from all records.');
 
@@ -982,9 +982,9 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ patient, isOp
           .reduce((sum, t) => sum + (t.amount || 0), 0),
         visitCount: updatedTransactions.filter(t =>
           t.transaction_type === 'ENTRY_FEE' ||
-          t.transaction_type === 'entry_fee' ||
+          (t.transaction_type as string) === 'entry_fee' ||
           t.transaction_type === 'CONSULTATION' ||
-          t.transaction_type === 'consultation'
+          (t.transaction_type as string) === 'consultation'
         ).length || 1
       };
 
@@ -1224,8 +1224,8 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ patient, isOp
                           displayDate = transaction.transaction_date;
                         } else if (transaction.created_at) {
                           displayDate = transaction.created_at;
-                        } else if (transaction.patient?.date_of_entry && transaction.patient.date_of_entry.trim() !== '') {
-                          displayDate = transaction.patient.date_of_entry;
+                        } else if (patient.date_of_entry && patient.date_of_entry.trim() !== '') {
+                          displayDate = patient.date_of_entry;
                         }
 
                         try {
@@ -1252,7 +1252,7 @@ const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({ patient, isOp
                       })()}</td>
                       <td className="p-2">
                         <span className={`px-2 py-1 rounded text-xs ${transaction.transaction_type === 'CONSULTATION' ? 'bg-blue-100 text-blue-800' :
-                          transaction.transaction_type === 'ADMISSION' ? 'bg-green-100 text-green-800' :
+                          (transaction.transaction_type as string) === 'ADMISSION' ? 'bg-green-100 text-green-800' :
                             transaction.transaction_type === 'REFUND' ? 'bg-red-100 text-red-800' :
                               'bg-gray-100 text-gray-800'
                           }`}>
@@ -1476,7 +1476,7 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
   const [showVHPrescription, setShowVHPrescription] = useState(false);
   const [showEnhancedPatientRecord, setShowEnhancedPatientRecord] = useState(false);
   const [showMultiplePrescription, setShowMultiplePrescription] = useState(false);
-  const [multiplePrescriptionType, setMultiplePrescriptionType] = useState<'valant' | 'vh'>('valant');
+  const [multiplePrescriptionType, setMultiplePrescriptionType] = useState<'sevasangraha' | 'vh'>('sevasangraha');
   const [selectedPatientForPrescription, setSelectedPatientForPrescription] = useState<PatientWithRelations | null>(null);
   /* State for Patient Service Manager */
   const [showServiceManager, setShowServiceManager] = useState(false);
@@ -1490,7 +1490,7 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const docs = await HospitalService.getDoctors();
+        const docs = await SupabasePatientService.getDoctors();
         console.log('🩺 Fetched doctors in PatientList:', docs);
         setDoctors(docs);
       } catch (error) {
@@ -1876,7 +1876,7 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
   };
 
 
-  const handlePrescription = (patient: PatientWithRelations, template: string) => {
+  const handlePrescription = (patient: PatientWithRelations, template: 'sevasangraha' | 'vh' | 'valant') => {
     setSelectedPatientForPrescription(patient);
 
     // Check if patient has multiple doctors
@@ -1884,11 +1884,12 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
 
     if (hasMultipleDoctors) {
       // Use multiple prescription generator
-      setMultiplePrescriptionType(template as 'valant' | 'vh');
+      const type = template === 'valant' ? 'sevasangraha' : template;
+      setMultiplePrescriptionType(type as 'sevasangraha' | 'vh');
       setShowMultiplePrescription(true);
     } else {
       // Use single prescription (original behavior)
-      if (template === 'valant') {
+      if (template === 'valant' || template === 'sevasangraha') {
         setShowSevasangrahaPrescription(true);
       } else if (template === 'vh') {
         setShowVHPrescription(true);
@@ -1921,7 +1922,7 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
       setLoading(true);
 
       // Delete the patient using HospitalService
-      await HospitalService.deletePatient(patientId);
+      await SupabasePatientService.deletePatient(patientId);
 
       toast.success('Patient deleted successfully');
       await loadPatients(startDate, endDate); // Reload the patients list
@@ -1992,10 +1993,10 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
             }
 
             // Get doctor name from transaction or patient
-            let doctorName = transaction.doctor_name || transaction.doctor || patient.assigned_doctor || 'Unknown Doctor';
+            let doctorName = transaction.doctor_name || (transaction as any).doctor || patient.assigned_doctor || 'Unknown Doctor';
 
             // Get department - try multiple sources
-            let department = transaction.department || transaction.assigned_department;
+            let department = transaction.department || (transaction as any).assigned_department;
 
             // If no department in transaction, try to infer from doctor name or patient data
             if (!department) {
@@ -2715,8 +2716,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                           if (selectedTemplate === 'enhanced') {
                             setSelectedPatientForPrescription(patient);
                             setShowEnhancedPatientRecord(true);
-                          } else if (selectedTemplate === 'valant') {
-                            handlePrescription(patient, 'valant');
+                          } else if (selectedTemplate === 'sevasangraha') {
+                            handlePrescription(patient, 'sevasangraha');
                           } else if (selectedTemplate === 'vh') {
                             handlePrescription(patient, 'vh');
                           }
@@ -2727,7 +2728,7 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                       >
                         <option value="">📝 Presc.</option>
                         <option value="enhanced">🏥 Complete Patient Record</option>
-                        <option value="valant">Valant Template</option>
+                        <option value="sevasangraha">Valant Template</option>
                         <option value="vh">V+H Template</option>
                       </select>
                     </div>

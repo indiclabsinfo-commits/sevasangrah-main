@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import SupabasePatientService from '../services/supabasePatientService';
 import HospitalService from '../services/hospitalService';
 import SMSService from '../services/smsService';
 import { PatientService } from '../services/patientService';
@@ -214,25 +215,21 @@ const NewFlexiblePatientEntry: React.FC = () => {
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        const status = await HospitalService.getConnectionStatus();
-        setConnectionStatus(status);
+        // Assume connected if using Supabase directly
+        setConnectionStatus(true);
 
-        // Fetch doctors
-        const docs = await HospitalService.getDoctors();
+        // Fetch doctors directly from Supabase
+        const docs = await SupabasePatientService.getDoctors();
+
         if (docs && docs.length > 0) {
           setDbDoctors(docs);
-          // Map DB doctors to compatible format for dropdown if needed, 
-          // but we will prioritize matching DB doctors by name/department
-          const formattedDocs = docs.map(d => ({
+          // Map DB doctors to compatible format for dropdown
+          const formattedDocs = docs.map((d: any) => ({
             id: d.id,
             name: `DR. ${d.first_name} ${d.last_name}`.toUpperCase(),
             department: d.department?.toUpperCase() || 'GENERAL',
             consultationFee: d.consultation_fee
           }));
-
-          // Merge legacy and DB doctors for display, prioritizing DB info if needed
-          // or just use DB doctors entirely if possible.
-          // For safety, we keep legacy list but know that real functionality (Queue) needs DB ID.
           setDbDoctors(formattedDocs);
         }
 
@@ -404,7 +401,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
       logger.log('🔍 Loading existing patients for search...');
       // Get ALL patients including inactive ones for comprehensive search
       // Using even higher limit to ensure we get ALL patients
-      const patients = await HospitalService.getPatients(50000, true, true); // limit=50000, skipOrthoFilter=TRUE, includeInactive=true
+      // Use SupabasePatientService directly (ignores limit/ortho flags for now)
+      const patients = await SupabasePatientService.getAllPatients();
       logger.log('✅ Loaded patients for search:', patients?.length || 0);
       logger.log('🏥 First few patient hospital_ids:', patients?.slice(0, 5).map(p => `${p.first_name} ${p.last_name} - Hospital ID: ${p.hospital_id} - Active: ${p.is_active}`));
 
@@ -651,7 +649,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
         }
 
         try {
-          const updatedPatient = await HospitalService.updatePatient(selectedExistingPatient.id, updateData);
+          // Use SupabasePatientService directly
+          const updatedPatient = await SupabasePatientService.updatePatient(selectedExistingPatient.id, updateData);
           if (updatedPatient) {
             newPatient = { ...selectedExistingPatient, ...updateData };
             logger.log('✅ Updated patient date_of_entry and doctor info for new visit');
@@ -747,8 +746,12 @@ const NewFlexiblePatientEntry: React.FC = () => {
           selected_department: formData.selected_department
         });
 
-        // Use backend API for patient creation
-        newPatient = await HospitalService.createPatient(patientData);
+        // Use SupabasePatientService for direct patient creation
+        newPatient = await SupabasePatientService.createPatient({
+          ...patientData,
+          full_name: formData.full_name,
+          age: patientData.age ? parseInt(patientData.age) : 0
+        } as any);
         logger.log('✅ Patient created successfully (Direct Mode):', newPatient);
       }
 
@@ -826,7 +829,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
             };
 
             logger.log('💳 Creating transaction:', transactionData);
-            await HospitalService.createTransaction(transactionData);
+            // Use SupabasePatientService for direct transaction creation
+            await SupabasePatientService.createTransaction(transactionData);
           }
         } catch (transactionError: any) {
           // Log the error but don't fail the whole patient creation
@@ -922,7 +926,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
             };
             console.log('🚀 Auto-Queue Payload:', queuePayload);
 
-            await HospitalService.addToOPDQueue(queuePayload);
+            // Use SupabasePatientService directly
+            await SupabasePatientService.addToOPDQueue(queuePayload);
             toast.success('Added to OPD Queue automatically');
           } else {
             console.warn('Skipping queue: No valid Doctor ID found for', formData.selected_doctor);
