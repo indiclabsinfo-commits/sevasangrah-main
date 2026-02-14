@@ -28,8 +28,8 @@ export class HospitalService {
     return { Authorization: `Bearer ${token}` };
   }
 
+
   private static getBaseUrl() {
-    // Use relative path by default for Vercel compatibility
     return import.meta.env.VITE_API_URL || '';
   }
 

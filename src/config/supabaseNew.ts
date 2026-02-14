@@ -169,6 +169,8 @@ export interface PatientTransaction {
   doctor_name?: string;
   discount_type?: 'PERCENTAGE' | 'AMOUNT';
   discount_value?: number;
+  discount_percentage?: number; // Added for frontend compatibility
+  discount_reason?: string; // Added for frontend compatibility
   online_payment_method?: string;
 }
 
@@ -235,6 +237,9 @@ export interface PatientWithRelations extends Patient {
   visitCount?: number;
   lastVisit?: string;
   departmentStatus?: 'OPD' | 'IPD';
+  doctor_name?: string; // Added for frontend compatibility
+  date_of_birth?: string; // Added for frontend compatibility (already in Patient but maybe missing in some unions)
+  photo_url?: string; // Added for frontend compatibility
 }
 
 export interface PatientAdmissionWithRelations extends PatientAdmission {

@@ -81,9 +81,8 @@ export class SupabasePatientService {
             // Prepare data for Supabase
             const supabaseData = {
                 patient_id,
-                full_name: patientData.full_name,
-                first_name: patientData.first_name || patientData.full_name.split(' ')[0],
-                last_name: patientData.last_name || patientData.full_name.split(' ').slice(1).join(' ') || '',
+                first_name: patientData.first_name || (patientData.full_name ? patientData.full_name.split(' ')[0] : ''),
+                last_name: patientData.last_name || (patientData.full_name ? patientData.full_name.split(' ').slice(1).join(' ') : ''),
                 prefix: patientData.prefix || 'Mr',
                 age: patientData.age || 0,
                 gender: patientData.gender || 'MALE',
@@ -243,9 +242,8 @@ export class SupabasePatientService {
     static async getDoctors(): Promise<any[]> {
         try {
             const { data, error } = await supabase
-                .from('users')
+                .from('doctors')
                 .select('*')
-                .eq('role', 'DOCTOR')
                 .eq('is_active', true);
 
             if (error) throw error;

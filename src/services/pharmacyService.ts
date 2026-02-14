@@ -51,7 +51,7 @@ class PharmacyService {
   }
 
   private getBaseUrl() {
-    return import.meta.env.VITE_API_URL || 'http://localhost:3002';
+    return import.meta.env.VITE_API_URL || '';
   }
 
   // =====================================================================

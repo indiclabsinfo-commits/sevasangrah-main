@@ -6,7 +6,7 @@
 
 // Backend API configuration
 export const AZURE_CONFIG = {
-  API_URL: '', // Relative path for Vercel
+  API_URL: import.meta.env.VITE_API_URL || '',
   DB_HOST: 'sevasangraha.postgres.database.azure.com',
   DB_NAME: 'postgres',
   DB_PORT: 5432,
@@ -102,7 +102,7 @@ export interface Patient {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  created_by: string;
+  created_by?: string;
 }
 
 export interface Department {

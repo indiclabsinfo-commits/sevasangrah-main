@@ -46,7 +46,7 @@ export class PatientService {
       );
 
       // Get API URL and auth token
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+      const baseUrl = import.meta.env.VITE_API_URL || '';
       const token = localStorage.getItem('auth_token');
 
       // Call backend API
@@ -108,7 +108,7 @@ export class PatientService {
    */
   static async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+      const baseUrl = import.meta.env.VITE_API_URL || '';
       const token = localStorage.getItem('auth_token');
 
       if (!token) {

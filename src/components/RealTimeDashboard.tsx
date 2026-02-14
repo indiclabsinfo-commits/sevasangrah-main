@@ -251,13 +251,13 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
         HospitalService.getPatients(50),
         HospitalService.getAppointments(100),
         // Load today's expenses via backend API instead of Supabase
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/daily_expenses?date=${today}`, {
+        fetch(`${import.meta.env.VITE_API_URL || ''}/api/daily_expenses?date=${today}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
           }
         }).then(res => res.ok ? res.json() : []).catch(() => []),
         // Load today's refunds via backend API
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/transactions/for-ledger?start_date=${today}&end_date=${today}`, {
+        fetch(`${import.meta.env.VITE_API_URL || ''}/api/transactions/for-ledger?start_date=${today}&end_date=${today}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
           }

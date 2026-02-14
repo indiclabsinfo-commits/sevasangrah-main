@@ -16,7 +16,7 @@ class DataService {
 
   // Helper methods for API calls
   private getBaseUrl(): string {
-    let baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+    let baseUrl = import.meta.env.VITE_API_URL || '';
     if (baseUrl.endsWith('/api')) {
       baseUrl = baseUrl.substring(0, baseUrl.length - 4);
     }

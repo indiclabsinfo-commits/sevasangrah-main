@@ -84,7 +84,7 @@ export class SMSService {
    */
   private static async logSMS(log: SMSLog): Promise<void> {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+      const baseUrl = import.meta.env.VITE_API_URL || '';
       const token = localStorage.getItem('auth_token');
 
       await axios.post(`${baseUrl}/api/sms-logs`, {
@@ -292,7 +292,7 @@ Please arrive 15 minutes early.
    */
   static async getSMSLogs(patientId: string) {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+      const baseUrl = import.meta.env.VITE_API_URL || '';
       const token = localStorage.getItem('auth_token');
 
       const response = await axios.get(`${baseUrl}/api/sms-logs`, {
