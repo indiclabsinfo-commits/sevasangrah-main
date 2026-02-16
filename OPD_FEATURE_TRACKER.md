@@ -34,8 +34,8 @@
 ### **Group 3: Clinical Features (P1 - High)**
 | ID | Feature | Status | Notes | Test Result |
 |----|---------|--------|-------|-------------|
-| US-015 | ICD-10 codes table | ❌ **NOT STARTED** | Need database table | |
-| US-016 | ICD-10 lookup to diagnosis | ❌ **NOT STARTED** | Need search component | |
+| US-015 | ICD-10 codes table | ✅ **IMPLEMENTED** | Tables created in Supabase, 5 sample codes inserted | Ready for testing |
+| US-016 | ICD-10 lookup to diagnosis | ✅ **IMPLEMENTED** | ICD10Lookup.tsx component built with real-time search | Component ready for integration |
 | US-017 | Examination templates table | ❌ **NOT STARTED** | Need database table | |
 | US-018 | Examination template selector | ❌ **NOT STARTED** | Need UI component | |
 | US-019 | Prescription templates table | ❌ **NOT STARTED** | Need database table | |
