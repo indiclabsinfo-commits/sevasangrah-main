@@ -4,7 +4,7 @@ import { Button } from '../../ui/Button';
 import { DIAGNOSIS_OPTIONS, type DiagnosisData, DEFAULT_DIAGNOSIS } from '../../../data/medicalData';
 import DoctorService from '../../../services/doctorService';
 import NurseService from '../../../services/nurseService';
-import { HospitalService } from '../../../services/hospitalService';
+import SupabaseHospitalService from '../../../services/supabaseHospitalService';
 
 interface DiagnosisSectionProps {
   data: DiagnosisData[];
