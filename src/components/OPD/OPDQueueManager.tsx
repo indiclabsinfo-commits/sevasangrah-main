@@ -16,6 +16,7 @@ import {
     Stethoscope
 } from 'lucide-react';
 import HospitalService from '../../services/hospitalService';
+import SupabaseQueueService from '../../services/supabaseQueueService';
 import { logger } from '../../utils/logger';
 import { announcePatient } from '../../utils/voiceAnnouncement';
 import { ElevenLabsService } from '../../services/elevenLabsService';
@@ -82,43 +83,58 @@ const OPDQueueManager: React.FC = () => {
 
     const loadDoctors = async () => {
         try {
-            const docs = await HospitalService.getDoctors();
+            const docs = await SupabaseQueueService.getDoctors();
             setDoctors(docs);
         } catch (error) {
             console.error('Failed to load doctors', error);
+            toast.error('Failed to load doctors');
         }
     };
 
     const loadQueues = async () => {
         try {
             setLoading(true);
-            const data = await HospitalService.getOPDQueues(
+            const data = await SupabaseQueueService.getOPDQueues(
                 statusFilter !== 'all' ? statusFilter : undefined,
                 selectedDoctor || undefined
             );
 
-            // Map flat backend response to nested structure expected by UI
+            // Map Supabase response to UI format
             const mappedData = data.map((item: any) => ({
                 ...item,
                 id: item.id,
-                status: item.queue_status || 'WAITING', // Map DB queue_status to frontend status
-                token_number: item.queue_no,           // Map DB queue_no to token_number
-                patient: {
+                status: item.queue_status || 'waiting',
+                token_number: item.queue_number,
+                patient: item.patient ? {
+                    id: item.patient.id,
+                    first_name: item.patient.first_name,
+                    last_name: item.patient.last_name,
+                    age: item.patient.age,
+                    gender: item.patient.gender,
+                    phone: item.patient.phone,
+                    patient_id: item.patient.uhid || `P${item.patient.id.substring(0, 8)}`
+                } : {
                     id: item.patient_id,
-                    first_name: item.first_name,
-                    last_name: item.last_name,
-                    age: item.age,
-                    gender: item.gender,
-                    patient_id: item.patient_code
+                    first_name: 'Unknown',
+                    last_name: 'Patient',
+                    age: 0,
+                    gender: 'Unknown'
                 },
-                doctor: {
-                    id: item.assigned_doctor, // Use assigned_doctor column for ID (it might be name or ID)
-                    first_name: item.assigned_doctor, // Use assigned_doctor for name display since we don't have separate columns
-                    last_name: ''
+                doctor: item.doctor ? {
+                    id: item.doctor.id,
+                    first_name: item.doctor.first_name,
+                    last_name: item.doctor.last_name,
+                    email: item.doctor.email,
+                    specialization: item.doctor.specialization
+                } : {
+                    id: item.doctor_id,
+                    first_name: 'Unknown',
+                    last_name: 'Doctor'
                 }
             }));
 
-            setQueue(mappedData); // Set queue
+            setQueue(mappedData);
+            logger.log(`✅ Loaded ${mappedData.length} queue items`);
         } catch (error) {
             console.error('Failed to load queues', error);
             toast.error('Failed to load queue data');
@@ -129,7 +145,10 @@ const OPDQueueManager: React.FC = () => {
 
     const updateStatus = async (queueId: string, newStatus: string) => {
         try {
-            await HospitalService.updateOPDQueueStatus(queueId, newStatus);
+            // Map frontend status to backend status
+            const backendStatus = newStatus.toLowerCase() as 'waiting' | 'in_consultation' | 'completed' | 'cancelled';
+            
+            await SupabaseQueueService.updateQueueStatus(queueId, backendStatus);
             toast.success(`Status updated to ${newStatus}`);
 
             // Announce if status is 'IN_CONSULTATION' (Start)
@@ -138,7 +157,7 @@ const OPDQueueManager: React.FC = () => {
                 if (item && item.patient) {
                     announcePatient({
                         patientName: `${item.patient.first_name} ${item.patient.last_name}`,
-                        tokenNumber: String(item.queue_no || item.token_number || '0'),
+                        tokenNumber: String(item.queue_number || item.token_number || '0'),
                         doctorName: item.doctor ? `Dr. ${item.doctor.first_name} ${item.doctor.last_name}` : undefined
                     });
                 }
@@ -160,13 +179,13 @@ const OPDQueueManager: React.FC = () => {
         setQueue(newQueue);
 
         try {
-            // Prepare the payload: array of { id, order }
+            // Prepare the payload: array of { id, queue_number }
             const reorderPayload = newQueue.map((item, index) => ({
                 id: item.id,
-                order: index + 1
+                queue_number: index + 1
             }));
 
-            await HospitalService.reorderOPDQueue(reorderPayload);
+            await SupabaseQueueService.reorderQueues(reorderPayload);
             // toast.success('Queue order updated'); // Optional: don't spam toasts
         } catch (error) {
             console.error('Failed to persist queue order', error);
