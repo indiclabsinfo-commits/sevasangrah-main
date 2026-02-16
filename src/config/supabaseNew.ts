@@ -320,6 +320,7 @@ export interface CreatePatientData {
   aadhaar_number?: string; // 12-digit Aadhaar card number
   abha_id?: string; // 14-digit ABHA ID (Ayushman Bharat Health Account)
   photo_url?: string | null; // Patient photo URL
+  photo_thumbnail_url?: string | null; // Patient photo thumbnail URL
   date_of_entry?: string; // Visit/entry date
   has_pending_appointment?: boolean; // Flag to hide patient from list when they have pending appointment
   hospital_id: string;

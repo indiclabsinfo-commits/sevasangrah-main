@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { logger } from '../utils/logger';
 import { parseLocalDate } from '../utils';
-import { PatientPhotoUpload } from './forms/PatientPhotoUpload';
+import PatientPhotoUpload from './PatientPhotoUpload';
 
 // Doctors and Departments data
 const DOCTORS_DATA = [
@@ -166,6 +166,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
     current_medications: '',
     patient_tag: '',
     photo_url: null as string | null,
+    photo_thumbnail_url: null as string | null,
     abha_id: '',
     aadhaar_number: '',
     has_reference: 'NO',
@@ -705,6 +706,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
 
           // Patient photo
           photo_url: formData.photo_url || undefined,
+          photo_thumbnail_url: formData.photo_thumbnail_url || undefined,
 
           // ABHA ID
           abha_id: formData.abha_id || undefined,
@@ -1306,13 +1308,33 @@ const NewFlexiblePatientEntry: React.FC = () => {
                 </div>
 
                 {/* Patient Photo Upload */}
-                <div className="mb-6">
-                  <PatientPhotoUpload
-                    value={formData.photo_url}
-                    onChange={(photoUrl) => setFormData({ ...formData, photo_url: photoUrl })}
-                    disabled={loading}
-                  />
-                </div>
+                {formData.id && (
+                  <div className="mb-6">
+                    <PatientPhotoUpload
+                      patientId={formData.id}
+                      patientName={`${formData.first_name} ${formData.last_name}`}
+                      existingPhotoUrl={formData.photo_url || undefined}
+                      onPhotoUploaded={(photoData) => {
+                        setFormData({ 
+                          ...formData, 
+                          photo_url: photoData.photo_url,
+                          photo_thumbnail_url: photoData.photo_thumbnail_url
+                        });
+                        toast.success('Patient photo uploaded successfully!');
+                      }}
+                      onPhotoRemoved={() => {
+                        setFormData({ 
+                          ...formData, 
+                          photo_url: null,
+                          photo_thumbnail_url: null
+                        });
+                        toast.success('Patient photo removed');
+                      }}
+                      readOnly={loading}
+                      size="md"
+                    />
+                  </div>
+                )}
 
                 {/* Name Fields */}
                 <div className="grid grid-cols-4 gap-4 mb-4">
