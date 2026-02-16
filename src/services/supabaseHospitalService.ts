@@ -183,6 +183,7 @@ export class SupabaseHospitalService {
     doctor_id?: string,
     date?: string
   ): Promise<any[]> {
+    const supabase = await getSupabase();
     try {
       logger.log('🔍 Fetching OPD queues from Supabase', { status, doctor_id, date });
       
@@ -229,12 +230,12 @@ export class SupabaseHospitalService {
   }
 
   static async addToOPDQueue(data: {
-    const supabase = await getSupabase();
     patient_id: string;
     doctor_id: string;
     priority?: string;
     notes?: string;
   }): Promise<any> {
+    const supabase = await getSupabase();
     try {
       logger.log('➕ Adding patient to OPD queue:', data);
       
