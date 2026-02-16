@@ -3,7 +3,7 @@
 // US-018: Examination template selector
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, Edit, Trash2, Eye, Copy, Check, X, Save, Stethoscope, Heart, Brain, Lung } from 'lucide-react';
+import { Search, Filter, Plus, Edit, Trash2, Eye, Copy, Check, X, Save, Stethoscope, Heart, Brain, Wind } from 'lucide-react';
 import { getSupabase } from '../lib/supabaseClient';
 import { logger } from '../utils/logger';
 
@@ -206,7 +206,7 @@ const ExaminationTemplates: React.FC<ExaminationTemplatesProps> = ({
   const getSystemIcon = (systemCode: string) => {
     switch (systemCode) {
       case 'cvs': return <Heart size={16} className="text-red-500" />;
-      case 'respiratory': return <Lung size={16} className="text-blue-500" />;
+      case 'respiratory': return <Wind size={16} className="text-blue-500" />;
       case 'cns': return <Brain size={16} className="text-purple-500" />;
       default: return <Stethoscope size={16} className="text-gray-500" />;
     }
