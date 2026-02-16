@@ -22,6 +22,7 @@ import {
 import { logger } from '../utils/logger';
 import { parseLocalDate } from '../utils';
 import PatientPhotoUpload from './PatientPhotoUpload';
+import DuplicatePatientCheck from './DuplicatePatientCheck';
 
 // Doctors and Departments data
 const DOCTORS_DATA = [
@@ -1757,6 +1758,45 @@ const NewFlexiblePatientEntry: React.FC = () => {
                     </span>
                   )}
                 </div>
+
+                {/* Duplicate Patient Check */}
+                {(formData.first_name || formData.full_name) && formData.phone && (
+                  <div className="mb-6">
+                    <DuplicatePatientCheck
+                      patientData={{
+                        id: formData.id,
+                        firstName: formData.first_name || formData.full_name.split(' ')[0],
+                        lastName: formData.last_name || formData.full_name.split(' ').slice(1).join(' ') || '',
+                        phone: formData.phone,
+                        aadhaar: formData.aadhaar_number,
+                        abhaId: formData.abha_id,
+                        dateOfBirth: formData.date_of_birth,
+                        gender: formData.gender
+                      }}
+                      onDuplicateFound={(result) => {
+                        logger.log('🔍 Duplicate found:', result);
+                        if (result.suggestedAction === 'block') {
+                          toast.error('Duplicate patient found! Registration blocked.');
+                        } else if (result.suggestedAction === 'warn') {
+                          toast.warning('Potential duplicate found. Please review.');
+                        }
+                      }}
+                      onNoDuplicates={() => {
+                        logger.log('✅ No duplicates found');
+                      }}
+                      onActionSelected={(action) => {
+                        logger.log('Action selected:', action);
+                        if (action === 'block') {
+                          toast.error('Registration blocked due to duplicate patient.');
+                        } else if (action === 'allow') {
+                          toast.success('No duplicates found. Registration can proceed.');
+                        }
+                      }}
+                      autoCheck={true}
+                      showDetails={true}
+                    />
+                  </div>
+                )}
 
                 {/* RGHS Number Field - Moved below Aadhaar as requested */}
                 <div className="mb-4">
