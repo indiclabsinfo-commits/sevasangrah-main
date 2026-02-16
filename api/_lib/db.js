@@ -7,8 +7,14 @@ const { Pool } = pg;
 let pool;
 
 if (!pool) {
+    // Use environment variable or fallback to Supabase connection
+    const connectionString = process.env.DATABASE_URL || 
+        'postgresql://postgres:indicwings%4000@db.plkbxjedbjpmbfrekmrr.supabase.co:5432/postgres';
+    
+    console.log('🔌 Database connection string:', connectionString ? 'Set' : 'Missing');
+    
     pool = new Pool({
-        connectionString: 'postgresql://postgres:indicwings%4000@db.plkbxjedbjpmbfrekmrr.supabase.co:5432/postgres',
+        connectionString,
         ssl: {
             rejectUnauthorized: false
         },
@@ -16,6 +22,11 @@ if (!pool) {
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 10000,
     });
+    
+    // Test connection
+    pool.query('SELECT NOW()')
+        .then(() => console.log('✅ Database connection successful'))
+        .catch(err => console.error('❌ Database connection failed:', err.message));
 }
 
 export default pool;
