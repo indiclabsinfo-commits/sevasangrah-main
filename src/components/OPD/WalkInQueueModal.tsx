@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, UserPlus, AlertCircle, User, Phone, CheckCircle } from 'lucide-react';
-import HospitalService from '../../services/hospitalService';
+import SupabaseHospitalService from '../../services/supabaseHospitalService';
 import toast from 'react-hot-toast';
 import type { User as Doctor, Patient } from '../../config/supabaseNew';
 
@@ -58,7 +58,7 @@ const WalkInQueueModal: React.FC<WalkInQueueModalProps> = ({ isOpen, onClose, on
 
         try {
             // Search by name (if text) or phone (if digits)
-            const patients = await HospitalService.searchPatients(searchTerm.trim());
+            const patients = await SupabaseHospitalService.searchPatients(searchTerm.trim());
 
             if (patients && patients.length > 0) {
                 setFoundPatients(patients);
@@ -96,7 +96,7 @@ const WalkInQueueModal: React.FC<WalkInQueueModalProps> = ({ isOpen, onClose, on
                     return;
                 }
 
-                const createdPatient = await HospitalService.createPatient({
+                const createdPatient = await SupabaseHospitalService.createPatient({
                     ...newPatient,
                     age: parseInt(newPatient.age),
                     email: '', // Optional
@@ -116,11 +116,10 @@ const WalkInQueueModal: React.FC<WalkInQueueModalProps> = ({ isOpen, onClose, on
             }
 
             // Add to Queue
-            await HospitalService.addToOPDQueue({
+            await SupabaseHospitalService.addToOPDQueue({
                 patient_id: patientId,
                 doctor_id: selectedDoctor,
-                appointment_id: undefined,
-                priority: false,
+                priority: 'normal',
                 notes: notes || 'Walk-in Visit'
             });
 

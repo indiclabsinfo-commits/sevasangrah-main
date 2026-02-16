@@ -15,8 +15,7 @@ import {
     Settings,
     Stethoscope
 } from 'lucide-react';
-import HospitalService from '../../services/hospitalService';
-import SupabaseQueueService from '../../services/supabaseQueueService';
+import SupabaseHospitalService from '../../services/supabaseHospitalService';
 import { logger } from '../../utils/logger';
 import { announcePatient } from '../../utils/voiceAnnouncement';
 import { ElevenLabsService } from '../../services/elevenLabsService';
@@ -83,7 +82,7 @@ const OPDQueueManager: React.FC = () => {
 
     const loadDoctors = async () => {
         try {
-            const docs = await SupabaseQueueService.getDoctors();
+            const docs = await SupabaseHospitalService.getDoctors();
             setDoctors(docs);
         } catch (error) {
             console.error('Failed to load doctors', error);
@@ -94,7 +93,7 @@ const OPDQueueManager: React.FC = () => {
     const loadQueues = async () => {
         try {
             setLoading(true);
-            const data = await SupabaseQueueService.getOPDQueues(
+            const data = await SupabaseHospitalService.getOPDQueues(
                 statusFilter !== 'all' ? statusFilter : undefined,
                 selectedDoctor || undefined
             );
@@ -148,7 +147,7 @@ const OPDQueueManager: React.FC = () => {
             // Map frontend status to backend status
             const backendStatus = newStatus.toLowerCase() as 'waiting' | 'in_consultation' | 'completed' | 'cancelled';
             
-            await SupabaseQueueService.updateQueueStatus(queueId, backendStatus);
+            await SupabaseHospitalService.updateOPDQueueStatus(queueId, backendStatus);
             toast.success(`Status updated to ${newStatus}`);
 
             // Announce if status is 'IN_CONSULTATION' (Start)
@@ -185,7 +184,7 @@ const OPDQueueManager: React.FC = () => {
                 queue_number: index + 1
             }));
 
-            await SupabaseQueueService.reorderQueues(reorderPayload);
+            await SupabaseHospitalService.reorderOPDQueue(reorderPayload);
             // toast.success('Queue order updated'); // Optional: don't spam toasts
         } catch (error) {
             console.error('Failed to persist queue order', error);

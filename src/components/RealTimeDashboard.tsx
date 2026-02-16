@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import QuickReportsModal from './QuickReportsModal';
 import { supabase } from '../config/supabaseNew';
 import type { DashboardStats, PatientWithRelations, FutureAppointment } from '../config/supabaseNew';
@@ -247,9 +247,10 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
         expensesData,
         refundsData
       ] = await Promise.all([
-        HospitalService.getDashboardStats(),
-        HospitalService.getPatients(50),
-        HospitalService.getAppointments(100),
+        SupabaseHospitalService.getDashboardStats(),
+        SupabaseHospitalService.getPatients(50),
+        SupabaseHospitalService.getAppointments(),
+        // Load today's expenses via backend API instead of Supabase
         // Load today's expenses via backend API instead of Supabase
         fetch(`${import.meta.env.VITE_API_URL || ''}/api/daily_expenses?date=${today}`, {
           headers: {
