@@ -10,12 +10,14 @@ import {
     Search,
     Plus,
     Trash2,
-    CheckCircle
+    CheckCircle,
+    Pill
 } from 'lucide-react';
 import opdService, { type CreateConsultationData } from '../../services/opdService';
 import ChiefComplaints from '../ChiefComplaints';
 import ICD10Lookup from '../ICD10Lookup';
 import ExaminationTemplates from '../ExaminationTemplates';
+import PrescriptionTemplates from '../PrescriptionTemplates';
 import { logger } from '../../utils/logger';
 
 interface OPDConsultationFormProps {
@@ -59,6 +61,10 @@ const OPDConsultationForm: React.FC<OPDConsultationFormProps> = ({
     // Examination findings state
     const [examinationFindings, setExaminationFindings] = useState<any>(null);
     const [showExaminationTemplates, setShowExaminationTemplates] = useState(false);
+
+    // Prescription state
+    const [prescriptionData, setPrescriptionData] = useState<any>(null);
+    const [showPrescriptionTemplates, setShowPrescriptionTemplates] = useState(false);
 
     // UI state
     const [loading, setLoading] = useState(false);
@@ -402,13 +408,54 @@ const OPDConsultationForm: React.FC<OPDConsultationFormProps> = ({
 
                         {/* Treatment Plan */}
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Treatment Plan
-                            </label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-semibold text-gray-700">
+                                    Treatment Plan
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPrescriptionTemplates(!showPrescriptionTemplates)}
+                                    className="text-sm px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center gap-1"
+                                >
+                                    <Pill size={14} />
+                                    {showPrescriptionTemplates ? 'Hide Templates' : 'Use Prescription Template'}
+                                </button>
+                            </div>
+                            
+                            {showPrescriptionTemplates ? (
+                                <div className="mb-4">
+                                    <PrescriptionTemplates
+                                        patientId={patientId}
+                                        consultationId={undefined} // Will be set after consultation creation
+                                        mode="selector"
+                                        onSelectTemplate={(template, items) => {
+                                            // Auto-fill with template structure
+                                            const drugsList = items.map(item => 
+                                                `${item.drug_name} - ${item.dosage} ${item.frequency}${item.duration ? ` for ${item.duration}` : ''}`
+                                            ).join('\n');
+                                            
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                treatment_plan: `Prescription Template: ${template.template_name}\n\n${drugsList}\n\n${prev.treatment_plan}`
+                                            }));
+                                        }}
+                                        onSavePrescription={(prescription) => {
+                                            setPrescriptionData(prescription);
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                treatment_plan: `Structured prescription recorded. See prescriptions table for details.\n\n${prev.treatment_plan}`
+                                            }));
+                                            setShowPrescriptionTemplates(false);
+                                            toast.success('Prescription saved!');
+                                        }}
+                                    />
+                                </div>
+                            ) : null}
+                            
                             <textarea
                                 value={formData.treatment_plan}
                                 onChange={(e) => setFormData({ ...formData, treatment_plan: e.target.value })}
-                                placeholder="Enter treatment plan and recommendations..."
+                                placeholder="Enter treatment plan and recommendations... (or use prescription template above)"
                                 rows={3}
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
