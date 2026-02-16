@@ -13,20 +13,33 @@ if (!pool) {
     
     console.log('🔌 Database connection string:', connectionString ? 'Set' : 'Missing');
     
-    pool = new Pool({
-        connectionString,
-        ssl: {
-            rejectUnauthorized: false
-        },
-        max: 1, // Limit max connections per lambda to avoid exhausting pool
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
-    });
-    
-    // Test connection
-    pool.query('SELECT NOW()')
-        .then(() => console.log('✅ Database connection successful'))
-        .catch(err => console.error('❌ Database connection failed:', err.message));
+    if (!connectionString) {
+        console.log('⚠️ No DATABASE_URL - API will work in limited mode (login only)');
+        // Create a mock pool that fails gracefully
+        pool = {
+            query: async () => {
+                throw new Error('Database not configured. Set DATABASE_URL environment variable.');
+            },
+            connect: async () => {
+                throw new Error('Database not configured.');
+            }
+        };
+    } else {
+        pool = new Pool({
+            connectionString,
+            ssl: {
+                rejectUnauthorized: false
+            },
+            max: 1, // Limit max connections per lambda to avoid exhausting pool
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 10000,
+        });
+        
+        // Test connection
+        pool.query('SELECT NOW()')
+            .then(() => console.log('✅ Database connection successful'))
+            .catch(err => console.error('❌ Database connection failed:', err.message));
+    }
 }
 
 export default pool;
