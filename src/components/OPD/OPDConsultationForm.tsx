@@ -13,7 +13,8 @@ import {
     CheckCircle
 } from 'lucide-react';
 import opdService, { type CreateConsultationData } from '../../services/opdService';
-
+import ChiefComplaints from '../ChiefComplaints';
+import ICD10Lookup from '../ICD10Lookup';
 import { logger } from '../../utils/logger';
 
 interface OPDConsultationFormProps {
@@ -51,16 +52,16 @@ const OPDConsultationForm: React.FC<OPDConsultationFormProps> = ({
         follow_up_notes: ''
     });
 
+    // Chief complaints state (structured)
+    const [chiefComplaints, setChiefComplaints] = useState<any[]>([]);
+
     // UI state
     const [loading, setLoading] = useState(false);
     const [latestVitals, setLatestVitals] = useState<any>(null);
     const [patientHistory, setPatientHistory] = useState<any>(null);
     const [showHistory, setShowHistory] = useState(false);
 
-    // ICD-10 search state
-    const [diagnosisSearchTerm, setDiagnosisSearchTerm] = useState('');
-    const [icdResults, setIcdResults] = useState<{ code: string; description: string }[]>([]);
-    const [showIcdDropdown, setShowIcdDropdown] = useState(false);
+    // ICD-10 state (handled by ICD10Lookup component)
 
     // Load patient vitals and history on mount
     useEffect(() => {
@@ -85,53 +86,15 @@ const OPDConsultationForm: React.FC<OPDConsultationFormProps> = ({
         }
     };
 
-    // ICD-10 search
-    const handleDiagnosisSearch = async (searchTerm: string) => {
-        setDiagnosisSearchTerm(searchTerm);
-
-        if (searchTerm.length < 2) {
-            setIcdResults([]);
-            setShowIcdDropdown(false);
-            return;
-        }
-
-        try {
-            const results = await opdService.searchICD10(searchTerm);
-            setIcdResults(results);
-            setShowIcdDropdown(results.length > 0);
-        } catch (error) {
-            logger.error('Error searching ICD-10:', error);
-        }
-    };
-
-    const addDiagnosisCode = (code: string, description: string) => {
-        const newCode = `${code} - ${description}`;
-
-        if (!formData.diagnosis_codes?.includes(newCode)) {
-            setFormData({
-                ...formData,
-                diagnosis_codes: [...(formData.diagnosis_codes || []), newCode]
-            });
-        }
-
-        setDiagnosisSearchTerm('');
-        setShowIcdDropdown(false);
-    };
-
-    const removeDiagnosisCode = (code: string) => {
-        setFormData({
-            ...formData,
-            diagnosis_codes: formData.diagnosis_codes?.filter(c => c !== code) || []
-        });
-    };
+    // ICD-10 functions handled by ICD10Lookup component
 
     // Form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // Validation
-        if (!formData.chief_complaints.trim()) {
-            toast.error('Please enter chief complaints');
+        if (chiefComplaints.length === 0) {
+            toast.error('Please add at least one chief complaint');
             return;
         }
 
@@ -168,8 +131,8 @@ const OPDConsultationForm: React.FC<OPDConsultationFormProps> = ({
         e.preventDefault();
 
         // Validation
-        if (!formData.chief_complaints.trim() || !formData.diagnosis.trim()) {
-            toast.error('Please fill in chief complaints and diagnosis');
+        if (chiefComplaints.length === 0 || !formData.diagnosis.trim()) {
+            toast.error('Please add chief complaints and diagnosis');
             return;
         }
 
@@ -303,13 +266,16 @@ const OPDConsultationForm: React.FC<OPDConsultationFormProps> = ({
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 Chief Complaints <span className="text-red-500">*</span>
                             </label>
-                            <textarea
-                                value={formData.chief_complaints}
-                                onChange={(e) => setFormData({ ...formData, chief_complaints: e.target.value })}
-                                placeholder="Enter patient's main complaints..."
-                                rows={3}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                required
+                            <ChiefComplaints
+                                patientId={patientId}
+                                onComplaintsChange={(complaints) => {
+                                    setChiefComplaints(complaints);
+                                    // Convert structured complaints to text for backward compatibility
+                                    const complaintsText = complaints.map(c => 
+                                        `${c.complaint} (${c.duration}, ${c.severity})${c.body_part ? ` - ${c.body_part}` : ''}${c.notes ? ` - ${c.notes}` : ''}`
+                                    ).join('; ');
+                                    setFormData({ ...formData, chief_complaints: complaintsText });
+                                }}
                             />
                         </div>
 
@@ -342,44 +308,33 @@ const OPDConsultationForm: React.FC<OPDConsultationFormProps> = ({
                             />
                         </div>
 
-                        {/* ICD-10 Code Search */}
+                        {/* ICD-10 Diagnosis Codes */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 ICD-10 Diagnosis Codes
                             </label>
-                            <div className="relative">
-                                <div className="flex gap-2">
-                                    <div className="flex-1 relative">
-                                        <input
-                                            type="text"
-                                            value={diagnosisSearchTerm}
-                                            onChange={(e) => handleDiagnosisSearch(e.target.value)}
-                                            placeholder="Search ICD-10 codes..."
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10"
-                                        />
-                                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                    </div>
-                                </div>
-
-                                {/* ICD-10 Search Results Dropdown */}
-                                {showIcdDropdown && icdResults.length > 0 && (
-                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                        {icdResults.map((result, index) => (
-                                            <button
-                                                key={index}
-                                                type="button"
-                                                onClick={() => addDiagnosisCode(result.code, result.description)}
-                                                className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0"
-                                            >
-                                                <div className="font-semibold text-blue-600">{result.code}</div>
-                                                <div className="text-sm text-gray-600">{result.description}</div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Selected ICD-10 Codes */}
+                            <ICD10Lookup
+                                onSelectCode={(code) => {
+                                    const newCode = `${code.code} - ${code.description}`;
+                                    if (!formData.diagnosis_codes?.includes(newCode)) {
+                                        setFormData({
+                                            ...formData,
+                                            diagnosis_codes: [...(formData.diagnosis_codes || []), newCode]
+                                        });
+                                    }
+                                }}
+                                selectedCodes={[]} // We'll handle this differently
+                                onRemoveCode={(codeToRemove) => {
+                                    setFormData({
+                                        ...formData,
+                                        diagnosis_codes: formData.diagnosis_codes?.filter(code => 
+                                            !code.startsWith(codeToRemove)
+                                        ) || []
+                                    });
+                                }}
+                            />
+                            
+                            {/* Display selected codes */}
                             {formData.diagnosis_codes && formData.diagnosis_codes.length > 0 && (
                                 <div className="mt-3 space-y-2">
                                     {formData.diagnosis_codes.map((code, index) => (
@@ -387,7 +342,12 @@ const OPDConsultationForm: React.FC<OPDConsultationFormProps> = ({
                                             <span className="text-sm text-blue-900">{code}</span>
                                             <button
                                                 type="button"
-                                                onClick={() => removeDiagnosisCode(code)}
+                                                onClick={() => {
+                                                    setFormData({
+                                                        ...formData,
+                                                        diagnosis_codes: formData.diagnosis_codes?.filter((_, i) => i !== index) || []
+                                                    });
+                                                }}
                                                 className="text-red-500 hover:text-red-700"
                                             >
                                                 <Trash2 size={16} />
