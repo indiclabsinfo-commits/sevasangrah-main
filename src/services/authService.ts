@@ -13,6 +13,21 @@ export interface AuthUser {
   hospital_id?: string;
 }
 
+// For compatibility with existing code
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  role?: string;
+  department?: string;
+}
+
 // Hardcoded admin users (fallback when Supabase Auth is not configured)
 const HARDCODED_USERS: AuthUser[] = [
   {
@@ -249,3 +264,51 @@ if (typeof window !== 'undefined') {
     logger.error('❌ Auto-auth initialization failed:', err);
   });
 }
+
+// Export an instance for compatibility with existing code
+export const authService = {
+  // User management
+  getCurrentUser: () => AuthService.getCurrentUser(),
+  login: async (credentials: LoginCredentials) => {
+    const user = await AuthService.login(credentials.email, credentials.password);
+    return { 
+      success: !!user, 
+      error: user ? undefined : 'Invalid credentials',
+      user
+    };
+  },
+  logout: () => AuthService.logout(),
+  isAdmin: (user?: AuthUser | null) => {
+    const currentUser = user || AuthService.getCurrentUser();
+    return currentUser?.role === 'ADMIN';
+  },
+  isDoctor: () => AuthService.isDoctor(),
+  isAuthenticated: () => AuthService.isAuthenticated(),
+  hasRole: (role: AuthUser['role'] | AuthUser['role'][]) => AuthService.hasRole(role),
+  
+  // For compatibility with old code
+  onAuthStateChange: (callback: (user: any) => void) => {
+    // Simplified implementation - in real app, use Supabase auth state change
+    const user = AuthService.getCurrentUser();
+    if (user) callback(user);
+    return { data: { subscription: { unsubscribe: () => {} } } };
+  },
+  
+  // Placeholder methods for compatibility
+  register: async (userData: RegisterData) => ({ 
+    success: false, 
+    error: 'Registration not implemented in zero-backend mode. Use hardcoded accounts.' 
+  }),
+  updateProfile: async (updates: Partial<AuthUser>) => ({ 
+    success: false, 
+    error: 'Profile update not implemented' 
+  }),
+  resetPassword: async (email: string) => ({ 
+    success: false, 
+    error: 'Password reset not implemented' 
+  }),
+  updatePassword: async (newPassword: string) => ({ 
+    success: false, 
+    error: 'Password update not implemented' 
+  })
+};
