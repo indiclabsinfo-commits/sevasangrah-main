@@ -497,7 +497,7 @@ const PrescriptionTemplates: React.FC<PrescriptionTemplatesProps> = ({
                       <input
                         type="text"
                         value={item.dosage}
-                        onChange={(e) => updateCustomItem(index,                        onChange={(e) => updateCustomItem(index, 'dosage', e.target.value)}
+                        onChange={(e) => updateCustomItem(index, 'dosage', e.target.value)}
                         placeholder="e.g., 1 tablet, 5ml"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                         required
