@@ -65,7 +65,7 @@ interface RecentActivityProps {
 
 const RecentActivity: React.FC<RecentActivityProps> = ({ patients, appointments }) => {
   const recentPatients = patients.slice(0, 5);
-  const todayAppointments = appointments
+  const todayAppointments = (appointments || [])
     .filter(a => a.appointment_date === new Date().toISOString().split('T')[0])
     .slice(0, 3);
 
@@ -249,21 +249,10 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
         SupabaseHospitalService.getDashboardStats(),
         SupabaseHospitalService.getPatients(50),
         SupabaseHospitalService.getAppointments(),
-        // Load today's expenses via backend API instead of Supabase
-        // Load today's expenses via backend API instead of Supabase
-        fetch(`${import.meta.env.VITE_API_URL || ''}/api/daily_expenses?date=${today}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-          }
-        }).then(res => res.ok ? res.json() : []).catch(() => []),
-        // Load today's refunds via backend API
-        fetch(`${import.meta.env.VITE_API_URL || ''}/api/transactions/for-ledger?start_date=${today}&end_date=${today}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-          }
-        }).then(res => res.ok ? res.json() : [])
-          .then(data => data.filter((t: any) => t.transaction_type === 'PROCEDURE' && parseFloat(t.amount) < 0))
-          .catch(() => [])
+        // Load today's expenses - use empty array for zero-backend
+        Promise.resolve([]),
+        // Load today's refunds - use empty array for zero-backend
+        Promise.resolve([]) // Zero-backend: no transaction data
       ]);
 
       setStats(statsData);
