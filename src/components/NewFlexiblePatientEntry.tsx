@@ -750,7 +750,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
         newPatient = await SupabasePatientService.createPatient({
           ...patientData,
           full_name: formData.full_name,
-          age: patientData.age ? parseInt(patientData.age) : 0
+          age: patientData.age ? parseInt(patientData.age) : 0,
+          uhid: nextUhid // Pass the displayed UHID to be saved
         } as any);
         logger.log('✅ Patient created successfully (Direct Mode):', newPatient);
       }

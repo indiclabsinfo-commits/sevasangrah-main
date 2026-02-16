@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { supabase } from '../lib/supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -292,32 +293,71 @@ export const userService = {
   }
 };
 
-// UHID Service
+// UHID Service - Direct Supabase Integration
 export const uhidService = {
   async getConfig(hospitalId?: string) {
-    const response = await api.get('/uhid/config', {
-      params: { hospital_id: hospitalId }
-    });
-    return response.data;
+    const { data, error } = await supabase
+      .from('uhid_config')
+      .select('*')
+      .eq('hospital_id', hospitalId || '550e8400-e29b-41d4-a716-446655440000')
+      .single();
+    
+    if (error) {
+      console.error('Error fetching UHID config:', error);
+      throw error;
+    }
+    
+    return data;
   },
 
   async generateUhid(hospitalId?: string) {
-    const response = await api.post('/uhid/generate', {
-      hospital_id: hospitalId
+    const { data, error } = await supabase.rpc('generate_uhid', {
+      p_hospital_id: hospitalId || '550e8400-e29b-41d4-a716-446655440000'
     });
-    return response.data;
+    
+    if (error) {
+      console.error('Error generating UHID:', error);
+      throw error;
+    }
+    
+    return { uhid: data };
   },
 
   async updateConfig(config: { prefix?: string; year_format?: string; hospital_id?: string }) {
-    const response = await api.put('/uhid/config', config);
-    return response.data;
+    const { data, error } = await supabase
+      .from('uhid_config')
+      .update({
+        prefix: config.prefix,
+        year_format: config.year_format,
+        updated_at: new Date().toISOString()
+      })
+      .eq('hospital_id', config.hospital_id || '550e8400-e29b-41d4-a716-446655440000')
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating UHID config:', error);
+      throw error;
+    }
+    
+    return data;
   },
 
   async getNextUhid(hospitalId?: string) {
-    const response = await api.get('/uhid/next', {
-      params: { hospital_id: hospitalId }
-    });
-    return response.data;
+    try {
+      // Get current config to calculate next UHID
+      const config = await this.getConfig(hospitalId);
+      const year = new Date().getFullYear();
+      const nextSequence = config.current_sequence + 1;
+      const nextUhid = `${config.prefix}-${year}-${nextSequence.toString().padStart(6, '0')}`;
+      
+      return { next_uhid: nextUhid, sequence: nextSequence };
+    } catch (error) {
+      console.error('Error getting next UHID:', error);
+      // Fallback if config not found
+      const year = new Date().getFullYear();
+      return { next_uhid: `MH-${year}-000001`, sequence: 1 };
+    }
   }
 };
 

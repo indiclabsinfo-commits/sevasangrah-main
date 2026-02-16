@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import type { Patient } from '../types/index';
+import { uhidService } from './azureApiService';
 
 export interface CreatePatientData {
     full_name: string;
@@ -31,6 +32,7 @@ export interface CreatePatientData {
     assigned_department?: string;
     has_pending_appointment?: boolean;
     hospital_id?: string;
+    uhid?: string; // Added UHID field
 }
 
 export class SupabasePatientService {
@@ -77,10 +79,29 @@ export class SupabasePatientService {
 
             // Generate patient ID
             const patient_id = await this.generatePatientId();
+            
+            // Generate UHID if not provided
+            let uhid = patientData.uhid;
+            if (!uhid) {
+                console.log('🔄 Generating UHID for new patient...');
+                try {
+                    const uhidResult = await uhidService.generateUhid(patientData.hospital_id);
+                    uhid = uhidResult.uhid;
+                    console.log('✅ Generated UHID:', uhid);
+                } catch (uhidError) {
+                    console.error('❌ CRITICAL: Failed to generate UHID:', uhidError);
+                    console.error('UHID Error details:', uhidError.message);
+                    // Don't continue - UHID is required for Magnus Hospital
+                    throw new Error(`Failed to generate UHID: ${uhidError.message}. Patient creation aborted.`);
+                }
+            } else {
+                console.log('📝 Using provided UHID:', uhid);
+            }
 
             // Prepare data for Supabase
             const supabaseData = {
                 patient_id,
+                uhid: uhid || null, // Add UHID to patient record
                 first_name: patientData.first_name || (patientData.full_name ? patientData.full_name.split(' ')[0] : ''),
                 last_name: patientData.last_name || (patientData.full_name ? patientData.full_name.split(' ').slice(1).join(' ') : ''),
                 prefix: patientData.prefix || 'Mr',
