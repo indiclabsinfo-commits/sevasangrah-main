@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { createRoot } from 'react-dom/client';
 import { Plus, Search, Edit, Printer, Download, X, Calendar, User, Stethoscope, Trash2 } from 'lucide-react';
-import HospitalService from '../../services/hospitalService';
+import SupabaseHospitalService from '../../services/supabaseHospitalService';
 import DoctorService, { type DoctorInfo } from '../../services/doctorService';
 import BillingService, { type OPDBill } from '../../services/billingService';
 import type { PatientWithRelations } from '../../config/supabaseNew';
@@ -87,7 +87,7 @@ const OPDBillingModule: React.FC = () => {
       setLoading(true);
 
       // Load actual patients from HospitalService
-      const actualPatients = await HospitalService.getPatients(50000, true, true);
+      const actualPatients = await SupabaseHospitalService.getPatients(50000, true, true);
       logger.log('📋 Loaded patients for OPD billing:', actualPatients.length);
 
       // Load actual doctors from DoctorService (same as patient entry)

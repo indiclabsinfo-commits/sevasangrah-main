@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, UserPlus, AlertCircle, User, Phone, CheckCircle } from 'lucide-react';
-import SupabaseHospitalService from '../../services/supabaseHospitalService';
 import toast from 'react-hot-toast';
 import type { User as Doctor, Patient } from '../../config/supabaseNew';
 

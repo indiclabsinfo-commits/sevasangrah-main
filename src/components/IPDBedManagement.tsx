@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Bed, User, Users, Activity, AlertCircle, Plus, Clock, Play, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import type { PatientWithRelations, PatientAdmissionWithRelations, Patient } from '../config/supabaseNew';
 import { HOSPITAL_ID, supabase } from '../config/supabaseNew';
 import ProcedureConsentForm from './ProcedureConsentForm';
@@ -85,7 +85,7 @@ const PatientSelectionModal: React.FC<PatientSelectionModalProps> = ({
   const loadPatients = async () => {
     try {
       setLoading(true);
-      const patientData = await HospitalService.getPatients(50000, true, true);
+      const patientData = await SupabaseHospitalService.getPatients(50000, true, true);
       // Filter to show all patients (since IPD status tracking may not be implemented yet)
       // TODO: Once IPD status columns are added, filter out already admitted patients
       const opdPatients = patientData; // Show all patients for now
@@ -863,7 +863,7 @@ const IPDBedManagement: React.FC = () => {
       
       // Update patient's IPD status (if columns exist)
       try {
-        await HospitalService.updatePatient(patient.id, {
+        await SupabaseHospitalService.updatePatient(patient.id, {
           ipd_status: 'ADMITTED',
           ipd_bed_number: selectedBed.number.toString()
         });
@@ -1728,7 +1728,7 @@ const IPDBedManagement: React.FC = () => {
     // Update patient's IPD status to DISCHARGED in database
     if (patientId) {
       try {
-        await HospitalService.updatePatient(patientId, {
+        await SupabaseHospitalService.updatePatient(patientId, {
           ipd_status: 'DISCHARGED',
           ipd_bed_number: null
         });
@@ -1762,7 +1762,7 @@ const IPDBedManagement: React.FC = () => {
   const syncPatientIPDStatus = async () => {
     try {
       // Get all patients with IPD status = ADMITTED (using high limit to get all)
-      const admittedPatients = await HospitalService.getPatients(50000, true, true);
+      const admittedPatients = await SupabaseHospitalService.getPatients(50000, true, true);
       const ipdPatients = admittedPatients.filter(p => p.ipd_status === 'ADMITTED');
       
       // Get all patients actually in beds
@@ -1777,7 +1777,7 @@ const IPDBedManagement: React.FC = () => {
         
         // Update their status to DISCHARGED
         const updatePromises = orphanedPatients.map(patient => 
-          HospitalService.updatePatient(patient.id, {
+          SupabaseHospitalService.updatePatient(patient.id, {
             ipd_status: 'DISCHARGED',
             ipd_bed_number: null
           })
@@ -1800,7 +1800,7 @@ const IPDBedManagement: React.FC = () => {
   const clearAllIPDEntries = async () => {
     try {
       // Get all patients with any IPD status
-      const allPatients = await HospitalService.getPatients(50000, true, true);
+      const allPatients = await SupabaseHospitalService.getPatients(50000, true, true);
       const ipdPatients = allPatients.filter(p => 
         p.ipd_status === 'ADMITTED' || 
         p.ipd_status === 'DISCHARGED' || 
@@ -1816,7 +1816,7 @@ const IPDBedManagement: React.FC = () => {
       
       // Clear IPD status and bed number for all patients
       const updatePromises = ipdPatients.map(patient => 
-        HospitalService.updatePatient(patient.id, {
+        SupabaseHospitalService.updatePatient(patient.id, {
           ipd_status: null,
           ipd_bed_number: null
         })

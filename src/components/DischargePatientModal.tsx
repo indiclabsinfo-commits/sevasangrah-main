@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../config/supabaseNew';
 import type { PatientAdmissionWithRelations } from '../config/supabaseNew';
-import HospitalService from '../services/hospitalService';
 import { useAuth } from '../contexts/AuthContext';
 
 interface DischargeModalProps {
@@ -201,7 +200,7 @@ const DischargePatientModal: React.FC<DischargeModalProps> = ({
       
       // Verify that the admission record actually exists in the database
       console.log('🔍 Verifying admission record exists...');
-      const admissionExists = await HospitalService.verifyAdmissionExists(admission.id);
+      const admissionExists = await SupabaseHospitalService.verifyAdmissionExists(admission.id);
       
       let validAdmissionId = admission.id; // Default to original admission ID
       
@@ -211,7 +210,7 @@ const DischargePatientModal: React.FC<DischargeModalProps> = ({
         
         try {
           // Create missing admission record using available data
-          const missingAdmissionData = await HospitalService.createMissingAdmissionRecord(
+          const missingAdmissionData = await SupabaseHospitalService.createMissingAdmissionRecord(
             admission.patient?.id,
             admission.bed_id || 'unknown-bed',
             admission.admission_date,

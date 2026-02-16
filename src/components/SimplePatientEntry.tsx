@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import { supabase } from '../config/supabaseNew';
 import type { CreatePatientData } from '../config/supabaseNew';
 import useReceiptPrinting from '../hooks/useReceiptPrinting';
@@ -110,7 +110,7 @@ const SimplePatientEntry: React.FC = () => {
 
   const testConnection = async () => {
     try {
-      const result = await HospitalService.testConnection();
+      const result = await SupabaseHospitalService.testConnection();
       setConnectionStatus(result.success ? '🟢 Connected to Supabase' : `🔴 ${result.message}`);
     } catch (error) {
       setConnectionStatus('🔴 Connection failed');
@@ -121,7 +121,7 @@ const SimplePatientEntry: React.FC = () => {
     if (!formData.first_name.trim()) return;
     
     try {
-      const existing = await HospitalService.findExistingPatient(
+      const existing = await SupabaseHospitalService.findExistingPatient(
         formData.phone,
         formData.first_name,
         formData.last_name
@@ -138,7 +138,7 @@ const SimplePatientEntry: React.FC = () => {
 
   const checkForDuplicateInBackground = async () => {
     try {
-      const existing = await HospitalService.findExistingPatient(
+      const existing = await SupabaseHospitalService.findExistingPatient(
         formData.phone,
         formData.first_name,
         formData.last_name
@@ -203,13 +203,13 @@ const SimplePatientEntry: React.FC = () => {
         notes: `Visit on ${formData.visit_date || new Date().toLocaleDateString()}`
       };
       
-      await HospitalService.createPatientVisit(visitData);
+      await SupabaseHospitalService.createPatientVisit(visitData);
       
       // Create financial transactions
       const totalAmount = formData.consultation_fee - formData.discount_amount;
       
       if (formData.consultation_fee > 0) {
-        await HospitalService.createTransaction({
+        await SupabaseHospitalService.createTransaction({
           patient_id: existingPatient.id,
           transaction_type: 'CONSULTATION',
           description: `Consultation Fee - Return Visit`,
@@ -220,7 +220,7 @@ const SimplePatientEntry: React.FC = () => {
       }
 
       if (formData.discount_amount > 0) {
-        await HospitalService.createTransaction({
+        await SupabaseHospitalService.createTransaction({
           patient_id: existingPatient.id,
           transaction_type: 'PROCEDURE',
           description: `Discount Applied: ${formData.discount_reason || 'Return visit discount'}`,
@@ -274,7 +274,7 @@ const SimplePatientEntry: React.FC = () => {
     
     try {
       // Check for existing patient
-      const existing = await HospitalService.findExistingPatient(
+      const existing = await SupabaseHospitalService.findExistingPatient(
         formData.phone,
         formData.first_name,
         formData.last_name
@@ -285,7 +285,7 @@ const SimplePatientEntry: React.FC = () => {
         
         // Get last visit info
         try {
-          const transactions = await HospitalService.getTransactionsByPatient(existing.id);
+          const transactions = await SupabaseHospitalService.getTransactionsByPatient(existing.id);
           if (transactions.length > 0) {
             const lastTransaction = transactions[0];
             setLastVisitInfo({
@@ -340,7 +340,7 @@ const SimplePatientEntry: React.FC = () => {
       console.log('📤 Creating patient with data:', patientData);
       console.log('📅 Form visit_date:', formData.visit_date);
       console.log('📅 Mapped date_of_entry:', patientData.date_of_entry);
-      const newPatient = await HospitalService.createPatient(patientData);
+      const newPatient = await SupabaseHospitalService.createPatient(patientData);
       
       console.log('✅ Patient created successfully:', newPatient);
       console.log('✅ Patient date_of_entry in response:', newPatient.date_of_entry);
@@ -378,7 +378,7 @@ const SimplePatientEntry: React.FC = () => {
       for (const transactionData of transactions) {
         try {
           console.log('💰 Creating transaction:', transactionData);
-          await HospitalService.createTransaction(transactionData as any);
+          await SupabaseHospitalService.createTransaction(transactionData as any);
           console.log('✅ Transaction created successfully');
         } catch (transactionError: any) {
           console.error('❌ Failed to create transaction:', transactionError);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import DoctorService from '../services/doctorService';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import * as CompletePatientRecordService from '../services/completePatientRecordService';
 import type { PatientWithRelations } from '../config/supabaseNew';
 
@@ -149,7 +149,7 @@ const SimpleEnhancedPatientRecord: React.FC<SimpleEnhancedPatientRecordProps> = 
       searchTimeoutRef.current = setTimeout(async () => {
         try {
           // Use HospitalService to search ICD-10
-          const results = await HospitalService.searchICD10(diagnosisSearchTerm);
+          const results = await SupabaseHospitalService.searchICD10(diagnosisSearchTerm);
           setIcdResults(results);
           setShowDiagnosisSearchResults(results.length > 0);
         } catch (error) {
@@ -448,7 +448,7 @@ const SimpleEnhancedPatientRecord: React.FC<SimpleEnhancedPatientRecordProps> = 
 
         // Load pain complaints from database (may fail if endpoint doesn't exist)
         try {
-          const complaints = await HospitalService.getPainComplaints();
+          const complaints = await SupabaseHospitalService.getPainComplaints();
           if (complaints && complaints.length > 0) {
             setComplaintsList(complaints);
           }

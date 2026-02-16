@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
 import dataService from '../services/dataService';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import type { Patient, Doctor, Department } from '../services/dataService';
 import type { PatientWithRelations, CreateTransactionData } from '../config/supabaseNew';
 
@@ -293,7 +293,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
         created_at: data.visit_date + 'T' + new Date().toTimeString().split(' ')[0] // Use selected date with current time
       } as any;
       
-      const consultationTransaction = await HospitalService.createTransaction(transactionData);
+      const consultationTransaction = await SupabaseHospitalService.createTransaction(transactionData);
       transactions.push(consultationTransaction);
 
       // Create additional service transactions
@@ -311,7 +311,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
             created_at: data.visit_date + 'T' + new Date().toTimeString().split(' ')[0] // Use selected date with current time
           } as any;
           
-          const serviceTransaction = await HospitalService.createTransaction(serviceTransactionData);
+          const serviceTransaction = await SupabaseHospitalService.createTransaction(serviceTransactionData);
           transactions.push(serviceTransaction);
         }
       }
@@ -341,7 +341,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
           created_at: data.visit_date + 'T' + new Date().toTimeString().split(' ')[0] // Use selected date with current time
         } as any;
         
-        const admissionTransaction = await HospitalService.createTransaction(admissionTransactionData);
+        const admissionTransaction = await SupabaseHospitalService.createTransaction(admissionTransactionData);
         transactions.push(admissionTransaction);
       }
 
@@ -357,7 +357,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
           });
 
           // Update patient's primary doctor and department in the patients table
-          await HospitalService.updatePatient(patient.id, {
+          await SupabaseHospitalService.updatePatient(patient.id, {
             primary_doctor: data.selected_doctor,
             department: data.selected_department,
             last_visit_doctor: data.selected_doctor,

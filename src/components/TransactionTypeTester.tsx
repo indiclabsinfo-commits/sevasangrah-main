@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import HospitalService from '../services/hospitalService';
 import { supabase } from '../config/supabaseNew';
 
 const TransactionTypeTester: React.FC = () => {
@@ -41,12 +40,12 @@ const TransactionTypeTester: React.FC = () => {
       console.log(`Testing transaction type: ${type}`);
       
       // First, try to get a patient to test with
-      const patients = await HospitalService.getPatients(1);
+      const patients = await SupabaseHospitalService.getPatients(1);
       let testPatientId = '';
       
       if (patients.length === 0) {
         // Create a test patient
-        const testPatient = await HospitalService.createPatient({
+        const testPatient = await SupabaseHospitalService.createPatient({
           first_name: 'Test',
           last_name: 'Patient',
           hospital_id: '550e8400-e29b-41d4-a716-446655440000'
@@ -66,7 +65,7 @@ const TransactionTypeTester: React.FC = () => {
         status: 'COMPLETED'
       };
       
-      await HospitalService.createTransaction(testTransaction);
+      await SupabaseHospitalService.createTransaction(testTransaction);
       
       console.log(`✅ SUCCESS: ${type} is allowed`);
       return `✅ ${type} - SUCCESS`;

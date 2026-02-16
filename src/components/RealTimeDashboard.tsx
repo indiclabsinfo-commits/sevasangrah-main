@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
 import QuickReportsModal from './QuickReportsModal';
 import { supabase } from '../config/supabaseNew';
 import type { DashboardStats, PatientWithRelations, FutureAppointment } from '../config/supabaseNew';

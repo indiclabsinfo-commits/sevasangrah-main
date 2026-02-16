@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import HospitalService from '../../services/hospitalService';
 import { logger } from '../../utils/logger';
 
 interface VitalsRecordingModalProps {
@@ -84,7 +83,7 @@ const VitalsRecordingModal: React.FC<VitalsRecordingModalProps> = ({
         setLoading(true);
 
         try {
-            const user = await HospitalService.getCurrentUser();
+            const user = await SupabaseHospitalService.getCurrentUser();
 
             const vitalsData = {
                 patient_id: patientId,
@@ -102,7 +101,7 @@ const VitalsRecordingModal: React.FC<VitalsRecordingModalProps> = ({
                 recorded_by: user?.id
             };
 
-            await HospitalService.recordVitals(vitalsData);
+            await SupabaseHospitalService.recordVitals(vitalsData);
             toast.success('Vitals recorded successfully');
 
             if (onSuccess) onSuccess();

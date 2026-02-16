@@ -13,7 +13,7 @@ import {
 import NewIPDBillingModule from './billing/NewIPDBillingModule';
 import IPDSummaryModule from './billing/IPDSummaryModule';
 import CombinedBillingModule from './billing/CombinedBillingModule';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import { logger } from '../utils/logger';
 
 interface PatientBilling {
@@ -78,7 +78,7 @@ const BillingSection: React.FC = () => {
       logger.log('🔍 Loading billing dashboard data...');
 
       // Load actual patients from HospitalService (same as other billing modules)
-      const actualPatients = await HospitalService.getPatients(50000, true, true);
+      const actualPatients = await SupabaseHospitalService.getPatients(50000, true, true);
       logger.log('📊 Loaded patients for billing dashboard:', actualPatients.length);
       logger.log('👥 First few patients:', actualPatients.slice(0, 3));
 
@@ -201,7 +201,7 @@ const BillingSection: React.FC = () => {
       logger.log('🔍 Loading details for patient:', patient.patientName, 'ID:', patient.patientId);
 
       // Load ALL transactions for this patient via HospitalService
-      const allTransactions = await HospitalService.getTransactionsByPatient(patient.patientId);
+      const allTransactions = await SupabaseHospitalService.getTransactionsByPatient(patient.patientId);
 
       logger.log('✅ Loaded transactions for patient:', allTransactions?.length || 0);
 
@@ -220,7 +220,7 @@ const BillingSection: React.FC = () => {
       logger.log('✅ Deposits:', depositsData.length, 'IPD bills:', ipdBillsData.length);
 
       // Get patient details for receipt printing
-      const patientDetails = await HospitalService.getPatientById(patient.patientId);
+      const patientDetails = await SupabaseHospitalService.getPatientById(patient.patientId);
 
       // Add patient details to each deposit for receipt printing
       const depositsWithPatientData = depositsData.map((deposit: any) => ({
@@ -393,7 +393,7 @@ const BillingSection: React.FC = () => {
       logger.log('🗑️ Deleting deposit:', deposit.id);
 
       // Delete via HospitalService
-      await HospitalService.deleteTransaction(deposit.id);
+      await SupabaseHospitalService.deleteTransaction(deposit.id);
 
       logger.log('✅ Deposit deleted successfully:', deposit.id);
       toast.success(`Deposit deleted successfully!`);

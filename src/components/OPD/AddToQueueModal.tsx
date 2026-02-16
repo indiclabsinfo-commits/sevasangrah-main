@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import HospitalService from '../../services/hospitalService';
 import toast from 'react-hot-toast';
 import type { User as Doctor, PatientWithRelations } from '../../config/supabaseNew';
 
@@ -42,7 +41,7 @@ const AddToQueueModal: React.FC<AddToQueueModalProps> = ({ isOpen, onClose, onSu
         console.log('🚀 Sending AddToQueue Payload:', payload);
 
         try {
-            await HospitalService.addToOPDQueue(payload);
+            await SupabaseHospitalService.addToOPDQueue(payload);
 
             toast.success('Added to queue successfully');
             onSuccess();

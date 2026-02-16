@@ -3,7 +3,7 @@ import type { PatientWithRelations } from '../config/supabaseNew';
 import { getDoctorWithDegree } from '../data/doctorDegrees';
 import { supabase } from '../config/supabaseNew';
 import { MEDICAL_SERVICES_DATA, type MedicalService } from '../data/medicalServices';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import * as CompletePatientRecordService from '../services/completePatientRecordService';
 import MedicineDropdown from './MedicineDropdown';
 import toast from 'react-hot-toast';
@@ -175,11 +175,11 @@ const SevasangrahaPrescription: React.FC<SevasangrahaPrescriptionProps> = ({ pat
         }
 
         // Load pain complaints from database
-        const complaints = await HospitalService.getPainComplaints();
+        const complaints = await SupabaseHospitalService.getPainComplaints();
         setPainComplaints(complaints);
 
         // Load locations from database
-        const locationsList = await HospitalService.getLocations();
+        const locationsList = await SupabaseHospitalService.getLocations();
         setLocations(locationsList);
 
         // PRIORITY 1: Load data from Complete Patient Record database if available
@@ -396,7 +396,7 @@ const SevasangrahaPrescription: React.FC<SevasangrahaPrescriptionProps> = ({ pat
           }
         } else {
           // PRIORITY 2: Load saved prescriptions for this patient (fallback)
-          const prescriptions = await HospitalService.getPrescriptions(patient.patient_id);
+          const prescriptions = await SupabaseHospitalService.getPrescriptions(patient.patient_id);
           setSavedPrescriptions(prescriptions);
 
           // If there are saved prescriptions, load the most recent one
@@ -500,7 +500,7 @@ const SevasangrahaPrescription: React.FC<SevasangrahaPrescriptionProps> = ({ pat
     }
 
     try {
-      const complaint = await HospitalService.addPainComplaint(newPainComplaint.trim());
+      const complaint = await SupabaseHospitalService.addPainComplaint(newPainComplaint.trim());
 
       // Add to local state
       setPainComplaints(prev => [...prev, complaint]);
@@ -530,7 +530,7 @@ const SevasangrahaPrescription: React.FC<SevasangrahaPrescriptionProps> = ({ pat
     }
 
     try {
-      const location = await HospitalService.addLocation(newLocation.trim());
+      const location = await SupabaseHospitalService.addLocation(newLocation.trim());
 
       // Add to local state
       setLocations(prev => [...prev, location]);
@@ -597,7 +597,7 @@ const SevasangrahaPrescription: React.FC<SevasangrahaPrescriptionProps> = ({ pat
         medical_advise: prescriptionData.medicalAdvise.length > 0 ? prescriptionData.medicalAdvise : null
       };
 
-      const savedPrescription = await HospitalService.savePrescription(prescriptionPayload);
+      const savedPrescription = await SupabaseHospitalService.savePrescription(prescriptionPayload);
 
       // Update the saved prescriptions list
       setSavedPrescriptions(prev => [savedPrescription, ...prev]);

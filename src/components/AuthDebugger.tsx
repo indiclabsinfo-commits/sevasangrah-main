@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import HospitalService from '../services/hospitalService';
 import { supabase } from '../config/supabaseNew';
 
 const AuthDebugger: React.FC = () => {
@@ -23,7 +22,7 @@ const AuthDebugger: React.FC = () => {
 
       // Check our service
       if (user) {
-        const profileUser = await HospitalService.getCurrentUser();
+        const profileUser = await SupabaseHospitalService.getCurrentUser();
         setProfileUser(profileUser);
         console.log('Profile user:', profileUser);
       }
@@ -56,7 +55,7 @@ const AuthDebugger: React.FC = () => {
         toast.success('Direct auth successful!');
         
         // Now test our service
-        const serviceResult = await HospitalService.signIn(testEmail, testPassword);
+        const serviceResult = await SupabaseHospitalService.signIn(testEmail, testPassword);
         console.log('Service result:', serviceResult);
         
         if (serviceResult.error) {
@@ -166,7 +165,7 @@ const AuthDebugger: React.FC = () => {
         <h3 className="text-lg font-semibold mb-3">Database Connection Test</h3>
         <button
           onClick={async () => {
-            const result = await HospitalService.testConnection();
+            const result = await SupabaseHospitalService.testConnection();
             console.log('Connection test:', result);
             toast.success(`Connection test: ${result.success ? 'SUCCESS' : 'FAILED'} - ${result.message}`);
           }}

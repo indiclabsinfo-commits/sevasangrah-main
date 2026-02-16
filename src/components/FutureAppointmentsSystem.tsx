@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import SMSService from '../services/smsService';
 import Receipt from './Receipt';
 import type { FutureAppointment, PatientWithRelations, User, CreateAppointmentData, AppointmentWithRelations } from '../config/supabaseNew';
@@ -62,8 +62,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ isOpen, onClose, onSu
   const loadPatientsAndDoctors = async () => {
     try {
       const [patientsData, currentUser] = await Promise.all([
-        HospitalService.getPatients(50000, true, true),
-        HospitalService.getCurrentUser()
+        SupabaseHospitalService.getPatients(50000, true, true),
+        SupabaseHospitalService.getCurrentUser()
       ]);
       
       setPatients(patientsData);
@@ -102,7 +102,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ isOpen, onClose, onSu
       };
 
       console.log('📝 Creating appointment with data:', appointmentData);
-      await HospitalService.createAppointment(appointmentData);
+      await SupabaseHospitalService.createAppointment(appointmentData);
       console.log('✅ Appointment created successfully');
 
       toast.success('Appointment scheduled successfully!');
@@ -390,7 +390,7 @@ const FutureAppointmentsSystem: React.FC = () => {
     try {
       console.log('🔍 Loading appointments...');
       setLoading(true);
-      const appointmentsData = await HospitalService.getAppointments();
+      const appointmentsData = await SupabaseHospitalService.getAppointments();
       console.log('📅 Appointments loaded:', appointmentsData);
       setAppointments(appointmentsData || []);
     } catch (error: any) {

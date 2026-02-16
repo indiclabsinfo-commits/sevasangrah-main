@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { logger } from './utils/logger';
 // import './utils/smartConsoleBlocker'; // Console blocking disabled
-import HospitalService from './services/hospitalService';
 import EmailService from './services/emailService';
 import { ExactDateService } from './services/exactDateService';
 import type { User } from './config/supabaseNew';
@@ -35,7 +34,6 @@ import QueueDisplayScreen from './components/QueueDisplayScreen';
 import OPDQueueManager from './components/OPD/OPDQueueManager';
 // import TableInspector from './components/TableInspector'; // Removed debug component
 import { Login } from './pages/Login/Login'; // Import 3D Login component
-// import HospitalServices from './components/HospitalServices'; // Removed - using patient-specific services instead
 // import RemoveTriggerComponent from './components/RemoveTriggerComponent'; // Not needed - backend issue
 import TransactionDateDebugger from './components/TransactionDateDebugger'; // Temporary debugger
 
@@ -341,7 +339,7 @@ const App: React.FC = () => {
       const statusToast = toast.loading('Fetching patient data...', { duration: 0 });
 
       // Get ALL patients data with all fields (no limits, including inactive)
-      const patients = await HospitalService.getPatients(10000, true, true);
+      const patients = await SupabaseHospitalService.getPatients(10000, true, true);
 
       if (!patients) {
         logger.error('Error fetching patients for backup');
@@ -353,19 +351,19 @@ const App: React.FC = () => {
       const appointmentToast = toast.loading('Fetching appointments...', { duration: 0 });
 
       // Get ALL appointments (no limits)
-      const appointments = await HospitalService.getAppointments(10000);
+      const appointments = await SupabaseHospitalService.getAppointments(10000);
 
       toast.dismiss(appointmentToast);
       const transactionToast = toast.loading('Fetching transactions...', { duration: 0 });
 
       // Get all transactions with patient details
-      const transactions = await HospitalService.getAllTransactions();
+      const transactions = await SupabaseHospitalService.getAllTransactions();
 
       toast.dismiss(transactionToast);
       const expenseToast = toast.loading('Fetching expenses...', { duration: 0 });
 
       // Get all expenses
-      const expenses = await HospitalService.getAllExpenses();
+      const expenses = await SupabaseHospitalService.getAllExpenses();
 
       toast.dismiss(expenseToast);
       const refundToast = toast.loading('Fetching refunds...', { duration: 0 });
@@ -594,7 +592,7 @@ const App: React.FC = () => {
 
       // Fetch real data from database
       if (exportData.patients) {
-        const patients = await HospitalService.getPatients();
+        const patients = await SupabaseHospitalService.getPatients();
         exportDataObject.patients = {
           count: patients?.length || 0,
           data: patients || []
@@ -602,7 +600,7 @@ const App: React.FC = () => {
       }
 
       if (exportData.transactions) {
-        const transactions = await HospitalService.getAllTransactions();
+        const transactions = await SupabaseHospitalService.getAllTransactions();
         exportDataObject.transactions = {
           count: transactions?.length || 0,
           data: transactions || []
@@ -610,7 +608,7 @@ const App: React.FC = () => {
       }
 
       if (exportData.appointments) {
-        const appointments = await HospitalService.getAppointments();
+        const appointments = await SupabaseHospitalService.getAppointments();
         exportDataObject.appointments = {
           count: appointments?.length || 0,
           data: appointments || []
@@ -618,7 +616,7 @@ const App: React.FC = () => {
       }
 
       if (exportData.expenses) {
-        const expenses = await HospitalService.getAllExpenses();
+        const expenses = await SupabaseHospitalService.getAllExpenses();
         exportDataObject.expenses = {
           count: expenses?.length || 0,
           data: expenses || []
@@ -772,7 +770,7 @@ const App: React.FC = () => {
                   // Skip if patient already exists (basic validation)
                   if (!patient.first_name) continue;
 
-                  await HospitalService.createPatient({
+                  await SupabaseHospitalService.createPatient({
                     first_name: patient.first_name,
                     last_name: patient.last_name || '',
                     age: patient.age || null,

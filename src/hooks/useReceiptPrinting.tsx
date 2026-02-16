@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import ReceiptTemplate from '../components/receipts/ReceiptTemplate';
 import type { ReceiptData } from '../components/receipts/ReceiptTemplate';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import { supabase } from '../config/supabaseNew';
 
 // Hook for printing receipts with proper discount handling
@@ -73,7 +73,7 @@ export const useReceiptPrinting = () => {
   const printConsultationReceipt = async (patientId: string, transactionId?: string) => {
     try {
       // Load patient data
-      const patient = await HospitalService.getPatientById(patientId);
+      const patient = await SupabaseHospitalService.getPatientById(patientId);
       if (!patient) throw new Error('Patient not found');
 
       // Load transaction data if provided
@@ -304,7 +304,7 @@ export const useReceiptPrinting = () => {
     try {
       console.log('🖨️ Starting discharge receipt print for admission:', admissionId);
       
-      const dischargeSummary = await HospitalService.getDischargeSummaryWithBill(admissionId);
+      const dischargeSummary = await SupabaseHospitalService.getDischargeSummaryWithBill(admissionId);
       console.log('📋 Discharge summary data received:', dischargeSummary);
       
       if (!dischargeSummary) {

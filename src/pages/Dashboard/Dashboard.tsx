@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency } from '@/utils';
-import HospitalService from '../../services/hospitalService';
+import SupabaseHospitalService from '../../services/supabaseHospitalService';
 import { useAppointments } from '../../hooks/useAppointments';
 import { queryKeys } from '../../config/reactQuery';
 
@@ -59,14 +59,14 @@ export const Dashboard: React.FC = () => {
           endDate.setHours(23, 59, 59, 999);
         }
 
-        return await HospitalService.getDashboardStatsWithDateRange(
+        return await SupabaseHospitalService.getDashboardStatsWithDateRange(
           startDate.toISOString(),
           endDate.toISOString()
         );
       }
 
       console.log('📊 Using default dashboard stats (no date filter)');
-      const stats = await HospitalService.getDashboardStats();
+      const stats = await SupabaseHospitalService.getDashboardStats();
       return stats;
     },
     refetchInterval: autoRefresh ? 10 * 1000 : false, // Refresh every 10 seconds for immediate updates
@@ -1471,7 +1471,7 @@ export const Dashboard: React.FC = () => {
                         <button
                           onClick={async () => {
                             try {
-                              await HospitalService.acceptAppointment(appointment.patient_uuid);
+                              await SupabaseHospitalService.acceptAppointment(appointment.patient_uuid);
                               // Remove from localStorage
                               const stored = localStorage.getItem('hospital_appointments');
                               if (stored) {
@@ -1492,7 +1492,7 @@ export const Dashboard: React.FC = () => {
                           onClick={async () => {
                             if (window.confirm('Reject this appointment? The patient record will be removed.')) {
                               try {
-                                await HospitalService.rejectAppointment(appointment.patient_uuid);
+                                await SupabaseHospitalService.rejectAppointment(appointment.patient_uuid);
                                 // Remove from localStorage
                                 const stored = localStorage.getItem('hospital_appointments');
                                 if (stored) {

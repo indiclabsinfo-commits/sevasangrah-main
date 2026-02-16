@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../config/supabaseNew';
 import type { PatientAdmissionWithRelations } from '../config/supabaseNew';
-import HospitalService from '../services/hospitalService';
 import InsurancePaymentForm from './InsurancePaymentForm';
 
 interface EnhancedDischargeModalProps {
@@ -130,7 +129,7 @@ const EnhancedDischargeModal: React.FC<EnhancedDischargeModalProps> = ({
     if (!admission?.patient?.id) return;
 
     try {
-      const transactions = await HospitalService.getTransactionsByPatient(admission.patient.id);
+      const transactions = await SupabaseHospitalService.getTransactionsByPatient(admission.patient.id);
       
       // Filter transactions for this admission period
       const admissionTransactions = transactions.filter(t => 
@@ -295,7 +294,7 @@ const EnhancedDischargeModal: React.FC<EnhancedDischargeModalProps> = ({
     try {
       console.log('🏥 Starting enhanced discharge process...');
       
-      const currentUser = await HospitalService.getCurrentUser();
+      const currentUser = await SupabaseHospitalService.getCurrentUser();
       if (!currentUser) {
         toast.error('Authentication required');
         return;

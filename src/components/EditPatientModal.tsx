@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import HospitalService from '../services/hospitalService';
 import type { PatientWithRelations } from '../config/supabaseNew';
 import { supabase } from '../config/supabaseNew';
 import { useAuth } from '../contexts/AuthContext';
@@ -195,7 +194,7 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
       console.log('Updating patient with data:', updateData);
 
-      const updatedPatient = await HospitalService.updatePatient(patient.id, updateData);
+      const updatedPatient = await SupabaseHospitalService.updatePatient(patient.id, updateData);
 
       if (updatedPatient) {
         // Log audit trail
@@ -303,7 +302,7 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
       if (selectedPaymentId) {
         // Update existing transaction
-        const updatedTransaction = await HospitalService.updateTransaction(selectedPaymentId, {
+        const updatedTransaction = await SupabaseHospitalService.updateTransaction(selectedPaymentId, {
           transaction_type: paymentData.transaction_type as any,
           description: transactionDescription,
           amount: finalAmount,
@@ -331,7 +330,7 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
           created_by: 'system'
         };
 
-        await HospitalService.createTransaction(mainTransaction as any);
+        await SupabaseHospitalService.createTransaction(mainTransaction as any);
         toast.success(`Payment added successfully! ₹${finalAmount.toFixed(2)}`);
       }
 

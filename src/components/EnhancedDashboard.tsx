@@ -21,7 +21,7 @@ import { dashboardService } from '../services/dashboardService';
 import { queryKeys } from '../config/reactQuery';
 import { HOSPITAL_ID } from '../config/supabaseNew';
 import bedService from '../services/bedService';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import { ExactDateService } from '../services/exactDateService';
 
 interface Props {
@@ -111,8 +111,8 @@ export const EnhancedDashboard: React.FC<Props> = ({ onNavigate }) => {
   // Helper function to fetch all transactions
   const fetchAllTransactions = async () => {
     try {
-      console.log('📄 Fetching all transactions via HospitalService...');
-      const allTransactions = await HospitalService.getAllTransactions();
+      console.log('📄 Fetching all transactions via SupabaseHospitalService...');
+      const allTransactions = await SupabaseHospitalService.getAllTransactions();
       console.log(`📊 Total transactions fetched: ${allTransactions.length}`);
       return allTransactions;
     } catch (error) {
@@ -124,8 +124,8 @@ export const EnhancedDashboard: React.FC<Props> = ({ onNavigate }) => {
   // Helper function to fetch all expenses
   const fetchAllExpenses = async () => {
     try {
-      console.log('📄 Fetching all expenses via HospitalService...');
-      const allExpenses = await HospitalService.getAllExpenses();
+      console.log('📄 Fetching all expenses via SupabaseHospitalService...');
+      const allExpenses = await SupabaseHospitalService.getAllExpenses();
       console.log(`📊 Total expenses fetched: ${allExpenses.length}`);
       return allExpenses;
     } catch (error) {
@@ -355,7 +355,7 @@ export const EnhancedDashboard: React.FC<Props> = ({ onNavigate }) => {
     queryFn: async () => {
       try {
         // Get ALL patients without any date filtering - using high limit for pagination
-        const allPatients = await HospitalService.getPatients(50000, true, true); // skipOrthoFilter=true, includeInactive=true for complete data
+        const allPatients = await SupabaseHospitalService.getPatients(50000, true, true); // skipOrthoFilter=true, includeInactive=true for complete data
         console.log('📋 Fetched all patients for dashboard:', allPatients?.length || 0);
         return allPatients || [];
       } catch (error) {
@@ -834,7 +834,7 @@ export const EnhancedDashboard: React.FC<Props> = ({ onNavigate }) => {
           // This makes the patient visible in the patient list
           if (appointment.patient_uuid) {
             try {
-              await HospitalService.acceptAppointment(appointment.patient_uuid);
+              await SupabaseHospitalService.acceptAppointment(appointment.patient_uuid);
               console.log('✅ Backend API: Patient has_pending_appointment set to false');
             } catch (apiError) {
               console.error('⚠️ Backend API error (continuing with localStorage update):', apiError);
@@ -892,7 +892,7 @@ export const EnhancedDashboard: React.FC<Props> = ({ onNavigate }) => {
           // If appointment has patient_uuid, delete the patient directly
           if (cancelledAppointment.patient_uuid) {
             try {
-              await HospitalService.deletePatient(cancelledAppointment.patient_uuid);
+              await SupabaseHospitalService.deletePatient(cancelledAppointment.patient_uuid);
               console.log('🗑️ Patient deleted due to appointment cancellation:', {
                 patient_name: cancelledAppointment.patient_name,
                 patient_uuid: cancelledAppointment.patient_uuid
@@ -958,7 +958,7 @@ export const EnhancedDashboard: React.FC<Props> = ({ onNavigate }) => {
 
       // Get all patients to find the one with matching name
       console.log('📋 Fetching all patients to find match...');
-      const allPatients = await HospitalService.getPatients(50000, true, true);
+      const allPatients = await SupabaseHospitalService.getPatients(50000, true, true);
       console.log(`📊 Total patients in database: ${allPatients.length}`);
 
       const matchingPatients = allPatients.filter((patient: any) =>
@@ -1031,7 +1031,7 @@ export const EnhancedDashboard: React.FC<Props> = ({ onNavigate }) => {
           hours_ago: hoursSinceCreation.toFixed(1)
         });
 
-        await HospitalService.deletePatient(patient.id);
+        await SupabaseHospitalService.deletePatient(patient.id);
         console.log('✅ Patient successfully deleted from database');
         toast.success(`Patient ${patientName} also removed (was created only for this appointment)`);
       } else {

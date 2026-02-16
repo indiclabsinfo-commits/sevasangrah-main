@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import HospitalService from '../../services/hospitalService';
+import SupabaseHospitalService from '../../services/supabaseHospitalService';
 import ReceiptTemplate, { type ReceiptData } from '../receipts/ReceiptTemplate';
 import { logger } from '../../utils/logger';
 
@@ -16,7 +16,7 @@ const BillingReceipt: React.FC<BillingReceiptProps> = ({ bill, onClose }) => {
     const fetchPatientDetails = async () => {
       try {
         setLoading(true);
-        const details = await HospitalService.getPatientById(bill.patientId);
+        const details = await SupabaseHospitalService.getPatientById(bill.patientId);
         setPatientDetails(details);
       } catch (error) {
         logger.warn('Could not fetch patient details:', error);

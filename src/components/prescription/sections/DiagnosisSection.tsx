@@ -33,7 +33,7 @@ const DiagnosisSection: React.FC<DiagnosisSectionProps> = ({ data, onChange }) =
 
       // Set new timeout
       searchTimeoutRef.current = setTimeout(async () => {
-        const results = await HospitalService.searchICD10(searchTerm);
+        const results = await SupabaseHospitalService.searchICD10(searchTerm);
         if (results && results.length > 0) {
           setIcdResults(results);
           setShowSearchResults(true);

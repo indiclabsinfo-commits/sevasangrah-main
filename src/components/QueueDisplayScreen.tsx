@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, User, CheckCircle, AlertCircle, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import type { User as Doctor } from '../config/supabaseNew';
 import { announcePatient } from '../utils/voiceAnnouncement';
 
@@ -33,7 +33,7 @@ const QueueDisplayScreen: React.FC = () => {
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const docs = await HospitalService.getDoctors();
+        const docs = await SupabaseHospitalService.getDoctors();
         setDoctors(docs);
       } catch (err) {
         console.error('Failed to load doctors', err);
@@ -46,7 +46,7 @@ const QueueDisplayScreen: React.FC = () => {
   const fetchQueue = async () => {
     try {
       // Pass selectedDoctor to filter if set. Pass undefined for status to fetch all active statuses (or backend default)
-      const data = await HospitalService.getOPDQueues(undefined, selectedDoctor || undefined);
+      const data = await SupabaseHospitalService.getOPDQueues(undefined, selectedDoctor || undefined);
 
       // Transform data to match component interface
       const transformedData: QueuePatient[] = data.map((item: any) => ({
@@ -83,7 +83,7 @@ const QueueDisplayScreen: React.FC = () => {
       if (status === 'called') apiStatus = 'IN_CONSULTATION';
       if (status === 'completed') apiStatus = 'COMPLETED';
 
-      await HospitalService.updateOPDQueueStatus(patientId, apiStatus);
+      await SupabaseHospitalService.updateOPDQueueStatus(patientId, apiStatus);
 
       // Find patient name for announcement
       const patient = queuePatients.find(p => p.id === patientId);

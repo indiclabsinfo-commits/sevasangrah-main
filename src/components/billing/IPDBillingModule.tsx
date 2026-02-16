@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import toast from 'react-hot-toast';
 import { Plus, Search, Edit, Printer, Download, X, Calendar, User, Bed, Trash2, Calculator } from 'lucide-react';
-import HospitalService from '../../services/hospitalService';
+import SupabaseHospitalService from '../../services/supabaseHospitalService';
 import DoctorService from '../../services/doctorService';
 import BillingService, { type IPDBill, type StaySegment, type IPDService } from '../../services/billingService';
 import type { PatientWithRelations } from '../../config/supabaseNew';
@@ -348,7 +348,7 @@ const IPDBillingModule: React.FC = () => {
     // Fetch complete patient details
     let patientDetails = null;
     try {
-      patientDetails = await HospitalService.getPatientById(bill.patientId);
+      patientDetails = await SupabaseHospitalService.getPatientById(bill.patientId);
     } catch (error) {
       logger.warn('Could not fetch patient details:', error);
     }

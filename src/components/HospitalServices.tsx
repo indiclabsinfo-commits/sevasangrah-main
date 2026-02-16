@@ -10,7 +10,6 @@ import {
   type OrderedService,
   type ServiceCategory
 } from '../data/medicalServices';
-import { HospitalService } from '../services/hospitalService';
 import { supabase } from '../config/supabaseNew';
 import type { Patient, PatientWithRelations } from '../config/supabaseNew';
 import { useReceiptPrinting } from '../hooks/useReceiptPrinting';
@@ -41,7 +40,7 @@ export default function HospitalServices() {
 
   const loadPatients = async () => {
     try {
-      const patientsList = await HospitalService.getPatients();
+      const patientsList = await SupabaseHospitalService.getPatients();
       setPatients(patientsList);
     } catch (error) {
       console.error('Error loading patients:', error);

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import HospitalService from '../services/hospitalService';
 import type { PatientWithRelations } from '../config/supabaseNew';
 
 const SimplePatientListTest: React.FC = () => {
@@ -16,8 +15,8 @@ const SimplePatientListTest: React.FC = () => {
         setError(null);
         
         // Test the exact call that ComprehensivePatientList makes
-        const result = await HospitalService.getPatients(200);
-        console.log('🧪 HospitalService.getPatients result:', result);
+        const result = await SupabaseHospitalService.getPatients(200);
+        console.log('🧪 SupabaseHospitalService.getPatients result:', result);
         console.log('🧪 Result type:', typeof result);
         console.log('🧪 Result length:', result?.length);
         console.log('🧪 First patient:', result?.[0]);

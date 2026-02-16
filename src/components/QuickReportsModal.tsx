@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import HospitalService from '../services/hospitalService';
 import type { PatientWithRelations, FutureAppointment } from '../config/supabaseNew';
 
 interface QuickReportsModalProps {
@@ -24,8 +23,8 @@ const QuickReportsModal: React.FC<QuickReportsModalProps> = ({ isOpen, onClose }
     setLoading(true);
     try {
       const [patientsData, appointmentsData] = await Promise.all([
-        HospitalService.getPatients(50000, true, true),
-        HospitalService.getAppointments(100)
+        SupabaseHospitalService.getPatients(50000, true, true),
+        SupabaseHospitalService.getAppointments(100)
       ]);
       
       setPatients(patientsData);

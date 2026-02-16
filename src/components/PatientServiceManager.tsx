@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Patient, PatientTransaction } from '../config/supabaseNew';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { DOCTOR_DEGREES } from '../data/doctorDegrees';
@@ -65,7 +65,7 @@ const PatientServiceManager: React.FC<PatientServiceManagerProps> = ({
   const loadExistingServices = async () => {
     try {
       setLoading(true);
-      const transactions = await HospitalService.getTransactionsByPatient(patient.id);
+      const transactions = await SupabaseHospitalService.getTransactionsByPatient(patient.id);
 
       // Filter service-related transactions (exclude cancelled ones)
       const serviceTransactions = transactions.filter(t =>
@@ -229,7 +229,7 @@ const PatientServiceManager: React.FC<PatientServiceManagerProps> = ({
         full_data: transactionData
       });
 
-      const transaction = await HospitalService.createTransaction(transactionData);
+      const transaction = await SupabaseHospitalService.createTransaction(transactionData);
 
       // Add to local state
       const serviceItem: ServiceItem = {
@@ -320,7 +320,7 @@ const PatientServiceManager: React.FC<PatientServiceManagerProps> = ({
         console.log('📝 Updated description with date:', updatedDescription);
 
         // Update the transaction in database
-        await HospitalService.updateTransaction(editingService.transactionId, {
+        await SupabaseHospitalService.updateTransaction(editingService.transactionId, {
           amount: finalAmount,
           description: updatedDescription,
           payment_mode: editingService.paymentMode,
@@ -374,7 +374,7 @@ const PatientServiceManager: React.FC<PatientServiceManagerProps> = ({
     try {
       // If the service has a transaction ID, delete it from the database
       if (serviceToRemove.transactionId) {
-        await HospitalService.deleteTransaction(serviceToRemove.transactionId);
+        await SupabaseHospitalService.deleteTransaction(serviceToRemove.transactionId);
       }
 
       // Remove from local state by index

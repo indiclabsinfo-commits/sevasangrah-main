@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import HospitalService from '../services/hospitalService';
 import type { Patient, PatientTransaction } from '../config/supabaseNew';
 import toast from 'react-hot-toast';
 
@@ -50,8 +49,8 @@ const Receipt: React.FC<ReceiptProps> = ({ patientId, onClose }) => {
       setLoading(true);
 
       // Fetch patient data and transactions
-      const patient = await HospitalService.getPatientById(patientId);
-      const transactions = await HospitalService.getTransactionsByPatient(patientId);
+      const patient = await SupabaseHospitalService.getPatientById(patientId);
+      const transactions = await SupabaseHospitalService.getTransactionsByPatient(patientId);
 
       if (!patient) {
         toast.error('Patient not found');

@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import SupabasePatientService from '../services/supabasePatientService';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import SMSService from '../services/smsService';
 import { PatientService } from '../services/patientService';
 import { appointmentService } from '../services/appointmentService';
@@ -847,7 +847,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
       // Create assigned doctors records
       // TODO: Implement assignDoctorsToPatient method in HospitalService
       // if (!saveAsDraft && assignedDoctorsData.length > 0) {
-      //   await HospitalService.assignDoctorsToPatient(newPatient.id, assignedDoctorsData);  // Use UUID id here too
+      //   await SupabaseHospitalService.assignDoctorsToPatient(newPatient.id, assignedDoctorsData);  // Use UUID id here too
       // }
 
       // Handle appointment scheduling if enabled

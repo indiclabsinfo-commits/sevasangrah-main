@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../config/supabaseNew';
-import HospitalService from '../services/hospitalService';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import type { PatientWithRelations } from '../config/supabaseNew';
 import { exportToExcel, formatDate } from '../utils/excelExport';
 import IPDConsentForm from './IPDConsentForm';
@@ -61,13 +61,13 @@ const DischargeSection: React.FC = () => {
       
       // Approach 1: Get discharged admissions from patient_admissions table
       try {
-        const dischargedAdmissions = await HospitalService.getDischargedAdmissions();
+        const dischargedAdmissions = await SupabaseHospitalService.getDischargedAdmissions();
         
         const admissionBasedPatients = await Promise.all(
           dischargedAdmissions.map(async (admission) => {
             try {
               // Get discharge summary for this admission
-              const dischargeSummary = await HospitalService.getDischargeSummary(admission.id);
+              const dischargeSummary = await SupabaseHospitalService.getDischargeSummary(admission.id);
 
               console.log('🔍 DEBUG - Discharge Summary:', {
                 admission_id: admission.id,
@@ -141,7 +141,7 @@ const DischargeSection: React.FC = () => {
       
       // Approach 2: Also check patients table for ipd_status = 'DISCHARGED'
       try {
-        const allPatients = await HospitalService.getPatients(50000, true, true);
+        const allPatients = await SupabaseHospitalService.getPatients(50000, true, true);
         const patientsWithDischargedStatus = allPatients.filter(patient => 
           patient.ipd_status === 'DISCHARGED'
         );
@@ -158,7 +158,7 @@ const DischargeSection: React.FC = () => {
           if (!alreadyExists) {
             // Try to get discharge history for additional info
             try {
-              const dischargeHistory = await HospitalService.getDischargeHistory(patient.id);
+              const dischargeHistory = await SupabaseHospitalService.getDischargeHistory(patient.id);
               const latestDischarge = dischargeHistory[0];
               
               allDischargedPatients.push({
@@ -348,13 +348,13 @@ const DischargeSection: React.FC = () => {
 
       // Update patient IPD status back to ADMITTED if they should be re-admitted
       // or set to null if they're completely done
-      await HospitalService.updatePatient(patientId, {
+      await SupabaseHospitalService.updatePatient(patientId, {
         ipd_status: null // or 'ADMITTED' if they should be re-admitted
       });
 
       // Update admission status back to ADMITTED if needed
       // Find and update related admission record
-      const dischargedAdmissions = await HospitalService.getDischargedAdmissions();
+      const dischargedAdmissions = await SupabaseHospitalService.getDischargedAdmissions();
       const relatedAdmission = dischargedAdmissions.find(admission => 
         admission.patient_id === patientId || admission.patient?.id === patientId
       );

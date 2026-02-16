@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import HospitalService from '../services/hospitalService';
 import { supabase } from '../config/supabaseNew';
 import type { PatientWithRelations, CreateTransactionData } from '../config/supabaseNew';
 
@@ -41,7 +40,7 @@ const RefundTab: React.FC = () => {
   const loadPatients = async () => {
     try {
       // Load ALL patients including ORTHO/inactive ones for comprehensive refund search
-      const patientsData = await HospitalService.getPatients(50000, true, true); // limit=50000, skipOrthoFilter=true, includeInactive=true
+      const patientsData = await SupabaseHospitalService.getPatients(50000, true, true); // limit=50000, skipOrthoFilter=true, includeInactive=true
       console.log('✅ Refunds - Loaded patients for search:', patientsData?.length || 0);
       setPatients(patientsData);
     } catch (error: any) {
@@ -167,7 +166,7 @@ const RefundTab: React.FC = () => {
       };
 
       console.log('💰 Creating refund transaction:', refundTransactionData);
-      await HospitalService.createTransaction(refundTransactionData as any);
+      await SupabaseHospitalService.createTransaction(refundTransactionData as any);
       console.log('✅ Refund transaction created successfully');
 
       toast.success(`Refund of ₹${formData.refund_amount.toLocaleString()} processed successfully`);

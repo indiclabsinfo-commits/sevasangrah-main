@@ -91,7 +91,7 @@ class OPDService {
 
             // If queue_id is provided, update queue status to IN_CONSULTATION
             if (data.queue_id) {
-                await HospitalService.updateOPDQueueStatus(data.queue_id, 'IN_CONSULTATION');
+                await SupabaseHospitalService.updateOPDQueueStatus(data.queue_id, 'IN_CONSULTATION');
                 logger.log('✅ Queue status updated to IN_CONSULTATION');
             }
 
@@ -212,7 +212,7 @@ class OPDService {
 
             // Update queue status to COMPLETED if queue_id is provided
             if (queueId) {
-                await HospitalService.updateOPDQueueStatus(queueId, 'COMPLETED');
+                await SupabaseHospitalService.updateOPDQueueStatus(queueId, 'COMPLETED');
                 logger.log('✅ Queue status updated to COMPLETED');
             }
 
@@ -283,14 +283,14 @@ class OPDService {
      * Search ICD-10 codes (wrapper around HospitalService)
      */
     async searchICD10(query: string): Promise<{ code: string; description: string }[]> {
-        return HospitalService.searchICD10(query);
+        return SupabaseHospitalService.searchICD10(query);
     }
 
     /**
      * Get latest vitals for patient (wrapper around HospitalService)
      */
     async getLatestVitals(patientId: string): Promise<any> {
-        return HospitalService.getLatestVitals(patientId);
+        return SupabaseHospitalService.getLatestVitals(patientId);
     }
 
     /**
@@ -299,8 +299,8 @@ class OPDService {
     async getPatientHistory(patientId: string): Promise<any> {
         try {
             const consultations = await this.getPatientConsultations(patientId);
-            const prescriptions = await HospitalService.getPrescriptions(patientId);
-            const vitals = await HospitalService.getLatestVitals(patientId);
+            const prescriptions = await SupabaseHospitalService.getPrescriptions(patientId);
+            const vitals = await SupabaseHospitalService.getLatestVitals(patientId);
 
             return {
                 consultations,
