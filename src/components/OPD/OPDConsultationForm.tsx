@@ -15,6 +15,7 @@ import {
 import opdService, { type CreateConsultationData } from '../../services/opdService';
 import ChiefComplaints from '../ChiefComplaints';
 import ICD10Lookup from '../ICD10Lookup';
+import ExaminationTemplates from '../ExaminationTemplates';
 import { logger } from '../../utils/logger';
 
 interface OPDConsultationFormProps {
@@ -54,6 +55,10 @@ const OPDConsultationForm: React.FC<OPDConsultationFormProps> = ({
 
     // Chief complaints state (structured)
     const [chiefComplaints, setChiefComplaints] = useState<any[]>([]);
+
+    // Examination findings state
+    const [examinationFindings, setExaminationFindings] = useState<any>(null);
+    const [showExaminationTemplates, setShowExaminationTemplates] = useState(false);
 
     // UI state
     const [loading, setLoading] = useState(false);
@@ -281,13 +286,50 @@ const OPDConsultationForm: React.FC<OPDConsultationFormProps> = ({
 
                         {/* Examination Findings */}
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Examination Findings
-                            </label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-semibold text-gray-700">
+                                    Examination Findings
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowExaminationTemplates(!showExaminationTemplates)}
+                                    className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 flex items-center gap-1"
+                                >
+                                    <Stethoscope size={14} />
+                                    {showExaminationTemplates ? 'Hide Templates' : 'Use Template'}
+                                </button>
+                            </div>
+                            
+                            {showExaminationTemplates ? (
+                                <div className="mb-4">
+                                    <ExaminationTemplates
+                                        patientId={patientId}
+                                        consultationId={undefined} // Will be set after consultation creation
+                                        mode="selector"
+                                        onSelectTemplate={(template) => {
+                                            // Auto-fill with template structure
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                examination_findings: `Using template: ${template.template_name}\n\n`
+                                            }));
+                                        }}
+                                        onSaveFindings={(findings) => {
+                                            setExaminationFindings(findings);
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                examination_findings: `Structured examination recorded. See examination_findings table for details.\n\n${prev.examination_findings}`
+                                            }));
+                                            setShowExaminationTemplates(false);
+                                            toast.success('Examination findings saved!');
+                                        }}
+                                    />
+                                </div>
+                            ) : null}
+                            
                             <textarea
                                 value={formData.examination_findings}
                                 onChange={(e) => setFormData({ ...formData, examination_findings: e.target.value })}
-                                placeholder="Enter examination findings..."
+                                placeholder="Enter examination findings... (or use template above)"
                                 rows={3}
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
