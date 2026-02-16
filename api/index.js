@@ -10,8 +10,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 
 // Helper to parse path segments
 const getPathSegments = (req) => {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const path = url.pathname.replace(/^\/api\/?/, ''); // Remove /api prefix
+    // In Vercel, api/index.js handles /api/*, so req.url is already without /api
+    // Example: /api/test → req.url = '/test'
+    // Example: /api/patients → req.url = '/patients'
+    const path = req.url.startsWith('/') ? req.url : '/' + req.url;
     return path.split('/').filter(Boolean);
 };
 
@@ -21,6 +23,9 @@ const handler = async (req, res) => {
         const segments = getPathSegments(req);
         const resource = segments[0]; // e.g., 'patients', 'auth', 'appointments'
         const id = segments[1];       // e.g., patient UUID or 'login'
+        
+        console.log('🔍 Path segments:', segments);
+        console.log('🔍 Resource:', resource, 'ID:', id);
 
         // --- AUTH ROUTES (No Auth Middleware Needed) ---
         if (resource === 'auth') {
