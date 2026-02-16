@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { logger } from './utils/logger';
 // import './utils/smartConsoleBlocker'; // Console blocking disabled
+import './utils/safeFilter'; // Safe array filter patch
 import EmailService from './services/emailService';
 import { ExactDateService } from './services/exactDateService';
 import type { User } from './config/supabaseNew';

@@ -262,7 +262,17 @@ export class AuthService {
 if (typeof window !== 'undefined') {
   AuthService.initialize().catch(err => {
     logger.error('❌ Auto-auth initialization failed:', err);
+    console.error('Auth initialization error:', err);
   });
+}
+
+// Debug: Log auth status
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    const user = AuthService.getCurrentUser();
+    console.log('🔍 AuthService debug - Current user:', user);
+    console.log('🔍 AuthService debug - Is authenticated:', AuthService.isAuthenticated());
+  }, 1000);
 }
 
 // Export an instance for compatibility with existing code
