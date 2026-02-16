@@ -23,6 +23,7 @@ import type { User } from '../../config/supabaseNew';
 import VitalsRecordingModal from './VitalsRecordingModal';
 import WalkInQueueModal from './WalkInQueueModal';
 import OPDConsultationForm from './OPDConsultationForm';
+import TATDisplay from './TATDisplay';
 
 const OPDQueueManager: React.FC = () => {
     const [queue, setQueue] = useState<any[]>([]); // Renamed from queues to queue
@@ -376,6 +377,18 @@ const OPDQueueManager: React.FC = () => {
                                                 )}
                                             </div>
                                         </div>
+                                    </div>
+
+                                    {/* TAT Display */}
+                                    <div className="mt-4 pt-4 border-t border-gray-100">
+                                        <TATDisplay 
+                                            queueItem={item}
+                                            config={{
+                                                maxWaitTime: 30,
+                                                maxConsultationTime: 15,
+                                                maxTotalTAT: 60
+                                            }}
+                                        />
                                     </div>
 
                                     {/* Drag Handle Indicator (Visual only) */}

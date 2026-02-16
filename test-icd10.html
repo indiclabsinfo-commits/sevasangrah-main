@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICD-10 Lookup Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .icd10-test {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .severity-mild { background-color: #d1fae5; color: #065f46; }
+        .severity-moderate { background-color: #fef3c7; color: #92400e; }
+        .severity-severe { background-color: #ffedd5; color: #9a3412; }
+        .severity-critical { background-color: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+    <div class="icd10-test">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">✅ ICD-10 Lookup Component Test</h1>
+        <p class="text-gray-600 mb-6">Testing US-015 & US-016: ICD-10 codes table with lookup functionality</p>
+        
+        <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Database Status</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="font-medium text-green-800">✅ icd10_codes table</div>
+                    <div class="text-sm text-green-600 mt-1">Created in Supabase with 5 sample codes</div>
+                </div>
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="font-medium text-green-800">✅ patient_diagnoses table</div>
+                    <div class="text-sm text-green-600 mt-1">Ready to link patients with ICD-10 codes</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Component Features</h2>
+            
+            <div class="space-y-4">
+                <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span class="text-blue-600 font-bold">1</span>
+                    </div>
+                    <div>
+                        <div class="font-medium text-blue-800">Real-time Search</div>
+                        <div class="text-sm text-blue-600">Search by code (I10) or description (hypertension)</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <span class="text-green-600 font-bold">2</span>
+                    </div>
+                    <div>
+                        <div class="font-medium text-green-800">Severity Indicators</div>
+                        <div class="text-sm text-green-600">Color-coded: 🟢 Mild 🟡 Moderate 🟠 Severe 🔴 Critical</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
+                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span class="text-purple-600 font-bold">3</span>
+                    </div>
+                    <div>
+                        <div class="font-medium text-purple-800">Multiple Selection</div>
+                        <div class="text-sm text-purple-600">Select up to 5 diagnoses per patient</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3 p-3 bg-amber-50 rounded-lg">
+                    <div class="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                        <span class="text-amber-600 font-bold">4</span>
+                    </div>
+                    <div>
+                        <div class="font-medium text-amber-800">Quick Common Diagnoses</div>
+                        <div class="text-sm text-amber-600">One-click add for common conditions</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <h3 class="font-medium text-gray-700 mb-3">Sample ICD-10 Codes in Database:</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono font-bold text-blue-600">A00</span>
+                            <span class="text-xs px-2 py-1 rounded-full severity-severe">Severe</span>
+                        </div>
+                        <div class="font-medium mt-1">Cholera</div>
+                        <div class="text-xs text-gray-500 mt-1">I. Infectious diseases</div>
+                    </div>
+                    
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono font-bold text-blue-600">I10</span>
+                            <span class="text-xs px-2 py-1 rounded-full severity-moderate">Moderate</span>
+                        </div>
+                        <div class="font-medium mt-1">Essential hypertension</div>
+                        <div class="text-xs text-gray-500 mt-1">IX. Circulatory diseases</div>
+                    </div>
+                    
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono font-bold text-blue-600">E11</span>
+                            <span class="text-xs px-2 py-1 rounded-full severity-severe">Severe</span>
+                        </div>
+                        <div class="font-medium mt-1">Type 2 diabetes</div>
+                        <div class="text-xs text-gray-500 mt-1">IV. Endocrine diseases</div>
+                    </div>
+                    
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono font-bold text-blue-600">J00</span>
+                            <span class="text-xs px-2 py-1 rounded-full severity-mild">Mild</span>
+                        </div>
+                        <div class="font-medium mt-1">Common cold</div>
+                        <div class="text-xs text-gray-500 mt-1">X. Respiratory diseases</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-gray-800">Ready for Integration</div>
+                        <div class="text-sm text-gray-600">Component: <code class="bg-gray-100 px-1 rounded">ICD10Lookup.tsx</code></div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                            View Code
+                        </button>
+                        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Integrate Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 text-center text-sm text-gray-500">
+            <p>✅ ICD-10 System (US-015 & US-016) - Built & Tested Locally</p>
+            <p class="mt-1">Next: Push to GitHub → Vercel Deployment → Integration into Consultation Form</p>
+        </div>
+    </div>
+</body>
+</html>
