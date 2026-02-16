@@ -1,14 +1,10 @@
 // Supabase Hospital Service - Direct database access
-// Replaces broken API endpoints in HospitalService
+// Zero Backend Architecture - No API dependencies
 
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '../lib/supabaseClient';
 import { logger } from '../utils/logger';
 
-// Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Note: Use getSupabase() async function instead of direct supabase instance
 
 export interface User {
   id: string;
@@ -38,6 +34,7 @@ export class SupabaseHospitalService {
   // ==================== AUTHENTICATION ====================
 
   static async getCurrentUser(): Promise<User | null> {
+    const supabase = await getSupabase();
     try {
       logger.log('🔍 Getting current user from Supabase auth');
       
@@ -78,6 +75,7 @@ export class SupabaseHospitalService {
   // ==================== PATIENTS ====================
 
   static async searchPatients(searchTerm: string): Promise<Patient[]> {
+    const supabase = await getSupabase();
     try {
       logger.log('🔍 Searching patients:', searchTerm);
       
@@ -105,6 +103,7 @@ export class SupabaseHospitalService {
   }
 
   static async getPatient(patientId: string): Promise<Patient | null> {
+    const supabase = await getSupabase();
     try {
       logger.log('👤 Getting patient:', patientId);
       
@@ -128,6 +127,7 @@ export class SupabaseHospitalService {
   }
 
   static async createPatient(patientData: any): Promise<Patient> {
+    const supabase = await getSupabase();
     try {
       logger.log('➕ Creating patient:', patientData);
       
@@ -153,6 +153,7 @@ export class SupabaseHospitalService {
   // ==================== DOCTORS ====================
 
   static async getDoctors(): Promise<User[]> {
+    const supabase = await getSupabase();
     try {
       logger.log('👨‍⚕️ Fetching doctors from Supabase');
       
@@ -228,6 +229,7 @@ export class SupabaseHospitalService {
   }
 
   static async addToOPDQueue(data: {
+    const supabase = await getSupabase();
     patient_id: string;
     doctor_id: string;
     priority?: string;
@@ -331,6 +333,7 @@ export class SupabaseHospitalService {
   }
 
   static async reorderOPDQueue(items: { id: string; order: number }[]): Promise<void> {
+    const supabase = await getSupabase();
     try {
       logger.log('📋 Reordering queues:', items);
       
@@ -357,6 +360,7 @@ export class SupabaseHospitalService {
   // ==================== DASHBOARD STATS ====================
 
   static async getDashboardStats(): Promise<any> {
+    const supabase = await getSupabase();
     try {
       logger.log('📊 Getting dashboard statistics');
       
@@ -447,6 +451,7 @@ export class SupabaseHospitalService {
   // ==================== APPOINTMENTS ====================
 
   static async getAppointments(date?: string): Promise<any[]> {
+    const supabase = await getSupabase();
     try {
       logger.log('📅 Fetching appointments from Supabase');
       
@@ -487,6 +492,7 @@ export class SupabaseHospitalService {
   // ==================== PATIENTS LIST ====================
 
   static async getPatients(limit: number = 50): Promise<Patient[]> {
+    const supabase = await getSupabase();
     try {
       logger.log(`👥 Fetching ${limit} patients from Supabase`);
       
@@ -512,6 +518,7 @@ export class SupabaseHospitalService {
   // ==================== SIMPLE FALLBACKS ====================
 
   static async createUserProfile(authUser: any): Promise<User> {
+    const supabase = await getSupabase();
     logger.log('👤 Creating/updating user profile for:', authUser.email);
     
     // Check if user already exists

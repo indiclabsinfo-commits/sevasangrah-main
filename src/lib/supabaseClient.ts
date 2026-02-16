@@ -1,14 +1,36 @@
-import { createClient } from '@supabase/supabase-js'
+// Supabase Client - Zero Backend Architecture
+// Auto-loads Supabase and creates client with current configuration
 
-console.log('⚡ [SupabaseClient] URL:', import.meta.env.VITE_SUPABASE_URL);
-console.log('⚡ [SupabaseClient] KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY);
+import { ensureSupabaseLoaded, createSupabaseClient } from '../config/supabaseConfig';
 
-const supabaseUrl = 'https://plkbxjedbjpmbfrekmrr.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
+let supabaseInstance: any = null;
 
-console.log('⚡ [SupabaseClient] Initializing with HARDCODED credentials');
+// Get or create Supabase client
+export async function getSupabase() {
+  if (supabaseInstance) {
+    return supabaseInstance;
+  }
+  
+  // Ensure Supabase is loaded
+  await ensureSupabaseLoaded();
+  
+  // Create client with current config
+  supabaseInstance = createSupabaseClient();
+  
+  console.log('✅ Supabase client initialized');
+  return supabaseInstance;
+}
 
-export const supabase = createClient(
-    supabaseUrl,
-    supabaseAnonKey
-)
+// Helper for components that need immediate access
+export const supabase = {
+  // These will throw if called before initialization
+  // Components should use getSupabase() instead
+};
+
+// Initialize on page load (optional)
+if (typeof window !== 'undefined') {
+  // Auto-initialize in background
+  getSupabase().catch(err => {
+    console.error('❌ Failed to initialize Supabase:', err);
+  });
+}
