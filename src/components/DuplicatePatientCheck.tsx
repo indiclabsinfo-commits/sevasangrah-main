@@ -313,8 +313,8 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
             </div>
           )}
 
-          {/* No Matches Message */}
-          {showDetails && result.totalMatches === 0 && (
+          {/* No Matches Message - REMOVED as requested */}
+          {/* {showDetails && result.totalMatches === 0 && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
               <Check className="text-green-600 mx-auto mb-2" size={24} />
               <p className="font-medium text-green-800">No duplicate patients found</p>
@@ -322,7 +322,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
                 This patient appears to be unique in the system
               </p>
             </div>
-          )}
+          )} */}
         </div>
       )}
 

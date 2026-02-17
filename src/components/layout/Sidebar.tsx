@@ -11,6 +11,7 @@ import {
   TrendingUp,
   FileText,
   Activity,
+  Send,
 } from 'lucide-react';
 import { classNames } from '@/utils';
 import { usePermissions } from '@/contexts/AuthContext';
@@ -30,6 +31,7 @@ const navigation = [
   { name: 'Patients', href: '/patients', icon: Users, permission: 'read_patients', saasModule: 'isOpdEnabled' },
   { name: 'Appointments', href: '/appointments', icon: Calendar, permission: 'read_appointments', saasModule: 'isOpdEnabled' },
   { name: 'Billing', href: '/billing', icon: Receipt, permission: 'read_bills', saasModule: 'isOpdEnabled' },
+  { name: 'Referral Management', href: '/referral-management', icon: Send, permission: 'read_patients', saasModule: 'isOpdEnabled' },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
