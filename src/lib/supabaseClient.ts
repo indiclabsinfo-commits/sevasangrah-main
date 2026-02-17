@@ -21,16 +21,18 @@ export async function getSupabase() {
   return supabaseInstance;
 }
 
-// Helper for components that need immediate access
-export const supabase = {
-  // These will throw if called before initialization
-  // Components should use getSupabase() instead
-};
+// Export a simple object that will be replaced with real client after initialization
+export const supabase = {} as any;
 
-// Initialize on page load (optional)
+// Initialize on page load and replace the supabase object
 if (typeof window !== 'undefined') {
-  // Auto-initialize in background
-  getSupabase().catch(err => {
+  getSupabase().then(client => {
+    // Copy all properties from real client to our export
+    Object.keys(client).forEach(key => {
+      supabase[key] = client[key];
+    });
+    console.log('✅ Supabase export initialized');
+  }).catch(err => {
     console.error('❌ Failed to initialize Supabase:', err);
   });
 }
