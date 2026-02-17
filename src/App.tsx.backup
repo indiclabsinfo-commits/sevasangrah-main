@@ -1,4 +1,3 @@
-import ComingSoon from './components/ComingSoon';
 import React, { useState, useEffect } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { logger } from './utils/logger';
@@ -965,42 +964,42 @@ const App: React.FC = () => {
     {
       id: 'referral-management',
       name: '📤 Referral Management',
-      component: ComingSoon,
+      component: ReferralManagementSimple,
       description: 'Manage internal and external patient referrals',
       permission: 'read_patients'
     },
     {
       id: 'teleconsult',
       name: '📹 Teleconsult',
-      component: ComingSoon,
+      component: TeleconsultAppointment,
       description: 'Physical and virtual consultation appointments',
       permission: 'read_appointments'
     },
     {
       id: 'waiting-hall',
       name: '🎫 Waiting Hall',
-      component: ComingSoon,
+      component: WaitingHallDisplay,
       description: 'Public display for waiting patients and token system',
       permission: 'read_patients'
     },
     {
       id: 'print-schedule',
       name: '🖨️ Print Schedule',
-      component: ComingSoon,
+      component: PrintScheduleSimple,
       description: 'Print and export practitioner schedules',
       permission: 'read_appointments'
     },
     {
       id: 'self-registration',
       name: '🖥️ Self Registration',
-      component: ComingSoon,
+      component: SelfRegistrationKiosk,
       description: 'Patient self-service registration kiosk',
       permission: 'create_patients'
     },
     {
       id: 'external-appointments',
       name: '🌐 External Appointments',
-      component: ComingSoon,
+      // component: ExternalAppointmentCapture,
       component: () => <div className="p-8">External Appointment Capture - Coming Soon</div>,
       description: 'Capture appointments from external booking systems',
       permission: 'read_appointments'
