@@ -30,7 +30,8 @@ import BillingSection from './components/BillingSection';
 import IPDBedManagement from './components/IPDBedManagement';
 import DischargeSection from './components/DischargeSection';
 import AdminAuditLog from './components/AdminAuditLog';
-import HRMManagement from './components/HRMManagement';
+// import HRMManagement from './components/HRMManagement';
+import HRMManagementSimple from './components/HRMManagementSimple';
 import QueueDisplayScreen from './components/QueueDisplayScreen';
 import OPDQueueManager from './components/OPD/OPDQueueManager';
 // import TableInspector from './components/TableInspector'; // Removed debug component
@@ -956,7 +957,7 @@ const App: React.FC = () => {
     {
       id: 'hrm',
       name: '👥 HR Management',
-      component: HRMManagement,
+      component: HRMManagementSimple,
       description: 'Manage hospital staff, attendance, leaves, and payroll',
       permission: 'access_hrm'
     },
