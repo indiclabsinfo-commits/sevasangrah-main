@@ -18,6 +18,7 @@ export interface User {
 
 export interface Patient {
   id: string;
+  patient_id: string;
   first_name: string;
   last_name: string;
   age: number;
@@ -37,21 +38,21 @@ export class SupabaseHospitalService {
     const supabase = await getSupabase();
     try {
       logger.log('🔍 Getting current user from Supabase auth');
-      
+
       const { data: { user }, error } = await supabase.auth.getUser();
-      
+
       if (error || !user) {
         logger.log('⚠️ No authenticated user found');
         return null;
       }
-      
+
       // Get user profile from users table
       const { data: userProfile, error: profileError } = await supabase
         .from('users')
         .select('*')
         .eq('auth_id', user.id)
         .single();
-      
+
       if (profileError) {
         logger.error('❌ Error fetching user profile:', profileError);
         // Return basic user info from auth
@@ -63,7 +64,7 @@ export class SupabaseHospitalService {
           role: user.user_metadata?.role || 'user'
         };
       }
-      
+
       logger.log('✅ Current user found:', userProfile);
       return userProfile as User;
     } catch (error) {
@@ -78,22 +79,22 @@ export class SupabaseHospitalService {
     const supabase = await getSupabase();
     try {
       logger.log('🔍 Searching patients:', searchTerm);
-      
+
       if (!searchTerm.trim()) {
         return [];
       }
-      
+
       const { data, error } = await supabase
         .from('patients')
         .select('*')
         .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,uhid.ilike.%${searchTerm}%`)
         .limit(10);
-      
+
       if (error) {
         logger.error('❌ Error searching patients:', error);
         throw error;
       }
-      
+
       logger.log(`✅ Found ${data?.length || 0} patients`);
       return data || [];
     } catch (error) {
@@ -102,22 +103,22 @@ export class SupabaseHospitalService {
     }
   }
 
-  static async getPatient(patientId: string): Promise<Patient | null> {
+  static async getPatient(patientId: string | number): Promise<Patient | null> {
     const supabase = await getSupabase();
     try {
       logger.log('👤 Getting patient:', patientId);
-      
+
       const { data, error } = await supabase
         .from('patients')
         .select('*')
         .eq('id', patientId)
         .single();
-      
+
       if (error) {
         logger.error('❌ Error fetching patient:', error);
         throw error;
       }
-      
+
       logger.log('✅ Patient found:', data);
       return data;
     } catch (error) {
@@ -130,18 +131,18 @@ export class SupabaseHospitalService {
     const supabase = await getSupabase();
     try {
       logger.log('➕ Creating patient:', patientData);
-      
+
       const { data, error } = await supabase
         .from('patients')
         .insert(patientData)
         .select()
         .single();
-      
+
       if (error) {
         logger.error('❌ Error creating patient:', error);
         throw error;
       }
-      
+
       logger.log('✅ Patient created:', data);
       return data;
     } catch (error) {
@@ -156,18 +157,18 @@ export class SupabaseHospitalService {
     const supabase = await getSupabase();
     try {
       logger.log('👨‍⚕️ Fetching doctors from Supabase');
-      
+
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('role', 'doctor')
         .order('first_name');
-      
+
       if (error) {
         logger.error('❌ Error fetching doctors:', error);
         throw error;
       }
-      
+
       logger.log(`✅ Found ${data?.length || 0} doctors`);
       return data || [];
     } catch (error) {
@@ -186,7 +187,7 @@ export class SupabaseHospitalService {
     const supabase = await getSupabase();
     try {
       logger.log('🔍 Fetching OPD queues from Supabase', { status, doctor_id, date });
-      
+
       let query = supabase
         .from('opd_queues')
         .select(`
@@ -199,19 +200,19 @@ export class SupabaseHospitalService {
       if (status && status !== 'all') {
         query = query.eq('queue_status', status);
       }
-      
+
       if (doctor_id) {
         query = query.eq('doctor_id', doctor_id);
       }
-      
+
       if (date) {
         const startDate = new Date(date);
         startDate.setHours(0, 0, 0, 0);
         const endDate = new Date(date);
         endDate.setHours(23, 59, 59, 999);
-        
+
         query = query.gte('created_at', startDate.toISOString())
-                    .lte('created_at', endDate.toISOString());
+          .lte('created_at', endDate.toISOString());
       }
 
       const { data, error } = await query;
@@ -238,13 +239,13 @@ export class SupabaseHospitalService {
     const supabase = await getSupabase();
     try {
       logger.log('➕ Adding patient to OPD queue:', data);
-      
+
       // Get next queue number for this doctor today
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       const { data: lastQueue, error: queueError } = await supabase
         .from('opd_queues')
         .select('queue_number')
@@ -253,9 +254,9 @@ export class SupabaseHospitalService {
         .lt('created_at', tomorrow.toISOString())
         .order('queue_number', { ascending: false })
         .limit(1);
-      
+
       const nextQueueNumber = (lastQueue?.[0]?.queue_number || 0) + 1;
-      
+
       // Create queue entry
       const queueData = {
         patient_id: data.patient_id,
@@ -266,7 +267,7 @@ export class SupabaseHospitalService {
         notes: data.notes,
         estimated_wait_time: data.priority === 'urgent' ? 15 : data.priority === 'emergency' ? 5 : 30
       };
-      
+
       const { data: newQueue, error } = await supabase
         .from('opd_queues')
         .insert(queueData)
@@ -276,12 +277,12 @@ export class SupabaseHospitalService {
           doctor:users(id, first_name, last_name, email, specialization)
         `)
         .single();
-      
+
       if (error) {
         logger.error('❌ Error adding to queue:', error);
         throw error;
       }
-      
+
       logger.log('✅ Patient added to queue:', newQueue);
       return newQueue;
     } catch (error) {
@@ -296,19 +297,20 @@ export class SupabaseHospitalService {
   ): Promise<any> {
     try {
       logger.log('🔄 Updating queue status:', { queueId, status });
-      
+
       const updateData: any = {
         queue_status: status,
         updated_at: new Date().toISOString()
       };
-      
+
       // Set consultation timestamps
       if (status === 'in_consultation') {
         updateData.consultation_start_time = new Date().toISOString();
       } else if (status === 'completed' || status === 'cancelled') {
         updateData.consultation_end_time = new Date().toISOString();
       }
-      
+
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('opd_queues')
         .update(updateData)
@@ -319,12 +321,12 @@ export class SupabaseHospitalService {
           doctor:users(id, first_name, last_name, email, specialization)
         `)
         .single();
-      
+
       if (error) {
         logger.error('❌ Error updating queue status:', error);
         throw error;
       }
-      
+
       logger.log('✅ Queue status updated:', data);
       return data;
     } catch (error) {
@@ -337,20 +339,20 @@ export class SupabaseHospitalService {
     const supabase = await getSupabase();
     try {
       logger.log('📋 Reordering queues:', items);
-      
+
       // Update each queue item
       for (const item of items) {
         const { error } = await supabase
           .from('opd_queues')
           .update({ queue_number: item.order, updated_at: new Date().toISOString() })
           .eq('id', item.id);
-          
+
         if (error) {
           logger.error(`❌ Error updating queue ${item.id}:`, error);
           throw error;
         }
       }
-      
+
       logger.log('✅ Queues reordered successfully');
     } catch (error) {
       logger.error('🚨 Failed to reorder queues:', error);
@@ -364,7 +366,7 @@ export class SupabaseHospitalService {
     const supabase = await getSupabase();
     try {
       logger.log('📊 Getting dashboard statistics');
-      
+
       // Get counts in parallel
       const [
         patientsCount,
@@ -377,7 +379,7 @@ export class SupabaseHospitalService {
         this.getTodayQueuesCount(),
         this.getTodayAppointmentsCount()
       ]);
-      
+
       const stats = {
         total_patients: patientsCount,
         total_doctors: doctorsCount,
@@ -386,7 +388,7 @@ export class SupabaseHospitalService {
         revenue_today: 0, // Would need transactions table
         occupancy_rate: 0 // Would need beds table
       };
-      
+
       logger.log('✅ Dashboard stats:', stats);
       return stats;
     } catch (error) {
@@ -403,49 +405,53 @@ export class SupabaseHospitalService {
   }
 
   private static async getPatientsCount(): Promise<number> {
+    const supabase = await getSupabase();
     const { count, error } = await supabase
       .from('patients')
       .select('*', { count: 'exact', head: true });
-    
+
     return error ? 0 : count || 0;
   }
 
   private static async getDoctorsCount(): Promise<number> {
+    const supabase = await getSupabase();
     const { count, error } = await supabase
       .from('users')
       .select('*', { count: 'exact', head: true })
       .eq('role', 'doctor');
-    
+
     return error ? 0 : count || 0;
   }
 
   private static async getTodayQueuesCount(): Promise<number> {
+    const supabase = await getSupabase();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     const { count, error } = await supabase
       .from('opd_queues')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', today.toISOString())
       .lt('created_at', tomorrow.toISOString());
-    
+
     return error ? 0 : count || 0;
   }
 
   private static async getTodayAppointmentsCount(): Promise<number> {
+    const supabase = await getSupabase();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     const { count, error } = await supabase
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .gte('appointment_date', today.toISOString())
       .lt('appointment_date', tomorrow.toISOString());
-    
+
     return error ? 0 : count || 0;
   }
 
@@ -455,7 +461,7 @@ export class SupabaseHospitalService {
     const supabase = await getSupabase();
     try {
       logger.log('📅 Fetching appointments from Supabase');
-      
+
       let query = supabase
         .from('appointments')
         .select(`
@@ -464,24 +470,24 @@ export class SupabaseHospitalService {
           doctor:users(id, first_name, last_name, email)
         `)
         .order('appointment_time', { ascending: true });
-      
+
       if (date) {
         const startDate = new Date(date);
         startDate.setHours(0, 0, 0, 0);
         const endDate = new Date(date);
         endDate.setHours(23, 59, 59, 999);
-        
+
         query = query.gte('appointment_date', startDate.toISOString())
-                    .lte('appointment_date', endDate.toISOString());
+          .lte('appointment_date', endDate.toISOString());
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) {
         logger.error('❌ Error fetching appointments:', error);
         throw error;
       }
-      
+
       logger.log(`✅ Found ${data?.length || 0} appointments`);
       return data || [];
     } catch (error) {
@@ -491,27 +497,69 @@ export class SupabaseHospitalService {
   }
 
   // ==================== PATIENTS LIST ====================
-
-  static async getPatients(limit: number = 50): Promise<Patient[]> {
+  static async getPatients(limit: number = 50, includeInactive: boolean = false, includeAllFields: boolean = false): Promise<Patient[]> {
     const supabase = await getSupabase();
     try {
-      logger.log(`👥 Fetching ${limit} patients from Supabase`);
-      
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
+      logger.log(`👥 Fetching patients from Supabase (limit: ${limit}, inactive: ${includeInactive})`);
+
+      let query = supabase.from('patients').select('*');
+
+      if (!includeInactive) {
+        query = query.eq('is_active', true);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(limit);
-      
+
       if (error) {
         logger.error('❌ Error fetching patients:', error);
         throw error;
       }
-      
+
       logger.log(`✅ Found ${data?.length || 0} patients`);
       return data || [];
     } catch (error) {
       logger.error('🚨 Failed to fetch patients:', error);
+      return [];
+    }
+  }
+
+  // ==================== TRANSACTIONS ====================
+  static async getAllTransactions(): Promise<any[]> {
+    const supabase = await getSupabase();
+    try {
+      logger.log('💰 Fetching all transactions from Supabase');
+      const { data, error } = await supabase
+        .from('patient_transactions')
+        .select(`
+          *,
+          patient:patients(id, first_name, last_name, patient_id)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      logger.error('🚨 Failed to fetch transactions:', error);
+      return [];
+    }
+  }
+
+  // ==================== EXPENSES ====================
+  static async getAllExpenses(): Promise<any[]> {
+    const supabase = await getSupabase();
+    try {
+      logger.log('💸 Fetching all expenses from Supabase');
+      const { data, error } = await supabase
+        .from('daily_expenses')
+        .select('*')
+        .order('expense_date', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      logger.error('🚨 Failed to fetch expenses:', error);
       return [];
     }
   }
@@ -521,19 +569,19 @@ export class SupabaseHospitalService {
   static async createUserProfile(authUser: any): Promise<User> {
     const supabase = await getSupabase();
     logger.log('👤 Creating/updating user profile for:', authUser.email);
-    
+
     // Check if user already exists
     const { data: existingUser } = await supabase
       .from('users')
       .select('*')
       .eq('auth_id', authUser.id)
       .single();
-    
+
     if (existingUser) {
       logger.log('✅ User profile already exists:', existingUser);
       return existingUser as User;
     }
-    
+
     // Create new user profile
     const userData = {
       auth_id: authUser.id,
@@ -544,13 +592,13 @@ export class SupabaseHospitalService {
       phone: authUser.user_metadata?.phone || '',
       created_at: new Date().toISOString()
     };
-    
+
     const { data: newUser, error } = await supabase
       .from('users')
       .insert(userData)
       .select()
       .single();
-    
+
     if (error) {
       logger.error('❌ Error creating user profile:', error);
       // Return fallback user
@@ -562,7 +610,7 @@ export class SupabaseHospitalService {
         role: authUser.user_metadata?.role || 'user'
       };
     }
-    
+
     logger.log('✅ User profile created:', newUser);
     return newUser as User;
   }

@@ -294,4 +294,4 @@ export const supabase = new SupabaseCompatibility();
 export default supabase;
 
 // Export types for compatibility
-export type * from './types/supabase';
+export type * from '../types/supabase';

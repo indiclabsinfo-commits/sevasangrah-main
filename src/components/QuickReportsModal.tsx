@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import type { PatientWithRelations, FutureAppointment } from '../config/supabaseNew';
 
 interface QuickReportsModalProps {
@@ -26,7 +27,7 @@ const QuickReportsModal: React.FC<QuickReportsModalProps> = ({ isOpen, onClose }
         SupabaseHospitalService.getPatients(50000, true, true),
         SupabaseHospitalService.getAppointments(100)
       ]);
-      
+
       setPatients(patientsData);
       setAppointments(appointmentsData);
     } catch (error: any) {
@@ -38,22 +39,22 @@ const QuickReportsModal: React.FC<QuickReportsModalProps> = ({ isOpen, onClose }
 
   const getDateFilteredData = () => {
     const selectedDateObj = new Date(selectedDate);
-    
+
     // Get patients registered on selected date
-    const patientsOnDate = patients.filter(p => 
+    const patientsOnDate = patients.filter(p =>
       new Date(p.created_at).toDateString() === selectedDateObj.toDateString()
     );
-    
+
     // Get appointments on selected date
-    const appointmentsOnDate = appointments.filter(a => 
+    const appointmentsOnDate = appointments.filter(a =>
       a.appointment_date === selectedDate
     );
-    
+
     // Calculate revenue for the day
     const dailyRevenue = patientsOnDate.reduce((sum, patient) => {
       return sum + (patient.totalSpent || 0);
     }, 0);
-    
+
     return {
       patientsOnDate,
       appointmentsOnDate,
@@ -64,7 +65,7 @@ const QuickReportsModal: React.FC<QuickReportsModalProps> = ({ isOpen, onClose }
   if (!isOpen) return null;
 
   const { patientsOnDate, appointmentsOnDate, dailyRevenue } = getDateFilteredData();
-  
+
   const totalPatients = patients.length;
   const totalRevenue = patients.reduce((sum, p) => sum + (p.totalSpent || 0), 0);
   const avgRevenuePerPatient = totalPatients > 0 ? totalRevenue / totalPatients : 0;
@@ -202,11 +203,10 @@ const QuickReportsModal: React.FC<QuickReportsModalProps> = ({ isOpen, onClose }
                           </td>
                           <td className="p-2">{appointment.appointment_type}</td>
                           <td className="p-2">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              appointment.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
-                              appointment.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
+                            <span className={`px-2 py-1 rounded text-xs ${appointment.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
+                                appointment.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-gray-100 text-gray-700'
+                              }`}>
                               {appointment.status}
                             </span>
                           </td>

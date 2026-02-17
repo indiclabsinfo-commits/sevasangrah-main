@@ -63,6 +63,7 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   role: string;
+  phone: string;
   isActive: boolean;
 }
 
@@ -404,6 +405,6 @@ export const APPOINTMENT_STATUS = [
   { value: 'NO_SHOW', label: 'No Show' }
 ];
 
-// Export everything for backwards compatibility
-export * from './azure';
+// Export azureClient as default
 export default azureClient;
+

@@ -16,9 +16,10 @@ import {
     Stethoscope
 } from 'lucide-react';
 import { logger } from '../../utils/logger';
+import SupabaseHospitalService from '../../services/supabaseHospitalService';
+import type { User } from '../../services/supabaseHospitalService';
 import { announcePatient } from '../../utils/voiceAnnouncement';
 import { ElevenLabsService } from '../../services/elevenLabsService';
-import type { User } from '../../config/supabaseNew';
 import VitalsRecordingModal from './VitalsRecordingModal';
 import WalkInQueueModal from './WalkInQueueModal';
 import OPDConsultationForm from './OPDConsultationForm';
@@ -145,7 +146,7 @@ const OPDQueueManager: React.FC = () => {
         try {
             // Map frontend status to backend status
             const backendStatus = newStatus.toLowerCase() as 'waiting' | 'in_consultation' | 'completed' | 'cancelled';
-            
+
             await SupabaseHospitalService.updateOPDQueueStatus(queueId, backendStatus);
             toast.success(`Status updated to ${newStatus}`);
 
@@ -180,7 +181,7 @@ const OPDQueueManager: React.FC = () => {
             // Prepare the payload: array of { id, queue_number }
             const reorderPayload = newQueue.map((item, index) => ({
                 id: item.id,
-                queue_number: index + 1
+                order: index + 1
             }));
 
             await SupabaseHospitalService.reorderOPDQueue(reorderPayload);
@@ -398,7 +399,7 @@ const OPDQueueManager: React.FC = () => {
 
                                     {/* TAT Display */}
                                     <div className="mt-4 pt-4 border-t border-gray-100">
-                                        <TATDisplay 
+                                        <TATDisplay
                                             queueItem={item}
                                             config={{
                                                 maxWaitTime: 30,
@@ -431,7 +432,7 @@ const OPDQueueManager: React.FC = () => {
                 isOpen={showWalkInModal}
                 onClose={() => { setShowWalkInModal(false); loadQueues(); }}
                 onSuccess={loadQueues}
-                doctors={doctors}
+                doctors={doctors as any}
             />
 
             {/* Vitals Modal */}

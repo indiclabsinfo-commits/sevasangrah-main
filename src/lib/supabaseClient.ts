@@ -5,34 +5,25 @@ import { ensureSupabaseLoaded, createSupabaseClient } from '../config/supabaseCo
 
 let supabaseInstance: any = null;
 
-// Get or create Supabase client
+/**
+ * Get or create Supabase client.
+ * Returns a promise that resolves to the Supabase client instance.
+ * Use this instead of direct 'supabase' export for maximum safety and async loading.
+ */
+export let supabase: any = null;
+
 export async function getSupabase() {
   if (supabaseInstance) {
     return supabaseInstance;
   }
-  
+
   // Ensure Supabase is loaded
   await ensureSupabaseLoaded();
-  
+
   // Create client with current config
   supabaseInstance = createSupabaseClient();
-  
+  supabase = supabaseInstance; // Update the exported let
+
   console.log('✅ Supabase client initialized');
   return supabaseInstance;
-}
-
-// Export a simple object that will be replaced with real client after initialization
-export const supabase = {} as any;
-
-// Initialize on page load and replace the supabase object
-if (typeof window !== 'undefined') {
-  getSupabase().then(client => {
-    // Copy all properties from real client to our export
-    Object.keys(client).forEach(key => {
-      supabase[key] = client[key];
-    });
-    console.log('✅ Supabase export initialized');
-  }).catch(err => {
-    console.error('❌ Failed to initialize Supabase:', err);
-  });
 }

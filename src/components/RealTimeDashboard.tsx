@@ -1,8 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import QuickReportsModal from './QuickReportsModal';
+import SupabaseHospitalService from '../services/supabaseHospitalService';
 import { supabase } from '../config/supabaseNew';
-import type { DashboardStats, PatientWithRelations, FutureAppointment } from '../config/supabaseNew';
+import type { PatientWithRelations, FutureAppointment } from '../config/supabaseNew';
+
+interface DashboardStats {
+  total_patients: number;
+  total_doctors: number;
+  today_queues: number;
+  today_appointments: number;
+  revenue_today: number;
+  occupancy_rate: number;
+  // Fields used in UI but maybe missing from service
+  total_beds?: number;
+  occupied_beds?: number;
+  monthly_revenue?: number;
+  pending_admissions?: number;
+  patient_growth_rate?: number;
+  revenue_growth_rate?: number;
+}
 
 interface StatCardProps {
   title: string;
@@ -116,7 +133,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ patients, appointments 
                     <div className="text-sm font-medium">
                       {(appointment as any).patient?.first_name} {(appointment as any).patient?.last_name}
                     </div>
-                    <div className="text-xs text-gray-500">{appointment.reason}</div>
+                    <div className="text-xs text-gray-500">{appointment.notes || 'No notes'}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-medium">{appointment.appointment_time}</div>
@@ -202,16 +219,18 @@ interface RealTimeDashboardProps {
 
 const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => {
   const [stats, setStats] = useState<DashboardStats>({
-    totalPatients: 0,
-    totalDoctors: 0,
-    totalBeds: 0,
-    occupiedBeds: 0,
-    todayRevenue: 0,
-    monthlyRevenue: 0,
-    todayAppointments: 0,
-    pendingAdmissions: 0,
-    patientGrowthRate: 0,
-    revenueGrowthRate: 0
+    total_patients: 0,
+    total_doctors: 0,
+    today_queues: 0,
+    today_appointments: 0,
+    revenue_today: 0,
+    occupancy_rate: 0,
+    total_beds: 0,
+    occupied_beds: 0,
+    monthly_revenue: 0,
+    pending_admissions: 0,
+    patient_growth_rate: 0,
+    revenue_growth_rate: 0
   });
 
   const [patients, setPatients] = useState<PatientWithRelations[]>([]);
@@ -237,7 +256,6 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const today = new Date().toISOString().split('T')[0];
 
       const [
         statsData,
@@ -256,8 +274,8 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
       ]);
 
       setStats(statsData);
-      setPatients(patientsData);
-      setAppointments(appointmentsData);
+      setPatients(patientsData as any);
+      setAppointments(appointmentsData as any);
       setDailyExpenses(Array.isArray(expensesData) ? expensesData : []);
       setDailyRefunds(Array.isArray(refundsData) ? refundsData : []);
       setLastUpdate(new Date());
@@ -313,7 +331,7 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
   // Calculate financial metrics
   const todayExpenses = dailyExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const todayRefunds = Math.abs(dailyRefunds.reduce((sum, refund) => sum + refund.amount, 0));
-  const netDailyValue = stats.todayRevenue - todayExpenses - todayRefunds;
+  const netDailyValue = (stats.revenue_today || 0) - todayExpenses - todayRefunds;
 
   return (
     <div className="max-w-7xl mx-auto p-6">
@@ -340,7 +358,7 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
         <h2 className="text-xl font-semibold text-gray-800 mb-4">💰 Daily Finance Summary</h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
-            <div className="text-2xl font-bold text-green-700">₹{stats.todayRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-700">₹{(stats.revenue_today || 0).toLocaleString()}</div>
             <div className="text-green-600 text-sm">Revenue (+)</div>
           </div>
           <div className="bg-red-50 p-4 rounded-lg border-2 border-red-200">
@@ -371,30 +389,30 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Total Patients"
-          value={stats.totalPatients}
-          change={stats.patientGrowthRate}
+          value={stats.total_patients}
+          change={stats.patient_growth_rate}
           icon="👥"
           color="text-blue-700"
           bgColor="bg-blue-50"
         />
         <StatCard
           title="Today's Revenue"
-          value={`₹${stats.todayRevenue.toLocaleString()}`}
-          change={stats.revenueGrowthRate}
+          value={`₹${(stats.revenue_today || 0).toLocaleString()}`}
+          change={stats.revenue_growth_rate}
           icon="💰"
           color="text-green-700"
           bgColor="bg-green-50"
         />
         <StatCard
           title="Today's Appointments"
-          value={stats.todayAppointments}
+          value={stats.today_appointments}
           icon="📅"
           color="text-purple-700"
           bgColor="bg-purple-50"
         />
         <StatCard
           title="Available Beds"
-          value={`${stats.totalBeds - stats.occupiedBeds}/${stats.totalBeds}`}
+          value={`${(stats.total_beds || 0) - (stats.occupied_beds || 0)}/${stats.total_beds || 0}`}
           icon="🏥"
           color="text-orange-700"
           bgColor="bg-orange-50"
@@ -405,28 +423,28 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Monthly Revenue"
-          value={`₹${stats.monthlyRevenue.toLocaleString()}`}
+          value={`₹${(stats.monthly_revenue || 0).toLocaleString()}`}
           icon="📈"
           color="text-indigo-700"
           bgColor="bg-indigo-50"
         />
         <StatCard
           title="Active Doctors"
-          value={stats.totalDoctors}
+          value={stats.total_doctors}
           icon="👨‍⚕️"
           color="text-teal-700"
           bgColor="bg-teal-50"
         />
         <StatCard
           title="Pending Admissions"
-          value={stats.pendingAdmissions}
+          value={stats.pending_admissions || 0}
           icon="🏨"
           color="text-red-700"
           bgColor="bg-red-50"
         />
         <StatCard
           title="Bed Occupancy"
-          value={`${stats.totalBeds > 0 ? Math.round((stats.occupiedBeds / stats.totalBeds) * 100) : 0}%`}
+          value={`${(stats.total_beds || 0) > 0 ? Math.round(((stats.occupied_beds || 0) / (stats.total_beds || 0)) * 100) : 0}%`}
           icon="🛏️"
           color="text-yellow-700"
           bgColor="bg-yellow-50"
@@ -489,9 +507,9 @@ const RealTimeDashboard: React.FC<RealTimeDashboardProps> = ({ onNavigate }) => 
       {/* Charts and Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RevenueChart
-          dailyRevenue={stats.todayRevenue}
+          dailyRevenue={stats.revenue_today || 0}
           weeklyRevenue={weeklyRevenue}
-          monthlyRevenue={stats.monthlyRevenue}
+          monthlyRevenue={stats.monthly_revenue || 0}
         />
         <RecentActivity patients={patients} appointments={appointments} />
       </div>
