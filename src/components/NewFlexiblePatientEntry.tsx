@@ -324,30 +324,37 @@ const NewFlexiblePatientEntry: React.FC = () => {
   const selectExistingPatient = (patient: any) => {
     logger.log('🔍 selectExistingPatient called with:', patient);
 
+    // SAFETY CHECK: Ensure patient is not null/undefined
+    if (!patient) {
+      logger.error('❌ selectExistingPatient called with null/undefined patient');
+      toast.error('Patient data is missing. Please select a valid patient.');
+      return;
+    }
+
     setSelectedExistingPatient(patient);
     setIsNewVisit(true);
     setShowPatientDropdown(false);
 
-    // Auto-fill all patient details
+    // Auto-fill all patient details with safety checks
     const newFormData = {
       ...formData,
-      prefix: patient.prefix || 'Mr',
-      full_name: `${patient.first_name} ${patient.last_name}`,
-      first_name: patient.first_name,
-      last_name: patient.last_name,
-      phone: patient.phone || '',
-      email: patient.email || '',
-      date_of_birth: patient.date_of_birth || '',
-      age: patient.age || '',
-      gender: patient.gender || 'MALE',
-      address: patient.address || '',
-      blood_group: patient.blood_group || '',
-      medical_history: patient.medical_history || '',
-      allergies: patient.allergies || '',
-      current_medications: patient.current_medications || '',
-      patient_tag: patient.patient_tag || '',
-      has_reference: patient.has_reference || 'NO',
-      reference_details: patient.reference_details || '',
+      prefix: patient?.prefix || 'Mr',
+      full_name: `${patient?.first_name || ''} ${patient?.last_name || ''}`.trim(),
+      first_name: patient?.first_name || '',
+      last_name: patient?.last_name || '',
+      phone: patient?.phone || '',
+      email: patient?.email || '',
+      date_of_birth: patient?.date_of_birth || '',
+      age: patient?.age || '',
+      gender: patient?.gender || 'MALE',
+      address: patient?.address || '',
+      blood_group: patient?.blood_group || '',
+      medical_history: patient?.medical_history || '',
+      allergies: patient?.allergies || '',
+      current_medications: patient?.current_medications || '',
+      patient_tag: patient?.patient_tag || '',
+      has_reference: patient?.has_reference || 'NO',
+      reference_details: patient?.reference_details || '',
       // Keep current date of entry as the new visit date
       date_of_entry: new Date()
     };
@@ -355,7 +362,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
     logger.log('📝 Setting new form data:', newFormData);
     setFormData(newFormData);
 
-    toast.success(`Auto-filled details for ${patient.first_name} ${patient.last_name} - This will be counted as a new visit`);
+    const patientName = `${patient?.first_name || ''} ${patient?.last_name || ''}`.trim() || 'Unknown Patient';
+    toast.success(`Auto-filled details for ${patientName} - This will be counted as a new visit`);
   };
 
   // Function to clear patient selection and start fresh
@@ -1489,10 +1497,10 @@ const NewFlexiblePatientEntry: React.FC = () => {
                               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
                             >
                               <div style={{ fontSize: '14px', fontWeight: '500', color: '#333333' }}>
-                                {patient.first_name} {patient.last_name}
+                                {patient?.first_name || 'No First Name'} {patient?.last_name || ''}
                               </div>
                               <div style={{ fontSize: '12px', color: '#666666' }}>
-                                ID: {patient.patient_id} | Phone: {patient.phone}
+                                ID: {patient?.patient_id || 'N/A'} | Phone: {patient?.phone || 'No Phone'}
                               </div>
                               <div style={{ fontSize: '11px', color: '#999999' }}>
                                 Last visit: {patient.date_of_entry ? parseLocalDate(patient.date_of_entry).toLocaleDateString() : 'N/A'}
