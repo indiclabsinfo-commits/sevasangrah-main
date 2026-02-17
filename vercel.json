@@ -1,7 +1,7 @@
 {
   "buildCommand": "npm run build:vercel",
   "devCommand": "npm run dev",
-  "installCommand": "npm install",
+  "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": "dist",
   "framework": "vite",
   "regions": ["sin1"],

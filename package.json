@@ -40,7 +40,6 @@
     "html2canvas": "^1.4.1",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^3.0.3",
-    "leva": "^0.10.0",
     "lucide-react": "^0.525.0",
     "pg": "^8.16.3",
     "react": "^19.1.0",
