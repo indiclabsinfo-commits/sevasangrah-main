@@ -1,4 +1,13 @@
 {
+  "buildCommand": "npm run build:vercel",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "regions": ["sin1"],
+  "env": {
+    "NODE_OPTIONS": "--max-old-space-size=4096"
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
