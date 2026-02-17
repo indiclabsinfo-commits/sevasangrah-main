@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, User, CheckCircle, AlertCircle, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import type { User as Doctor } from '../config/supabaseNew';
 import { announcePatient } from '../utils/voiceAnnouncement';
 

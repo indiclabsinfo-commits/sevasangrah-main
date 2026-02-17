@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
 import dataService from '../services/dataService';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import type { Patient, Doctor, Department } from '../services/dataService';
 import type { PatientWithRelations, CreateTransactionData } from '../config/supabaseNew';
 

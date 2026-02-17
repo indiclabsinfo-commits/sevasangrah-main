@@ -16,7 +16,7 @@ import {
     Stethoscope
 } from 'lucide-react';
 import { logger } from '../../utils/logger';
-import SupabaseHospitalService from '../../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../../services/supabaseHospitalService';
 import type { User } from '../../services/supabaseHospitalService';
 import { announcePatient } from '../../utils/voiceAnnouncement';
 import { ElevenLabsService } from '../../services/elevenLabsService';

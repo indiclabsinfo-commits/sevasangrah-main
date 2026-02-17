@@ -1,6 +1,6 @@
 import ComingSoon from './components/ComingSoon';
 import React, { useState, useEffect } from 'react';
-import SupabaseHospitalService from './services/supabaseHospitalService';
+import { SupabaseHospitalService } from './services/supabaseHospitalService';
 import toast, { Toaster } from 'react-hot-toast';
 import { logger } from './utils/logger';
 // import './utils/smartConsoleBlocker'; // Console blocking disabled

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Bed, User, Users, Activity, AlertCircle, Plus, Clock, Play, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import type { PatientWithRelations, PatientAdmissionWithRelations, Patient } from '../config/supabaseNew';
 import { HOSPITAL_ID, supabase } from '../config/supabaseNew';
 import ProcedureConsentForm from './ProcedureConsentForm';

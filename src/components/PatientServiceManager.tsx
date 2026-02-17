@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Patient, PatientTransaction } from '../config/supabaseNew';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { DOCTOR_DEGREES } from '../data/doctorDegrees';

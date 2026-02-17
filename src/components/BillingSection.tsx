@@ -13,7 +13,7 @@ import {
 import NewIPDBillingModule from './billing/NewIPDBillingModule';
 import IPDSummaryModule from './billing/IPDSummaryModule';
 import CombinedBillingModule from './billing/CombinedBillingModule';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import { logger } from '../utils/logger';
 
 interface PatientBilling {

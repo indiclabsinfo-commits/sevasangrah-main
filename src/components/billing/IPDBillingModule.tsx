@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import toast from 'react-hot-toast';
 import { Plus, Search, Edit, Printer, Download, X, Calendar, User, Bed, Trash2, Calculator } from 'lucide-react';
-import SupabaseHospitalService from '../../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../../services/supabaseHospitalService';
 import DoctorService from '../../services/doctorService';
 import BillingService, { type IPDBill, type StaySegment, type IPDService } from '../../services/billingService';
 import type { PatientWithRelations } from '../../config/supabaseNew';

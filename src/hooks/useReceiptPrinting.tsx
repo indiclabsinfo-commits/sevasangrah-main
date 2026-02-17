@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import ReceiptTemplate from '../components/receipts/ReceiptTemplate';
 import type { ReceiptData } from '../components/receipts/ReceiptTemplate';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import { supabase } from '../config/supabaseNew';
 
 // Hook for printing receipts with proper discount handling

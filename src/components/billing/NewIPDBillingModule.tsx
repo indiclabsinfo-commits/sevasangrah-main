@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Printer, Search, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import SupabaseHospitalService from '../../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../../services/supabaseHospitalService';
 import { supabase, HOSPITAL_ID } from '../../config/supabaseNew';
 import type { PatientWithRelations } from '../../config/supabaseNew';
 import { MEDICAL_SERVICES_DATA, searchServices, type MedicalService } from '../../data/medicalServices';

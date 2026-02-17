@@ -52,7 +52,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
   const performCheck = async () => {
     try {
       setChecking(true);
-      
+
       const checkData = {
         patientId: patientData.id || 'new-patient',
         firstName: patientData.firstName,
@@ -63,18 +63,18 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
         dateOfBirth: patientData.dateOfBirth,
         gender: patientData.gender
       };
-      
+
       logger.log('🔍 Performing duplicate check:', checkData);
       const checkResult = await checkForDuplicates(checkData);
       setResult(checkResult);
-      
+
       // Callbacks
       if (checkResult.hasDuplicates && onDuplicateFound) {
         onDuplicateFound(checkResult);
       } else if (!checkResult.hasDuplicates && onNoDuplicates) {
         onNoDuplicates();
       }
-      
+
       logger.log('✅ Duplicate check completed:', checkResult);
     } catch (error) {
       logger.error('❌ Error performing duplicate check:', error);
@@ -88,7 +88,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
     if (onActionSelected) {
       onActionSelected(action);
     }
-    
+
     if (action === 'merge') {
       setShowMergeModal(true);
     }
@@ -96,7 +96,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
 
   // Toggle duplicate selection for merging
   const toggleDuplicateSelection = (patientId: string) => {
-    setSelectedDuplicates(prev => 
+    setSelectedDuplicates(prev =>
       prev.includes(patientId)
         ? prev.filter(id => id !== patientId)
         : [...prev, patientId]
@@ -186,15 +186,14 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
         </div>
       )}
 
-      {/* Results */}
-      {result && !checking && (
+      {/* Results - Only show if duplicates found */}
+      {result && !checking && (result.suggestedAction === 'block' || result.suggestedAction === 'warn') && (
         <div className="space-y-4">
           {/* Summary Card */}
-          <div className={`border rounded-lg p-4 ${
-            result.suggestedAction === 'block' ? 'bg-red-50 border-red-200' :
-            result.suggestedAction === 'warn' ? 'bg-yellow-50 border-yellow-200' :
-            'bg-green-50 border-green-200'
-          }`}>
+          <div className={`border rounded-lg p-4 ${result.suggestedAction === 'block' ? 'bg-red-50 border-red-200' :
+              result.suggestedAction === 'warn' ? 'bg-yellow-50 border-yellow-200' :
+                'bg-green-50 border-green-200'
+            }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {result.suggestedAction === 'block' ? (
@@ -207,13 +206,13 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
                 <div>
                   <h3 className="font-bold text-lg">
                     {result.suggestedAction === 'block' ? '❌ Duplicate Found!' :
-                     result.suggestedAction === 'warn' ? '⚠️ Potential Duplicate' :
-                     '✅ No Duplicates Found'}
+                      result.suggestedAction === 'warn' ? '⚠️ Potential Duplicate' :
+                        '✅ No Duplicates Found'}
                   </h3>
                   <p className="text-sm">
                     {result.suggestedAction === 'block' ? 'Exact match found. Registration blocked.' :
-                     result.suggestedAction === 'warn' ? `${result.totalMatches} potential match(es) found.` :
-                     'Patient appears to be unique.'}
+                      result.suggestedAction === 'warn' ? `${result.totalMatches} potential match(es) found.` :
+                        'Patient appears to be unique.'}
                   </p>
                 </div>
               </div>
@@ -243,7 +242,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
                 </button>
               </>
             )}
-            
+
             {result.suggestedAction === 'warn' && (
               <>
                 <button
@@ -261,7 +260,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
                 </button>
               </>
             )}
-            
+
             {result.suggestedAction === 'allow' && (
               <button
                 onClick={() => handleAction('allow')}
@@ -276,7 +275,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
           {showDetails && (result.exactMatches.length > 0 || result.potentialMatches.length > 0) && (
             <div className="space-y-3">
               <h4 className="font-medium text-gray-800">Matching Patients</h4>
-              
+
               {/* Exact Matches */}
               {result.exactMatches.length > 0 && (
                 <div>
@@ -293,7 +292,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* Potential Matches */}
               {result.potentialMatches.length > 0 && (
                 <div>
@@ -340,7 +339,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
                   <X size={24} />
                 </button>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -352,7 +351,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
                     All appointments, transactions, and medical records will be transferred.
                   </p>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Primary Patient (will keep this record)
@@ -376,7 +375,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Duplicates to Merge (will be archived)
@@ -407,7 +406,7 @@ const DuplicatePatientCheck: React.FC<DuplicatePatientCheckProps> = ({
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => setShowMergeModal(false)}
@@ -465,7 +464,7 @@ const DuplicateMatchCard: React.FC<DuplicateMatchCardProps> = ({
               {match.matchScore}% match
             </span>
           </div>
-          
+
           {!compact && (
             <div className="grid grid-cols-2 gap-2 text-sm mt-2">
               <div className="flex items-center gap-1">
@@ -490,7 +489,7 @@ const DuplicateMatchCard: React.FC<DuplicateMatchCardProps> = ({
               </div>
             </div>
           )}
-          
+
           {!compact && match.matchReasons.length > 0 && (
             <div className="mt-2">
               <p className="text-xs font-medium mb-1">Match Reasons:</p>
@@ -503,16 +502,16 @@ const DuplicateMatchCard: React.FC<DuplicateMatchCardProps> = ({
               </div>
             </div>
           )}
-          
+
           {!compact && (
             <div className="text-xs text-gray-600 mt-2">
-              Patient ID: {match.patient.id.substring(0, 8)}... • 
+              Patient ID: {match.patient.id.substring(0, 8)}... •
               Created: {formatDate(match.patient.created_at)}
               {match.patient.last_visit && ` • Last visit: ${formatDate(match.patient.last_visit)}`}
             </div>
           )}
         </div>
-        
+
         {onToggleSelect && (
           <button
             onClick={onToggleSelect}

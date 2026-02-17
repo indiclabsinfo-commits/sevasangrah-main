@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { SupabasePatientService } from '../services/supabasePatientService';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import SMSService from '../services/smsService';
 import { PatientService } from '../services/patientService';
 import { appointmentService } from '../services/appointmentService';

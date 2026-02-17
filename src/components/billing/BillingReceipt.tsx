@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import SupabaseHospitalService from '../../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../../services/supabaseHospitalService';
 import ReceiptTemplate, { type ReceiptData } from '../receipts/ReceiptTemplate';
 import { logger } from '../../utils/logger';
 

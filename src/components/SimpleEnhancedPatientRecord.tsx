@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import DoctorService from '../services/doctorService';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import * as CompletePatientRecordService from '../services/completePatientRecordService';
 import type { PatientWithRelations } from '../config/supabaseNew';
 

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency } from '@/utils';
-import SupabaseHospitalService from '../../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../../services/supabaseHospitalService';
 import { useAppointments } from '../../hooks/useAppointments';
 import { queryKeys } from '../../config/reactQuery';
 

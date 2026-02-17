@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { logger } from '../utils/logger';
-import SupabaseHospitalService from './supabaseHospitalService';
+import { SupabaseHospitalService } from './supabaseHospitalService';
 
 const HOSPITAL_ID = 'b8a8c5e2-5c4d-4a8b-9e6f-3d2c1a0b9c8d';
 

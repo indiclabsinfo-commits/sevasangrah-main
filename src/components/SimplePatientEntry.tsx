@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import { supabase } from '../config/supabaseNew';
 import type { CreatePatientData } from '../config/supabaseNew';
 import useReceiptPrinting from '../hooks/useReceiptPrinting';

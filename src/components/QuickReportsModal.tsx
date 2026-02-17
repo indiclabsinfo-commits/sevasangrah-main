@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import type { PatientWithRelations, FutureAppointment } from '../config/supabaseNew';
 
 interface QuickReportsModalProps {

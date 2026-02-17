@@ -21,7 +21,7 @@ import { dashboardService } from '../services/dashboardService';
 import { queryKeys } from '../config/reactQuery';
 import { HOSPITAL_ID } from '../config/supabaseNew';
 import bedService from '../services/bedService';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import { ExactDateService } from '../services/exactDateService';
 
 interface Props {

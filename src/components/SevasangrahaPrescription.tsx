@@ -3,7 +3,7 @@ import type { PatientWithRelations } from '../config/supabaseNew';
 import { getDoctorWithDegree } from '../data/doctorDegrees';
 import { supabase } from '../config/supabaseNew';
 import { MEDICAL_SERVICES_DATA, type MedicalService } from '../data/medicalServices';
-import SupabaseHospitalService from '../services/supabaseHospitalService';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import * as CompletePatientRecordService from '../services/completePatientRecordService';
 import MedicineDropdown from './MedicineDropdown';
 import toast from 'react-hot-toast';
