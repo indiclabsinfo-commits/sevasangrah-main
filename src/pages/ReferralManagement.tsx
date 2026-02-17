@@ -1,5 +1,6 @@
 import React from 'react';
-import ReferralSystemComplete from '../components/ReferralSystemComplete';
+// import ReferralSystemComplete from '../components/ReferralSystemComplete';
+import ReferralManagementSimple from './ReferralManagementSimple';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { BarChart3, FileText, Send, Users } from 'lucide-react';
@@ -78,7 +79,8 @@ const ReferralManagement: React.FC = () => {
         </TabsList>
         
         <TabsContent value="referrals">
-          <ReferralSystemComplete />
+          {/* <ReferralSystemComplete /> */}
+          <ReferralManagementSimple />
         </TabsContent>
         
         <TabsContent value="analytics">

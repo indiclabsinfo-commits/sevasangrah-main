@@ -89,8 +89,6 @@ const IPDBillingModule: React.FC = () => {
     'Water Bed Charges',
     'Ventilator Charges',
     'C Pap Charges',
-  const filteredPatients = patients.filter(patient =>
-      `${patient.first_name} ${patient.last_name}`.toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
       patient.patient_id.toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
       patient.phone.includes(patientSearchTerm)
     );

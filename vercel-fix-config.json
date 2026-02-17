@@ -1,0 +1,16 @@
+{
+  "buildCommand": "npm run build:vercel",
+  "installCommand": "npm ci --no-audit",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "regions": ["sin1"],
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 10
+    }
+  },
+  "env": {
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "NODE_ENV": "production"
+  }
+}

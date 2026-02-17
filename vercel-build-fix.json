@@ -1,0 +1,11 @@
+{
+  "buildCommand": "npm run build:vercel",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "outputDirectory": "dist",
+  "regions": ["sin1"],
+  "env": {
+    "NODE_OPTIONS": "--max-old-space-size=4096"
+  }
+}
