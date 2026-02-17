@@ -1154,65 +1154,44 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation Tabs - Auto-hide Section */}
-      <div
-        className="bg-white border-b border-gray-200 relative"
-        onMouseEnter={handleNavMouseEnter}
-        onMouseLeave={handleNavMouseLeave}
-      >
-        <div className="w-full">
-          {/* All Navigation Tabs in Single Row */}
-          <div
-            className={`transition-all duration-500 ease-in-out transform ${(isNavVisible || !settings.autoHideNav)
-              ? 'translate-y-0 opacity-100 max-h-20'
-              : '-translate-y-full opacity-0 max-h-0 overflow-hidden'
-              }`}
-          >
-            <nav className="flex justify-between gap-1 py-3 px-6">
-              {filteredTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    // Reset the hide timer when a tab is clicked
-                    if (navHideTimer) {
-                      clearTimeout(navHideTimer);
-                    }
-                    const timer = setTimeout(() => {
-                      setIsNavVisible(false);
-                    }, 3000);
-                    setNavHideTimer(timer);
-                  }}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${activeTab === tab.id
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-                    }`}
-                >
-                  {tab.name}
-                </button>
-              ))}
-            </nav>
-          </div>
+      {/* Main Layout with Sidebar */}
+      <div className="flex" style={{ height: 'calc(100vh - 73px)' }}>
+        {/* Vertical Sidebar Navigation */}
+        <aside className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0">
+          <nav className="py-4">
+            {filteredTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full px-6 py-3 text-left text-sm font-medium transition-colors border-l-4 ${activeTab === tab.id
+                    ? 'bg-blue-50 text-blue-700 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-transparent'
+                  }`}
+                title={tab.description}
+              >
+                <div className="flex items-center justify-between">
+                  <span>{tab.name}</span>
+                  {activeTab === tab.id && (
+                    <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                {tab.description && activeTab === tab.id && (
+                  <p className="text-xs text-gray-500 mt-1">{tab.description}</p>
+                )}
+              </button>
+            ))}
+          </nav>
+        </aside>
 
-          {/* Minimal Hover Trigger Area - Only visible when navigation is hidden AND auto-hide is enabled */}
-          {settings.autoHideNav && (
-            <div
-              className={`transition-all duration-300 ${isNavVisible ? 'h-0 opacity-0' : 'h-2 opacity-0 hover:bg-gray-100'
-                }`}
-            >
-              {/* Invisible hover area to trigger navigation */}
-            </div>
-          )}
-        </div>
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-auto bg-gray-50">
+          <ErrorBoundary>
+            {renderActiveComponent()}
+          </ErrorBoundary>
+        </main>
       </div>
-
-
-      {/* Main Content */}
-      <main className="pb-6">
-        <ErrorBoundary>
-          {renderActiveComponent()}
-        </ErrorBoundary>
-      </main>
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-4">
