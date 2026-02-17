@@ -1797,7 +1797,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
                         if (action === 'block') {
                           toast.error('Registration blocked due to duplicate patient.');
                         } else if (action === 'allow') {
-                          toast.success('No duplicates found. Registration can proceed.');
+                          // REMOVED: No toast for "No duplicates found" as requested
+                          // toast.success('No duplicates found. Registration can proceed.');
                         }
                       }}
                       autoCheck={true}
