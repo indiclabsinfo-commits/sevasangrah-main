@@ -37,6 +37,12 @@ import OPDQueueManager from './components/OPD/OPDQueueManager';
 import { Login } from './pages/Login/Login'; // Import 3D Login component
 // import RemoveTriggerComponent from './components/RemoveTriggerComponent'; // Not needed - backend issue
 import TransactionDateDebugger from './components/TransactionDateDebugger'; // Temporary debugger
+import ReferralManagementSimple from './pages/ReferralManagementSimple';
+import TeleconsultAppointment from './components/TeleconsultAppointment';
+import WaitingHallDisplay from './components/WaitingHallDisplay';
+import PrintScheduleSimple from './components/PrintScheduleSimple';
+import SelfRegistrationKiosk from './components/SelfRegistrationKiosk';
+import ExternalAppointmentCapture from './components/ExternalAppointmentCapture';
 
 // Login Component - Replaced with 3D animated version from ./pages/Login/Login
 // The old LoginPage component has been commented out and replaced with the imported Login component
@@ -953,6 +959,48 @@ const App: React.FC = () => {
       component: HRMManagement,
       description: 'Manage hospital staff, attendance, leaves, and payroll',
       permission: 'access_hrm'
+    },
+    {
+      id: 'referral-management',
+      name: '📤 Referral Management',
+      component: ReferralManagementSimple,
+      description: 'Manage internal and external patient referrals',
+      permission: 'read_patients'
+    },
+    {
+      id: 'teleconsult',
+      name: '📹 Teleconsult',
+      component: TeleconsultAppointment,
+      description: 'Physical and virtual consultation appointments',
+      permission: 'read_appointments'
+    },
+    {
+      id: 'waiting-hall',
+      name: '🎫 Waiting Hall',
+      component: WaitingHallDisplay,
+      description: 'Public display for waiting patients and token system',
+      permission: 'read_patients'
+    },
+    {
+      id: 'print-schedule',
+      name: '🖨️ Print Schedule',
+      component: PrintScheduleSimple,
+      description: 'Print and export practitioner schedules',
+      permission: 'read_appointments'
+    },
+    {
+      id: 'self-registration',
+      name: '🖥️ Self Registration',
+      component: SelfRegistrationKiosk,
+      description: 'Patient self-service registration kiosk',
+      permission: 'create_patients'
+    },
+    {
+      id: 'external-appointments',
+      name: '🌐 External Appointments',
+      component: ExternalAppointmentCapture,
+      description: 'Capture appointments from external booking systems',
+      permission: 'read_appointments'
     }
   ];
 
