@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import dataService from '../services/dataService';
 import PatientService from '../services/patientService';
-import SupabasePatientService from '../services/supabasePatientService';
+import { SupabasePatientService } from '../services/supabasePatientService';
 import type { Patient, PatientTransaction, Gender, PaymentMode } from '../types/index';
 
 const FlexiblePatientEntry: React.FC = () => {

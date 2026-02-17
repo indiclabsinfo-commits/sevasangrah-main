@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import SupabasePatientService from '../services/supabasePatientService';
+import { SupabasePatientService } from '../services/supabasePatientService';
 import EmailService from '../services/emailService';
 import { ExactDateService } from '../services/exactDateService';
 import type { PatientWithRelations } from '../config/supabaseNew';

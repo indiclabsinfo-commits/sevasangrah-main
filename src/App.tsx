@@ -1,9 +1,10 @@
 import ComingSoon from './components/ComingSoon';
 import React, { useState, useEffect } from 'react';
+import SupabaseHospitalService from './services/supabaseHospitalService';
 import toast, { Toaster } from 'react-hot-toast';
 import { logger } from './utils/logger';
 // import './utils/smartConsoleBlocker'; // Console blocking disabled
-import './utils/safeFilter'; // Safe array filter patch
+import './utils/arraySafety'; // Safe array patches
 import EmailService from './services/emailService';
 import { ExactDateService } from './services/exactDateService';
 import type { User } from './config/supabaseNew';
@@ -1000,7 +1001,6 @@ const App: React.FC = () => {
     {
       id: 'external-appointments',
       name: '🌐 External Appointments',
-      component: ComingSoon,
       component: () => <div className="p-8">External Appointment Capture - Coming Soon</div>,
       description: 'Capture appointments from external booking systems',
       permission: 'read_appointments'
@@ -1022,7 +1022,7 @@ const App: React.FC = () => {
     } else if (activeTab === 'patient-list') {
       return <ComprehensivePatientList onNavigate={setActiveTab} />;
     } else if (activeTab === 'operations') {
-      return <OperationsLedger onNavigate={setActiveTab} />;
+      return <OperationsLedger />;
     } else if (activeTab === 'audit-log') {
       return <AdminAuditLog />;
     }

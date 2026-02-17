@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import SupabasePatientService from '../services/supabasePatientService';
+import { SupabasePatientService } from '../services/supabasePatientService';
 import SupabaseHospitalService from '../services/supabaseHospitalService';
 import SMSService from '../services/smsService';
 import { PatientService } from '../services/patientService';
@@ -1324,16 +1324,16 @@ const NewFlexiblePatientEntry: React.FC = () => {
                       patientName={`${formData.first_name} ${formData.last_name}`}
                       existingPhotoUrl={formData.photo_url || undefined}
                       onPhotoUploaded={(photoData) => {
-                        setFormData({ 
-                          ...formData, 
+                        setFormData({
+                          ...formData,
                           photo_url: photoData.photo_url,
                           photo_thumbnail_url: photoData.photo_thumbnail_url
                         });
                         toast.success('Patient photo uploaded successfully!');
                       }}
                       onPhotoRemoved={() => {
-                        setFormData({ 
-                          ...formData, 
+                        setFormData({
+                          ...formData,
                           photo_url: null,
                           photo_thumbnail_url: null
                         });
