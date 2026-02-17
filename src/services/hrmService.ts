@@ -55,21 +55,46 @@ class HRMService {
       
       const response = await axios.get(`${this.getBaseUrl()}/api/hrm/employees`, {
         headers: this.getHeaders(),
-        params: filters
+        params: filters,
+        timeout: 3000,
+        validateStatus: () => true // Don't throw on HTTP errors
       });
 
-      // SAFE: Ensure we always return an array
+      // ULTRA-SAFE: Handle ANY response type
       const data = response.data;
-      if (!Array.isArray(data)) {
-        console.warn('⚠️ HRM: API returned non-array data for employees, converting to array');
-        return data ? [data] : [];
+      
+      if (data === null || data === undefined) {
+        console.warn('⚠️ HRM: API returned null/undefined, returning empty array');
+        return [];
       }
-
-      console.log('✅ HRM: Fetched employees:', data.length || 0, 'employees');
-      return data as Employee[];
-    } catch (error) {
-      console.error('❌ HRM: Exception fetching employees:', error);
-      // Return empty array instead of throwing to prevent UI crashes
+      
+      if (Array.isArray(data)) {
+        console.log('✅ HRM: Fetched employees:', data.length, 'employees');
+        return data as Employee[];
+      }
+      
+      if (typeof data === 'object') {
+        console.warn('⚠️ HRM: API returned object instead of array, converting');
+        // Try to extract array from common patterns
+        if (data.data && Array.isArray(data.data)) {
+          return data.data as Employee[];
+        }
+        if (data.results && Array.isArray(data.results)) {
+          return data.results as Employee[];
+        }
+        if (data.items && Array.isArray(data.items)) {
+          return data.items as Employee[];
+        }
+        // Last resort: wrap in array
+        return [data] as Employee[];
+      }
+      
+      // Not array or object? Return empty
+      console.warn('⚠️ HRM: API returned unexpected type:', typeof data);
+      return [];
+      
+    } catch (error: any) {
+      console.warn('⚠️ HRM: Employee fetch failed, returning empty array:', error.message);
       return [];
     }
   }

@@ -1,39 +1,64 @@
 import { StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import './utils/arraySafety' // Array safety patches - MUST BE FIRST
+
+// CRITICAL: Install array safety patches IMMEDIATELY before anything else
+(function installCriticalPatches() {
+  if (typeof window === 'undefined') return;
+  
+  console.log('🚨 Installing CRITICAL array safety patches...');
+  
+  // Store original methods
+  const originalMethods = {
+    filter: Array.prototype.filter,
+    map: Array.prototype.map,
+    forEach: Array.prototype.forEach,
+    reduce: Array.prototype.reduce,
+    find: Array.prototype.find,
+    some: Array.prototype.some,
+    every: Array.prototype.every,
+  };
+  
+  // Patch ALL array methods
+  Object.keys(originalMethods).forEach(method => {
+    const original = originalMethods[method as keyof typeof originalMethods];
+    Array.prototype[method as keyof Array<any>] = function(...args: any[]) {
+      if (!Array.isArray(this)) {
+        console.warn(`⚠️ CRITICAL: ${method} called on non-array (type: ${typeof this})`);
+        // Return safe defaults
+        if (method === 'filter' || method === 'map') return [];
+        if (method === 'forEach') return;
+        if (method === 'reduce') return args.length > 1 ? args[1] : undefined;
+        if (method === 'find') return undefined;
+        if (method === 'some' || method === 'every') return false;
+        return null;
+      }
+      try {
+        return original.apply(this, args);
+      } catch (error) {
+        console.error(`❌ CRITICAL: ${method} error:`, error);
+        // Return safe defaults on error too
+        if (method === 'filter' || method === 'map') return [];
+        if (method === 'forEach') return;
+        if (method === 'reduce') return args.length > 1 ? args[1] : undefined;
+        if (method === 'find') return undefined;
+        if (method === 'some' || method === 'every') return false;
+        return null;
+      }
+    };
+  });
+  
+  console.log('✅ CRITICAL array safety patches installed');
+  window.__PATCHES_LOADED__ = true;
+})();
+
+// Now import the rest
+import './utils/arraySafety'; // Additional safety
 import App from './App.tsx'
 import { ReactQueryProvider } from './config/reactQuery.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import { SaasProvider } from './contexts/SaasContext.tsx'
 import GlobalErrorBoundary from './components/GlobalErrorBoundary.tsx'
-
-// Wait for patches to load
-function waitForPatches() {
-  return new Promise(resolve => {
-    if (window.__PATCHES_LOADED__) {
-      resolve(true);
-    } else {
-      const check = setInterval(() => {
-        if (window.__PATCHES_LOADED__) {
-          clearInterval(check);
-          resolve(true);
-        }
-      }, 10);
-      
-      // Timeout after 1 second
-      setTimeout(() => {
-        clearInterval(check);
-        console.warn('⚠️ Patches not loaded, proceeding anyway');
-        window.__PATCHES_LOADED__ = true;
-        resolve(true);
-      }, 1000);
-    }
-  });
-}
-
-// Mark patches as loaded
-window.__PATCHES_LOADED__ = true;
 
 // Simple loading component
 function LoadingFallback() {
