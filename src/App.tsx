@@ -40,10 +40,10 @@ import { Login } from './pages/Login/Login'; // Import 3D Login component
 // import RemoveTriggerComponent from './components/RemoveTriggerComponent'; // Not needed - backend issue
 import TransactionDateDebugger from './components/TransactionDateDebugger'; // Temporary debugger
 import ReferralManagementSimple from './pages/ReferralManagementSimple';
-import TeleconsultAppointment from './components/TeleconsultAppointment';
-import WaitingHallDisplay from './components/WaitingHallDisplay';
-import PrintScheduleSimple from './components/PrintScheduleSimple';
-import SelfRegistrationKiosk from './components/SelfRegistrationKiosk';
+// import TeleconsultAppointment from './components/TeleconsultAppointment';
+// import WaitingHallDisplay from './components/WaitingHallDisplay';
+// import PrintScheduleSimple from './components/PrintScheduleSimple';
+// import SelfRegistrationKiosk from './components/SelfRegistrationKiosk';
 // import ExternalAppointmentCapture from './components/ExternalAppointmentCapture';
 
 // Login Component - Replaced with 3D animated version from ./pages/Login/Login
