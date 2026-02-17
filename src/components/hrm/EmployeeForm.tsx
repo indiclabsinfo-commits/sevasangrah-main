@@ -163,8 +163,15 @@ const EmployeeForm: React.FC<Props> = ({ employeeId, onClose, onSuccess }) => {
         if (formData.pan_card_number && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.pan_card_number)) {
           newErrors.pan_card_number = 'Invalid PAN format (e.g., ABCDE1234F)';
         }
-        if (formData.aadhaar_number && !/^\d{12}$/.test(formData.aadhaar_number)) {
-          newErrors.aadhaar_number = 'Aadhaar must be 12 digits';
+        if (formData.aadhaar_number) {
+          // Remove spaces and dashes for validation
+          const cleanAadhaar = formData.aadhaar_number.replace(/[\s-]/g, '');
+          if (!/^\d{12}$/.test(cleanAadhaar)) {
+            newErrors.aadhaar_number = 'Aadhaar number must be exactly 12 digits';
+          } else {
+            // Update with clean version
+            formData.aadhaar_number = cleanAadhaar;
+          }
         }
       }
       if (formData.job_title.toLowerCase().includes('doctor') || formData.job_title.toLowerCase().includes('nurse')) {
