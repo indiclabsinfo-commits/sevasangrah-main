@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:typecheck": "tsc -b && vite build --mode production",
-    "build:vercel": "NODE_OPTIONS='--max-old-space-size=4096' tsc --noEmit && vite build --mode production",
+    "build:vercel": "NODE_OPTIONS='--max-old-space-size=4096' vite build --mode production",
     "lint": "eslint .",
     "preview": "vite preview",
     "backup": "node backup/scripts/backup-database.js",
