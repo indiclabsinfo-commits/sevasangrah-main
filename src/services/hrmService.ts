@@ -58,11 +58,19 @@ class HRMService {
         params: filters
       });
 
-      console.log('✅ HRM: Fetched employees:', response.data?.length || 0, 'employees');
-      return response.data as Employee[];
+      // SAFE: Ensure we always return an array
+      const data = response.data;
+      if (!Array.isArray(data)) {
+        console.warn('⚠️ HRM: API returned non-array data for employees, converting to array');
+        return data ? [data] : [];
+      }
+
+      console.log('✅ HRM: Fetched employees:', data.length || 0, 'employees');
+      return data as Employee[];
     } catch (error) {
       console.error('❌ HRM: Exception fetching employees:', error);
-      throw error;
+      // Return empty array instead of throwing to prevent UI crashes
+      return [];
     }
   }
 
