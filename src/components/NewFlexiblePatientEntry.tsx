@@ -210,6 +210,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
 
   const [tempDepartment, setTempDepartment] = useState('');
   const [tempDoctor, setTempDoctor] = useState('');
+  const [selectedDoctors, setSelectedDoctors] = useState<any[]>([]);
 
   // Filter doctors based on available data and department selection
   const filteredDoctors = useMemo(() => {
