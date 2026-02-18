@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -207,10 +207,34 @@ const NewFlexiblePatientEntry: React.FC = () => {
   const [dbDoctors, setDbDoctors] = useState<any[]>([]); // New state for DB doctors
   const [nextUhid, setNextUhid] = useState<string>(''); // UHID preview for new patients
   const [uhidLoading, setUhidLoading] = useState(false);
-  const [filteredDoctors, setFilteredDoctors] = useState(DOCTORS_DATA);
-  const [selectedDoctors, setSelectedDoctors] = useState<any[]>([]);
+
   const [tempDepartment, setTempDepartment] = useState('');
   const [tempDoctor, setTempDoctor] = useState('');
+
+  // Filter doctors based on available data and department selection
+  const filteredDoctors = useMemo(() => {
+    // 1. Determine Source
+    // Map dbDoctors to match DOCTORS_DATA shape if needed, or use as is
+    const source = dbDoctors.length > 0 ? dbDoctors.map(d => ({
+      ...d,
+      name: d.name || `${d.first_name} ${d.last_name}`,
+      department: d.department || d.specialization || 'General',
+      // Ensure consultation_fee is present if possible, else 0 or undefined
+      consultation_fee: d.consultation_fee || 0
+    })) : DOCTORS_DATA;
+
+    let result = source;
+
+    // 2. Filter by Department
+    // Check both main form department and temp department (used in some flows)
+    const activeDept = formData.selected_department || tempDepartment;
+
+    if (activeDept && activeDept !== 'CUSTOM') {
+      result = result.filter(doc => doc.department === activeDept);
+    }
+
+    return result;
+  }, [dbDoctors, formData.selected_department, tempDepartment]);
   const [showCustomDepartment, setShowCustomDepartment] = useState(false);
   const [showCustomDoctor, setShowCustomDoctor] = useState(false);
   const [customDepartment, setCustomDepartment] = useState('');
@@ -513,29 +537,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
     }
   }, [formData.existing_patient_search, existingPatients]);
 
-  // Filter doctors when department changes
-  useEffect(() => {
-    if (formData.selected_department) {
-      const filtered = DOCTORS_DATA.filter(doc =>
-        doc.department === formData.selected_department
-      );
-      setFilteredDoctors(filtered);
-    } else {
-      setFilteredDoctors(DOCTORS_DATA);
-    }
-  }, [formData.selected_department]);
+  // Filter doctors logic moved to useMemo (filteredDoctors)
 
-  // Filter temp doctors for multiple selection
-  useEffect(() => {
-    if (tempDepartment) {
-      const filtered = DOCTORS_DATA.filter(doc =>
-        doc.department === tempDepartment
-      );
-      setFilteredDoctors(filtered);
-    } else {
-      setFilteredDoctors(DOCTORS_DATA);
-    }
-  }, [tempDepartment]);
 
   // Auto-select RGHS payment mode if patient tag is RGHS
   useEffect(() => {
@@ -1729,16 +1732,18 @@ const NewFlexiblePatientEntry: React.FC = () => {
                     type="text"
                     value={formData.aadhaar_number}
                     onChange={(e) => {
-                      // Only allow digits, max 12 characters
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 12);
-                      setFormData({ ...formData, aadhaar_number: value });
+                      // Allow spaces and dashes, max 14 chars
+                      const value = e.target.value;
+                      if (/^[\d\s-]*$/.test(value) && value.length <= 14) {
+                        setFormData({ ...formData, aadhaar_number: value });
+                      }
                     }}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
                       borderRadius: '8px',
-                      border: `1px solid ${formData.aadhaar_number.length === 12
-                        ? (validateAadhaarFormat(formData.aadhaar_number) ? '#22C55E' : '#EF4444')
+                      border: `1px solid ${formData.aadhaar_number
+                        ? (validateAadhaarFormat(formData.aadhaar_number) ? '#22C55E' : (formData.aadhaar_number.replace(/[\s-]/g, '').length === 12 ? '#EF4444' : '#CCCCCC'))
                         : '#CCCCCC'}`,
                       fontSize: '16px',
                       color: '#333333',
@@ -1746,36 +1751,31 @@ const NewFlexiblePatientEntry: React.FC = () => {
                       fontFamily: 'monospace',
                       letterSpacing: '1px'
                     }}
-                    placeholder="Enter 12-digit Aadhaar number"
-                    maxLength={12}
+                    placeholder="0000 0000 0000"
+                    maxLength={14}
                     onFocus={(e) => e.currentTarget.style.borderColor = '#0056B3'}
                     onBlur={(e) => {
-                      if (formData.aadhaar_number.length === 12) {
-                        e.currentTarget.style.borderColor = validateAadhaarFormat(formData.aadhaar_number) ? '#22C55E' : '#EF4444';
+                      const isValid = validateAadhaarFormat(formData.aadhaar_number);
+                      if (isValid) {
+                        e.currentTarget.style.borderColor = '#22C55E';
+                      } else if (formData.aadhaar_number && formData.aadhaar_number.replace(/[\s-]/g, '').length >= 12) {
+                        e.currentTarget.style.borderColor = '#EF4444';
                       } else {
                         e.currentTarget.style.borderColor = '#CCCCCC';
                       }
                     }}
                   />
-                  {/* Display masked Aadhaar after entry */}
-                  {formData.aadhaar_number.length === 12 && (
+                  {/* Display validation status */}
+                  {formData.aadhaar_number && (
                     <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{
                         fontSize: '14px',
-                        color: validateAadhaarFormat(formData.aadhaar_number) ? '#22C55E' : '#EF4444',
+                        color: validateAadhaarFormat(formData.aadhaar_number) ? '#22C55E' : (formData.aadhaar_number.replace(/[\s-]/g, '').length === 12 ? '#EF4444' : '#666'),
                         fontWeight: '500'
                       }}>
-                        {validateAadhaarFormat(formData.aadhaar_number) ? '✓ Valid format' : '✗ Invalid Aadhaar number'}
-                      </span>
-                      <span style={{ fontSize: '13px', color: '#666', fontFamily: 'monospace' }}>
-                        Display: XXXX-XXXX-{formData.aadhaar_number.slice(-4)}
+                        {validateAadhaarFormat(formData.aadhaar_number) ? '✓ Valid format' : (formData.aadhaar_number.replace(/[\s-]/g, '').length === 12 ? '✗ Invalid Aadhaar number' : '')}
                       </span>
                     </div>
-                  )}
-                  {formData.aadhaar_number.length > 0 && formData.aadhaar_number.length < 12 && (
-                    <span style={{ fontSize: '12px', color: '#F59E0B', marginTop: '4px', display: 'block' }}>
-                      {12 - formData.aadhaar_number.length} more digits required
-                    </span>
                   )}
                 </div>
 

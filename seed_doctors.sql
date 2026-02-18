@@ -1,0 +1,20 @@
+
+-- Insert doctors into the doctors table
+-- Run this in the Supabase SQL Editor
+
+INSERT INTO doctors (name, department, specialization, is_active)
+VALUES
+  ('DR. HEMANT KHAJJA', 'ORTHOPAEDIC', 'ORTHOPAEDIC', true),
+  ('DR. HEMANT', 'ORTHO', 'ORTHO', true),
+  ('DR. LALITA SUWALKA', 'DIETICIAN', 'DIETICIAN', true),
+  ('DR. MILIND KIRIT AKHANI', 'GASTRO', 'GASTRO', true),
+  ('DR MEETU BABLE', 'GYN.', 'GYN.', true),
+  ('DR. AMIT PATANVADIYA', 'NEUROLOGY', 'NEUROLOGY', true),
+  ('DR. KISHAN PATEL', 'UROLOGY', 'UROLOGY', true),
+  ('DR. PARTH SHAH', 'SURGICAL ONCOLOGY', 'SURGICAL ONCOLOGY', true),
+  ('DR.RAJEEDP GUPTA', 'MEDICAL ONCOLOGY', 'MEDICAL ONCOLOGY', true),
+  ('DR. KULDDEP VALA', 'NEUROSURGERY', 'NEUROSURGERY', true),
+  ('DR. KURNAL PATEL', 'UROLOGY', 'UROLOGY', true),
+  ('DR. SAURABH GUPTA', 'ENDOCRINOLOGY', 'ENDOCRINOLOGY', true),
+  ('DR. BATUL PEEPAWALA', 'GENERAL PHYSICIAN', 'GENERAL PHYSICIAN', true),
+  ('DR. POONAM JAIN', 'PHYSIOTHERAPY', 'PHYSIOTHERAPY', true);

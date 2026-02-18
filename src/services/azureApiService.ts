@@ -296,34 +296,44 @@ export const userService = {
 // UHID Service - Direct Supabase Integration
 export const uhidService = {
   async getConfig(hospitalId?: string) {
+    // Ensure Supabase is initialized
+    const { getSupabase } = await import('../lib/supabaseClient');
+    const supabase = await getSupabase();
+
     const { data, error } = await supabase
       .from('uhid_config')
       .select('*')
       .eq('hospital_id', hospitalId || '550e8400-e29b-41d4-a716-446655440000')
       .single();
-    
+
     if (error) {
       console.error('Error fetching UHID config:', error);
       throw error;
     }
-    
+
     return data;
   },
 
   async generateUhid(hospitalId?: string) {
+    const { getSupabase } = await import('../lib/supabaseClient');
+    const supabase = await getSupabase();
+
     const { data, error } = await supabase.rpc('generate_uhid', {
       p_hospital_id: hospitalId || '550e8400-e29b-41d4-a716-446655440000'
     });
-    
+
     if (error) {
       console.error('Error generating UHID:', error);
       throw error;
     }
-    
+
     return { uhid: data };
   },
 
   async updateConfig(config: { prefix?: string; year_format?: string; hospital_id?: string }) {
+    const { getSupabase } = await import('../lib/supabaseClient');
+    const supabase = await getSupabase();
+
     const { data, error } = await supabase
       .from('uhid_config')
       .update({
@@ -334,12 +344,12 @@ export const uhidService = {
       .eq('hospital_id', config.hospital_id || '550e8400-e29b-41d4-a716-446655440000')
       .select()
       .single();
-    
+
     if (error) {
       console.error('Error updating UHID config:', error);
       throw error;
     }
-    
+
     return data;
   },
 
@@ -350,7 +360,7 @@ export const uhidService = {
       const year = new Date().getFullYear();
       const nextSequence = config.current_sequence + 1;
       const nextUhid = `${config.prefix}-${year}-${nextSequence.toString().padStart(6, '0')}`;
-      
+
       return { next_uhid: nextUhid, sequence: nextSequence };
     } catch (error) {
       console.error('Error getting next UHID:', error);

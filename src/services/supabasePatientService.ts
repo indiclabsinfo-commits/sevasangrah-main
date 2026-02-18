@@ -80,13 +80,14 @@ export class SupabasePatientService {
 
             // Generate patient ID
             const patient_id = await this.generatePatientId();
-            
+
             // Generate UHID if not provided
             let uhid = patientData.uhid;
             if (!uhid) {
                 console.log('🔄 Generating UHID for new patient...');
                 try {
                     const uhidResult = await uhidService.generateUhid(patientData.hospital_id);
+                    console.log('✅ uhidService returned:', uhidResult); // Log result
                     uhid = uhidResult.uhid;
                     console.log('✅ Generated UHID:', uhid);
                 } catch (uhidError) {
@@ -136,12 +137,16 @@ export class SupabasePatientService {
             console.log('📤 Inserting into Supabase:', supabaseData);
 
             // Insert into Supabase
+            console.log('🔄 Getting Supabase client...'); // Log
             const supabaseClient = await getSupabase();
+            console.log('✅ Got Supabase client, inserting data...'); // Log
+
             const { data, error } = await supabaseClient
                 .from('patients')
                 .insert([supabaseData])
                 .select()
                 .single();
+
 
             if (error) {
                 console.error('❌ Supabase insert error:', error);
@@ -193,5 +198,67 @@ export class SupabasePatientService {
         }
     }
 
-    // Other methods would need similar fixes...
+
+    static async createTransaction(transactionData: any): Promise<any> {
+        try {
+            const supabaseClient = await getSupabase();
+            const { data, error } = await supabaseClient
+                .from('transactions')
+                .insert([transactionData])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        } catch (error: any) {
+            console.error('Error creating transaction:', error);
+            throw new Error(`Failed to create transaction: ${error.message}`);
+        }
+    }
+
+    static async addToOPDQueue(queueData: any): Promise<any> {
+        try {
+            const supabaseClient = await getSupabase();
+            const { data, error } = await supabaseClient
+                .from('opd_queue')
+                .insert([queueData])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        } catch (error: any) {
+            console.error('Error adding to OPD queue:', error);
+            throw new Error(`Failed to add to queue: ${error.message}`);
+        }
+    }
+
+    static async getDoctors(): Promise<any[]> {
+        const supabaseClient = await getSupabase();
+        const { data, error } = await supabaseClient
+            .from('doctors')
+            .select('*')
+            .eq('is_active', true);
+
+        if (error) {
+            console.error('Error fetching doctors:', error);
+            return [];
+        }
+        return data || [];
+    }
+
+    static async getAllPatients(): Promise<any[]> {
+        const supabaseClient = await getSupabase();
+        const { data, error } = await supabaseClient
+            .from('patients')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) {
+            console.error('Error fetching patients:', error);
+            return [];
+        }
+        return data || [];
+    }
 }
