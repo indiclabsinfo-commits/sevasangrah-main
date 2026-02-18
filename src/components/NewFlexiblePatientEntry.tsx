@@ -46,8 +46,20 @@ const DOCTORS_DATA = [
 const DEPARTMENTS = [...new Set(DOCTORS_DATA.map(doc => doc.department))].sort();
 
 // Aadhaar Verhoeff validation
-const validateAadhaarFormat = (aadhaar: string): boolean => {
-  if (!aadhaar || aadhaar.length !== 12 || !/^\d{12}$/.test(aadhaar)) {
+//  Returns: true if valid, false if invalid, null if incomplete
+const validateAadhaarFormat = (aadhaarInput: string): boolean | null => {
+  if (!aadhaarInput) return null;
+
+  // Remove spaces and dashes
+  const aadhaar = aadhaarInput.replace(/[\s-]/g, '');
+
+  // If less than 12 digits, return null (neutral - not yet validated)
+  if (aadhaar.length < 12) {
+    return null;
+  }
+
+  // If more than 12 digits or contains non-digits, return false (invalid)
+  if (aadhaar.length !== 12 || !/^\d{12}$/.test(aadhaar)) {
     return false;
   }
 
