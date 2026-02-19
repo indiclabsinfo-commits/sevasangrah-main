@@ -1,5 +1,6 @@
 // Supabase Configuration - Zero Backend Architecture
-// Uses npm package @supabase/supabase-js directly (no CDN needed)
+// Uses VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from environment variables
+// Falls back to hardcoded values if env vars are not set
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
@@ -9,45 +10,28 @@ export interface SupabaseConfig {
   projectName?: string;
 }
 
-// Available configurations
-export const SUPABASE_CONFIGS: Record<string, SupabaseConfig> = {
-  // Magnus Hospital (Production)
-  magnus: {
-    url: 'https://plkbxjedbjpmbfrekmrr.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM',
-    projectName: 'Magnus Hospital'
-  },
+// Get configuration from environment variables (set in .env or Vercel)
+function getEnvConfig(): SupabaseConfig {
+  const url = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
-  // Demo Client A
-  demoA: {
-    url: 'https://plkbxjedbjpmbfrekmrr.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM',
-    projectName: 'Demo Client A'
-  },
+  // Extract project name from URL
+  const projectMatch = url.match(/https:\/\/([^.]+)\.supabase\.co/);
+  const projectName = projectMatch ? projectMatch[1] : 'Unknown';
 
-  // Demo Client B  
-  demoB: {
-    url: 'https://plkbxjedbjpmbfrekmrr.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM',
-    projectName: 'Demo Client B'
-  }
-};
+  return { url, anonKey, projectName };
+}
 
-// Get current configuration based on URL parameter
+// Get current configuration
 export function getCurrentConfig(): SupabaseConfig {
-  if (typeof window !== 'undefined') {
-    const urlParams = new URLSearchParams(window.location.search);
-    const client = urlParams.get('client') || 'magnus';
-    return SUPABASE_CONFIGS[client] || SUPABASE_CONFIGS.magnus;
-  }
-  return SUPABASE_CONFIGS.magnus;
+  return getEnvConfig();
 }
 
 // Create Supabase client with current config (uses npm package directly)
 export function createSupabaseClient(): SupabaseClient {
   const config = getCurrentConfig();
 
-  console.log(`🔧 Using Supabase project: ${config.projectName || 'Unknown'}`);
+  console.log(`🔧 Using Supabase project: ${config.projectName} (${config.url})`);
 
   return createClient(config.url, config.anonKey);
 }
@@ -59,6 +43,5 @@ export function isSupabaseAvailable(): boolean {
 
 // No-op for backward compatibility (npm package is always available)
 export async function ensureSupabaseLoaded(): Promise<void> {
-  // No-op: @supabase/supabase-js is bundled via npm, no CDN loading needed
   return;
 }
