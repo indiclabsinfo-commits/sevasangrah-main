@@ -143,37 +143,51 @@ export class SupabasePatientService {
 
             console.log('📤 Inserting into Supabase:', supabaseData);
 
-            // Insert into Supabase
+            // Insert into Supabase using raw fetch (bypasses supabase-js internal TypeError)
             let data, error;
             try {
-                console.log('🔄 Getting Supabase client...');
-                const supabaseClient = await getSupabase();
-                console.log('✅ Got Supabase client, inserting data...');
+                const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
+                const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
+
+                console.log('🔄 Inserting patient via REST API...');
                 console.log('📋 Insert data keys:', Object.keys(supabaseData));
+                console.log('🔗 Supabase URL:', supabaseUrl);
 
-                // Insert first (without .select().single() which crashes on error responses)
-                const insertResult = await supabaseClient
-                    .from('patients')
-                    .insert([supabaseData]);
+                // Direct REST API call for INSERT
+                const insertResponse = await fetch(`${supabaseUrl}/rest/v1/patients`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(supabaseData)
+                });
 
-                if (insertResult.error) {
-                    console.error('❌ Insert error:', insertResult.error);
-                    throw new Error(`Insert failed: ${insertResult.error.message || insertResult.error.details || JSON.stringify(insertResult.error)}`);
+                const responseText = await insertResponse.text();
+                console.log('📥 Insert response status:', insertResponse.status);
+                console.log('📥 Insert response body:', responseText);
+
+                if (!insertResponse.ok) {
+                    console.error('❌ Insert failed with status:', insertResponse.status);
+                    console.error('❌ Response body:', responseText);
+                    let errorMsg = `HTTP ${insertResponse.status}`;
+                    try {
+                        const errorJson = JSON.parse(responseText);
+                        errorMsg = errorJson.message || errorJson.details || errorJson.hint || responseText;
+                    } catch { errorMsg = responseText; }
+                    throw new Error(`Insert failed (${insertResponse.status}): ${errorMsg}`);
                 }
 
-                console.log('✅ Insert successful, fetching created patient...');
+                // Parse successful response
+                const insertedData = JSON.parse(responseText);
+                data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
+                error = null;
+                console.log('✅ Insert successful! Patient ID:', data?.patient_id);
 
-                // Now fetch the created patient
-                const selectResult = await supabaseClient
-                    .from('patients')
-                    .select('*')
-                    .eq('patient_id', patient_id)
-                    .single();
-
-                data = selectResult.data;
-                error = selectResult.error;
             } catch (dbError: any) {
-                console.error('❌ Supabase Client/Insert Error:', dbError);
+                console.error('❌ Database Insert Error:', dbError);
                 throw new Error(`Database Insert Failed: ${dbError.message}`);
             }
 
