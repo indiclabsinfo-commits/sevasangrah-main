@@ -29,6 +29,9 @@ export interface Patient {
   blood_group?: string;
   notes?: string;
   is_active: boolean;
+  assigned_doctor?: string;
+  assigned_department?: string;
+  ipd_status?: 'OPD' | 'ADMITTED' | 'DISCHARGED';
   created_at: string;
   updated_at: string;
   created_by: string;
@@ -62,6 +65,7 @@ export interface PatientTransaction {
   created_at: string;
   discount_type?: 'PERCENTAGE' | 'AMOUNT';
   discount_value?: number;
+  patients?: Patient;
 }
 
 export interface PatientAdmission {

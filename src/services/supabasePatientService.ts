@@ -371,4 +371,35 @@ export class SupabasePatientService {
             throw new Error(`Failed to update patient: ${error.message}`);
         }
     }
+    static async deletePatient(id: string): Promise<void> {
+        try {
+            console.log('🗑️ Deleting patient:', id);
+            const supabaseClient = await getSupabase();
+            const { error } = await supabaseClient
+                .from('patients')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (error: any) {
+            console.error('Error deleting patient:', error);
+            throw new Error(`Failed to delete patient: ${error.message}`);
+        }
+    }
+
+    static async deleteTransaction(id: string): Promise<void> {
+        try {
+            console.log('🗑️ Deleting transaction:', id);
+            const supabaseClient = await getSupabase();
+            const { error } = await supabaseClient
+                .from('patient_transactions')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+        } catch (error: any) {
+            console.error('Error deleting transaction:', error);
+            throw new Error(`Failed to delete transaction: ${error.message}`);
+        }
+    }
 }

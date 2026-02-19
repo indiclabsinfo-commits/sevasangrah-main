@@ -1663,7 +1663,7 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
 
       // Calculate totalSpent based on selected date filter
       const filteredPatientsData = patientsData.map(patient => {
-        const transactions = patient.transactions || [];
+        const transactions = patient.patient_transactions || patient.transactions || [];
         // Always exclude CANCELLED transactions and IPD Bills (SERVICE with [IPD_BILL]).
         // Keep DEPOSIT, ADMISSION_FEE, ADVANCE_PAYMENT and regular SERVICE transactions.
         // Only apply date-range filtering when a date filter other than "all" is active.
@@ -1683,17 +1683,8 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
           });
         }
 
-        // Exclude ORTHO + DR. HEMANT transactions from revenue calculation
-        const filterDoctorName = patient.assigned_doctor?.toUpperCase()?.trim() || '';
-        const filterDepartment = patient.assigned_department?.toUpperCase()?.trim() || '';
-        const isOrthoDeptOnly = filterDepartment === 'ORTHO';
-        const isDrHemantOnly = filterDoctorName === 'DR. HEMANT' || filterDoctorName === 'DR HEMANT';
-        const shouldExcludeFromRevenue = isOrthoDeptOnly && isDrHemantOnly;
-
-        // Recalculate totalSpent based on filtered transactions (excluding ORTHO + DR. HEMANT)
-        const filteredTotalSpent = shouldExcludeFromRevenue
-          ? 0
-          : filteredTransactions.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+        // Recalculate totalSpent based on filtered transactions
+        const filteredTotalSpent = filteredTransactions.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
 
         // Recalculate visitCount based on filtered transactions (count consultations/entry fees)
         const visitCountFromFiltered = filteredTransactions.reduce((cnt: number, t: any) => {
@@ -1945,7 +1936,7 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
         logger.log(`📊 Processing patient: ${patient.first_name} ${patient.last_name}`);
 
         // Get all transactions for this patient within the selected date range
-        const transactions = patient.transactions || [];
+        const transactions = patient.patient_transactions || patient.transactions || [];
 
         // Filter transactions by date range if date filters are active
         let consultationsInRange = transactions;
@@ -2031,7 +2022,7 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
               patientAssignedDept: patient.assigned_department
             });
 
-            if (!consultationMap.has(consultationKey)) {
+            if (consultationMap && !consultationMap.has(consultationKey)) {
               consultationMap.set(consultationKey, {
                 date: transactionDate,
                 doctor: doctorName,
@@ -2039,10 +2030,12 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
                 amount: transaction.amount,
                 type: transaction.transaction_type
               });
-            } else {
+            } else if (consultationMap) {
               // If same consultation exists, add the amount
               const existing = consultationMap.get(consultationKey);
-              existing.amount += transaction.amount;
+              if (existing) {
+                existing.amount += (transaction.amount || 0);
+              }
             }
           });
 

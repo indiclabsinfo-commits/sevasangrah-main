@@ -13,7 +13,7 @@ CREATE INDEX IF NOT EXISTS idx_patient_transactions_patient_uuid ON patient_tran
 UPDATE patient_transactions 
 SET patient_uuid = patient_id::uuid 
 WHERE patient_uuid IS NULL 
-AND patient_id ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+AND patient_id::text ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
 
 -- 4. Robustify the patients table to ensure id is primary and used correctly
 -- (Standardizing on UUID links)

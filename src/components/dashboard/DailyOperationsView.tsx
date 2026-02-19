@@ -122,7 +122,10 @@ const DailyOperationsView: React.FC = () => {
         if (!patientTransactionMap.has(patientId)) {
           patientTransactionMap.set(patientId, []);
         }
-        patientTransactionMap.get(patientId)!.push(transaction);
+        const list = patientTransactionMap.get(patientId);
+        if (list) {
+          list.push(transaction);
+        }
       });
 
       // Create patient journeys

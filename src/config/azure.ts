@@ -167,6 +167,8 @@ export interface PatientTransaction {
   transaction_date?: string;
   created_at: string;
   created_by: string;
+  patient_uuid?: string;
+  patients?: Patient;
 }
 
 export interface DailyExpense {
@@ -226,7 +228,9 @@ export interface FutureAppointment {
 
 export interface PatientWithRelations extends Patient {
   transactions?: PatientTransaction[];
+  patient_transactions?: PatientTransaction[];
   admissions?: PatientAdmission[];
+  patient_admissions?: PatientAdmission[];
   appointments?: FutureAppointment[];
   totalSpent?: number;
   visitCount?: number;
@@ -316,6 +320,7 @@ export interface CreatePatientData {
 // CREATE TRANSACTION DATA TYPE
 export interface CreateTransactionData {
   patient_id: string;
+  patient_uuid?: string;
   transaction_type: 'ENTRY_FEE' | 'CONSULTATION' | 'LAB_TEST' | 'XRAY' | 'MEDICINE' | 'PROCEDURE' | 'ADMISSION_FEE' | 'DAILY_CHARGE' | 'SERVICE' | 'REFUND';
   amount: number;
   payment_mode: 'CASH' | 'CARD' | 'UPI' | 'ONLINE' | 'BANK_TRANSFER' | 'INSURANCE';

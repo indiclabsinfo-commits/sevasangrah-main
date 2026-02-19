@@ -86,8 +86,9 @@ export class ExactDateService {
         .select(`
           *,
           patients (
-            full_name,
-            patient_id
+            first_name,
+            last_name,
+            phone
           )
         `)
         .eq('transaction_type', 'REFUND')

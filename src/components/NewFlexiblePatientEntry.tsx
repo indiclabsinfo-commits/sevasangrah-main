@@ -827,8 +827,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
             }
 
             const transactionData: CreateTransactionData = {
-              patient_id: newPatient.id,  // Record link (UUID)
-              patient_uuid: newPatient.id, // Explicit UUID link (for future compatibility/Dashboard)
+              patient_id: newPatient.patient_id,  // String ID (e.g. P000001)
+              patient_uuid: newPatient.id,       // Record link (UUID)
               amount: finalAmount, // Use discounted amount
               description: description,
               discount_type: formData.discount_type as 'PERCENTAGE' | 'AMOUNT',
@@ -1790,7 +1790,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                         if (result.suggestedAction === 'block') {
                           toast.error('Duplicate patient found! Registration blocked.');
                         } else if (result.suggestedAction === 'warn') {
-                          toast.warning('Potential duplicate found. Please review.');
+                          toast.error('Patient not found. This should not happen if record exists.');
                         }
                       }}
                       onNoDuplicates={() => {
