@@ -143,56 +143,72 @@ export class SupabasePatientService {
 
             console.log('📤 Inserting into Supabase:', supabaseData);
 
-            // Direct REST API insert (fetch interceptor that was masking errors has been removed)
+            // Direct REST API insert with retry on UHID conflict
             let data, error;
-            try {
-                const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
-                const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
+            const MAX_RETRIES = 3;
+            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
+                    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
-                console.log('🔄 Inserting patient via REST API...');
-                console.log('📋 Insert data:', JSON.stringify(supabaseData).substring(0, 300));
+                    console.log('Inserting patient attempt ' + attempt + '/' + MAX_RETRIES);
 
-                const insertResponse = await fetch(`${supabaseUrl}/rest/v1/patients`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': supabaseKey,
-                        'Authorization': `Bearer ${supabaseKey}`,
-                        'Prefer': 'return=representation'
-                    },
-                    body: JSON.stringify(supabaseData)
-                });
+                    const insertResponse = await fetch(`${supabaseUrl}/rest/v1/patients`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`,
+                            'Prefer': 'return=representation'
+                        },
+                        body: JSON.stringify(supabaseData)
+                    });
 
-                const responseText = await insertResponse.text();
-                console.log('📥 Insert response status:', insertResponse.status);
-                console.log('📥 Insert response body:', responseText.substring(0, 500));
+                    const responseText = await insertResponse.text();
+                    console.log('Insert response status:', insertResponse.status);
 
-                if (!insertResponse.ok) {
-                    console.error('❌ Insert failed with status:', insertResponse.status);
-                    let errorMsg = `HTTP ${insertResponse.status}`;
-                    try {
-                        const errorJson = JSON.parse(responseText);
-                        errorMsg = errorJson.message || errorJson.details || errorJson.hint || responseText;
-                    } catch { errorMsg = responseText; }
-                    throw new Error(`Insert failed (${insertResponse.status}): ${errorMsg}`);
+                    // Handle UHID conflict - retry with new UHID
+                    if (insertResponse.status === 409 && attempt < MAX_RETRIES) {
+                        console.warn('409 Conflict on attempt ' + attempt + '. Regenerating UHID...');
+                        try {
+                            const uhidResult = await uhidService.generateUhid(patientData.hospital_id);
+                            supabaseData.uhid = uhidResult.uhid;
+                        } catch {
+                            supabaseData.uhid = 'UHID-' + Date.now();
+                        }
+                        console.log('New UHID:', supabaseData.uhid);
+                        continue;
+                    }
+
+                    if (!insertResponse.ok) {
+                        let errorMsg = `HTTP ${insertResponse.status}`;
+                        try {
+                            const errorJson = JSON.parse(responseText);
+                            errorMsg = errorJson.message || errorJson.details || errorJson.hint || responseText;
+                        } catch { errorMsg = responseText; }
+                        throw new Error(`Insert failed (${insertResponse.status}): ${errorMsg}`);
+                    }
+
+                    // Parse response
+                    const insertedData = JSON.parse(responseText);
+                    data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
+
+                    if (!data || !data.id) {
+                        throw new Error('Patient insert returned empty. Run disable_rls.sql in Supabase SQL Editor.');
+                    }
+
+                    error = null;
+                    console.log('Patient inserted! ID:', data.patient_id, 'UUID:', data.id);
+                    break; // success, exit retry loop
+
+                } catch (dbError: any) {
+                    if (attempt === MAX_RETRIES) {
+                        console.error('Database Insert Error (final):', dbError);
+                        throw new Error(`Database Insert Failed: ${dbError.message}`);
+                    }
+                    console.warn('Attempt ' + attempt + ' failed:', dbError.message);
                 }
-
-                // Parse response
-                const insertedData = JSON.parse(responseText);
-                data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
-
-                if (!data || !data.id) {
-                    console.error('❌ Insert returned empty/invalid data:', responseText);
-                    throw new Error('Patient insert returned empty response. Check RLS policies - run disable_rls.sql in Supabase SQL Editor.');
-                }
-
-                error = null;
-                console.log('✅ Patient inserted! ID:', data.patient_id, 'UUID:', data.id);
-
-            } catch (dbError: any) {
-                console.error('❌ Database Insert Error:', dbError);
-                throw new Error(`Database Insert Failed: ${dbError.message}`);
-            }
+            } // end retry loop
 
 
             if (error) {
