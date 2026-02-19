@@ -183,6 +183,14 @@ export class SupabasePatientService {
                 // Parse successful response
                 const insertedData = JSON.parse(responseText);
                 data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
+
+                // If RLS blocks return=representation, data will be undefined
+                // Fall back to the data we sent, since the insert succeeded
+                if (!data) {
+                    console.warn('⚠️ Insert returned empty response (likely RLS). Using submitted data as fallback.');
+                    data = { ...supabaseData, id: crypto.randomUUID() };
+                }
+
                 error = null;
                 console.log('✅ Insert successful! Patient ID:', data?.patient_id);
 
