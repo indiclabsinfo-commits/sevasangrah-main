@@ -48,9 +48,9 @@ if (typeof window !== 'undefined') {
 
     return promise.then(response => {
       if (!response.ok) {
-        console.warn('⚠️ Fetch failed, returning empty array');
-        // For common data endpoints, return empty array
         const url = args[0] || '';
+        console.warn(`⚠️ Fetch failed [${response.status}] for URL: ${url}`);
+        // For common data endpoints, return empty array
         if (typeof url === 'string' && (
           url.includes('/api/') ||
           url.includes('expenses') ||
