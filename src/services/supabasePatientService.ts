@@ -184,11 +184,10 @@ export class SupabasePatientService {
                 const insertedData = JSON.parse(responseText);
                 data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
 
-                // If RLS blocks return=representation, data will be undefined
-                // Fall back to the data we sent, since the insert succeeded
+                // If RLS blocks the insert, data will be empty
                 if (!data) {
-                    console.warn('⚠️ Insert returned empty response (likely RLS). Using submitted data as fallback.');
-                    data = { ...supabaseData, id: crypto.randomUUID() };
+                    console.error('❌ Insert returned empty response - RLS may be blocking. Run fix_rls_policies.sql in Supabase SQL Editor.');
+                    throw new Error('Patient insert returned empty response. Please check database RLS policies.');
                 }
 
                 error = null;
@@ -253,17 +252,41 @@ export class SupabasePatientService {
 
     static async createTransaction(transactionData: any): Promise<any> {
         try {
-            const supabaseClient = await getSupabase();
-            const { data, error } = await supabaseClient
-                .from('transactions')
-                .insert([transactionData])
-                .select()
-                .single();
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
-            if (error) throw error;
-            return data;
+            console.log('💰 Creating transaction via REST API:', Object.keys(transactionData));
+
+            const response = await fetch(`${supabaseUrl}/rest/v1/patient_transactions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(transactionData)
+            });
+
+            const responseText = await response.text();
+            console.log('📥 Transaction response status:', response.status);
+            console.log('📥 Transaction response body:', responseText);
+
+            if (!response.ok) {
+                let errorMsg = `HTTP ${response.status}`;
+                try {
+                    const errorJson = JSON.parse(responseText);
+                    errorMsg = errorJson.message || errorJson.details || errorJson.hint || responseText;
+                } catch { errorMsg = responseText; }
+                throw new Error(`Transaction insert failed (${response.status}): ${errorMsg}`);
+            }
+
+            const insertedData = JSON.parse(responseText);
+            const data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
+            console.log('✅ Transaction created:', data?.id);
+            return data || transactionData;
         } catch (error: any) {
-            console.error('Error creating transaction:', error);
+            console.error('❌ Error creating transaction:', error);
             throw new Error(`Failed to create transaction: ${error.message}`);
         }
     }

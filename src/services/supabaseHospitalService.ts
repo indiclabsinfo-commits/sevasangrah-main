@@ -552,23 +552,40 @@ export class SupabaseHospitalService {
 
   // ==================== TRANSACTIONS ====================
   static async createTransaction(transactionData: any): Promise<any> {
-    const supabase = await getSupabase();
     try {
-      logger.log('💰 Creating transaction:', transactionData);
+      logger.log('💰 Creating transaction via REST API:', transactionData);
 
-      const { data, error } = await supabase
-        .from('patient_transactions')
-        .insert(transactionData)
-        .select()
-        .single();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
-      if (error) {
-        logger.error('❌ Error creating transaction:', error);
-        throw error;
+      const response = await fetch(`${supabaseUrl}/rest/v1/patient_transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(transactionData)
+      });
+
+      const responseText = await response.text();
+      logger.log('📥 Transaction response:', response.status, responseText.substring(0, 200));
+
+      if (!response.ok) {
+        let errorMsg = `HTTP ${response.status}`;
+        try {
+          const errorJson = JSON.parse(responseText);
+          errorMsg = errorJson.message || errorJson.details || errorJson.hint || responseText;
+        } catch { errorMsg = responseText; }
+        logger.error('❌ Transaction insert failed:', errorMsg);
+        throw new Error(`Transaction insert failed (${response.status}): ${errorMsg}`);
       }
 
-      logger.log('✅ Transaction created:', data);
-      return data;
+      const insertedData = JSON.parse(responseText);
+      const data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
+      logger.log('✅ Transaction created:', data?.id);
+      return data || transactionData;
     } catch (error) {
       logger.error('🚨 Failed to create transaction:', error);
       throw error;
