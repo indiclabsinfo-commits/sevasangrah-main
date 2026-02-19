@@ -827,7 +827,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
             }
 
             const transactionData: CreateTransactionData = {
-              patient_id: newPatient.id,  // Use UUID id, not patient_id string
+              patient_id: newPatient.id,  // Record link (UUID)
+              patient_uuid: newPatient.id, // Explicit UUID link (for future compatibility/Dashboard)
               amount: finalAmount, // Use discounted amount
               description: description,
               discount_type: formData.discount_type as 'PERCENTAGE' | 'AMOUNT',

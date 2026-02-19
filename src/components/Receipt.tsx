@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Patient, PatientTransaction } from '../config/supabaseNew';
 import toast from 'react-hot-toast';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 
 interface ReceiptData {
   patient: Patient;

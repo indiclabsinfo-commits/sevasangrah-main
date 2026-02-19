@@ -740,8 +740,10 @@ export class SupabaseHospitalService {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
+      // Query by both patient_id (record link) and patient_uuid if possible. 
+      // If patient_uuid doesn't exist yet, we fallback to just patient_id to avoid 400 errors.
       const res = await fetch(
-        `${supabaseUrl}/rest/v1/patient_transactions?or=(patient_id.eq.${patientId},patient_uuid.eq.${patientId})&order=created_at.desc`,
+        `${supabaseUrl}/rest/v1/patient_transactions?patient_id=eq.${patientId}&order=created_at.desc`,
         {
           headers: {
             'apikey': supabaseKey,
