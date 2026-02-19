@@ -149,15 +149,29 @@ export class SupabasePatientService {
                 console.log('🔄 Getting Supabase client...');
                 const supabaseClient = await getSupabase();
                 console.log('✅ Got Supabase client, inserting data...');
+                console.log('📋 Insert data keys:', Object.keys(supabaseData));
 
-                const result = await supabaseClient
+                // Insert first (without .select().single() which crashes on error responses)
+                const insertResult = await supabaseClient
                     .from('patients')
-                    .insert([supabaseData])
-                    .select()
+                    .insert([supabaseData]);
+
+                if (insertResult.error) {
+                    console.error('❌ Insert error:', insertResult.error);
+                    throw new Error(`Insert failed: ${insertResult.error.message || insertResult.error.details || JSON.stringify(insertResult.error)}`);
+                }
+
+                console.log('✅ Insert successful, fetching created patient...');
+
+                // Now fetch the created patient
+                const selectResult = await supabaseClient
+                    .from('patients')
+                    .select('*')
+                    .eq('patient_id', patient_id)
                     .single();
 
-                data = result.data;
-                error = result.error;
+                data = selectResult.data;
+                error = selectResult.error;
             } catch (dbError: any) {
                 console.error('❌ Supabase Client/Insert Error:', dbError);
                 throw new Error(`Database Insert Failed: ${dbError.message}`);
