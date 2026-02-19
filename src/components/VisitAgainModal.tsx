@@ -9,20 +9,9 @@ import type { Patient, Doctor, Department } from '../services/dataService';
 import type { PatientWithRelations, CreateTransactionData } from '../config/supabaseNew';
 
 // Doctors and Departments data (same as NewFlexiblePatientEntry)
+// Doctors and Departments data (same as NewFlexiblePatientEntry)
 const DOCTORS_DATA = [
-  { name: 'DR. HEMANT KHAJJA', department: 'ORTHOPAEDIC' },
-  { name: 'DR. LALITA SUWALKA', department: 'DIETICIAN' },
-  { name: 'DR. MILIND KIRIT AKHANI', department: 'GASTRO' },
-  { name: 'DR MEETU BABLE', department: 'GYN.' },
-  { name: 'DR. AMIT PATANVADIYA', department: 'NEUROLOGY' },
-  { name: 'DR. KISHAN PATEL', department: 'UROLOGY' },
-  { name: 'DR. PARTH SHAH', department: 'SURGICAL ONCOLOGY' },
-  { name: 'DR.RAJEEDP GUPTA', department: 'MEDICAL ONCOLOGY' },
-  { name: 'DR. KULDDEP VALA', department: 'NEUROSURGERY' },
-  { name: 'DR. KURNAL PATEL', department: 'UROLOGY' },
-  { name: 'DR. SAURABH GUPTA', department: 'ENDOCRINOLOGY' },
-  { name: 'DR. BATUL PEEPAWALA', department: 'GENERAL PHYSICIAN' },
-  { name: 'DR. POONAM JAIN', department: 'PHYSIOTHERAPY' }
+  { name: 'Doctor Naveen', department: 'General Medicine' }
 ];
 
 // Get unique departments
@@ -102,7 +91,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
     if (watchedDepartment) {
       const filtered = DOCTORS_DATA.filter(d => d.department === watchedDepartment);
       setFilteredDoctors(filtered);
-      
+
       // Set default consultation fee based on doctor selection
       if (watchedDoctor) {
         // Set a default fee based on department or doctor
@@ -238,7 +227,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
       patient: {
         id: patient.id.slice(0, 8),
         name: `${patient.first_name} ${patient.last_name}`,
-        age: patient.age,
+        age: patient.age ? parseInt(patient.age.toString()) : 0,
         gender: patient.gender,
         phone: patient.phone,
         address: patient.address,
@@ -280,7 +269,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
         department: data.selected_department,
         description: `Consultation with ${data.selected_doctor} - Return Visit`,
       });
-      
+
       const transactionData: CreateTransactionData = {
         patient_id: patient.id,
         transaction_type: 'CONSULTATION',
@@ -292,7 +281,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
         hospital_id: '550e8400-e29b-41d4-a716-446655440000', // Default hospital ID
         created_at: data.visit_date + 'T' + new Date().toTimeString().split(' ')[0] // Use selected date with current time
       } as any;
-      
+
       const consultationTransaction = await SupabaseHospitalService.createTransaction(transactionData);
       transactions.push(consultationTransaction);
 
@@ -310,7 +299,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
             hospital_id: '550e8400-e29b-41d4-a716-446655440000',
             created_at: data.visit_date + 'T' + new Date().toTimeString().split(' ')[0] // Use selected date with current time
           } as any;
-          
+
           const serviceTransaction = await SupabaseHospitalService.createTransaction(serviceTransactionData);
           transactions.push(serviceTransaction);
         }
@@ -340,7 +329,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
           hospital_id: '550e8400-e29b-41d4-a716-446655440000',
           created_at: data.visit_date + 'T' + new Date().toTimeString().split(' ')[0] // Use selected date with current time
         } as any;
-        
+
         const admissionTransaction = await SupabaseHospitalService.createTransaction(admissionTransactionData);
         transactions.push(admissionTransaction);
       }
@@ -352,14 +341,14 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
             patient_id: patient.id,
             new_doctor: data.selected_doctor,
             new_department: data.selected_department,
-            current_doctor: patient.primary_doctor,
-            current_department: patient.department
+            current_doctor: patient.assigned_doctor,
+            current_department: patient.assigned_department
           });
 
-          // Update patient's primary doctor and department in the patients table
+          // Update patient's assigned doctor and department in the patients table
           await SupabaseHospitalService.updatePatient(patient.id, {
-            primary_doctor: data.selected_doctor,
-            department: data.selected_department,
+            assigned_doctor: data.selected_doctor,
+            assigned_department: data.selected_department,
             last_visit_doctor: data.selected_doctor,
             last_visit_department: data.selected_department,
             updated_at: new Date().toISOString()
@@ -395,12 +384,12 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
       setShowReceipt(true);
 
       // Enhanced success message
-      const doctorChanged = data.selected_doctor !== patient.primary_doctor;
+      const doctorChanged = data.selected_doctor !== patient.assigned_doctor;
       const visitDate = new Date(data.visit_date).toLocaleDateString('en-IN');
-      const successMessage = doctorChanged ? 
+      const successMessage = doctorChanged ?
         `Visit recorded for ${visitDate} & doctor updated to ${data.selected_doctor}! Total: ₹${calculateTotalFees().toLocaleString()}` :
         `Return visit recorded for ${visitDate}! Total fees: ₹${calculateTotalFees().toLocaleString()}`;
-      
+
       toast.success(successMessage);
 
       if (onVisitCreated) {
@@ -494,7 +483,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
                       selectedDate.setHours(0, 0, 0, 0);
-                      
+
                       if (selectedDate.getTime() === today.getTime()) {
                         return <span className="text-blue-600">📅 Today's visit</span>;
                       } else if (selectedDate < today) {
@@ -527,18 +516,18 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
             {/* Doctor and Department */}
             <div className="bg-green-50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold mb-4 text-gray-700">Doctor & Department</h3>
-              
+
               {/* Current Patient Info */}
-              {patient.primary_doctor && (
+              {patient.assigned_doctor && (
                 <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <h4 className="text-sm font-medium text-blue-800 mb-2">Current Patient Information:</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                    <div><strong>Current Doctor:</strong> {patient.primary_doctor || 'Not assigned'}</div>
-                    <div><strong>Current Department:</strong> {patient.department || 'Not assigned'}</div>
+                    <div><strong>Current Doctor:</strong> {patient.assigned_doctor || 'Not assigned'}</div>
+                    <div><strong>Current Department:</strong> {patient.assigned_department || 'Not assigned'}</div>
                   </div>
-                  {watchedDoctor && watchedDoctor !== patient.primary_doctor && (
+                  {watchedDoctor && watchedDoctor !== patient.assigned_doctor && (
                     <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm text-yellow-800">
-                      ⚠️ <strong>Doctor Change Detected:</strong> This will update the patient's primary doctor from "{patient.primary_doctor}" to "{watchedDoctor}"
+                      ⚠️ <strong>Doctor Change Detected:</strong> This will update the patient's assigned doctor from "{patient.assigned_doctor}" to "{watchedDoctor}"
                     </div>
                   )}
                 </div>
@@ -567,9 +556,14 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
                   <select
                     {...register('selected_doctor')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={!watchedDepartment}
                   >
                     <option value="">Select Doctor</option>
+                    {/* Show assigned doctor first */}
+                    {(patient.assigned_doctor) && (
+                      <option value={patient.assigned_doctor}>
+                        {patient.assigned_doctor} ({patient.assigned_department})
+                      </option>
+                    )}
                     {filteredDoctors.map((doctor) => (
                       <option key={doctor.name} value={doctor.name}>
                         {doctor.name}
@@ -622,7 +616,7 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
                   ➕ Add Service
                 </Button>
               </div>
-              
+
               {additionalServices.map((service, index) => (
                 <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-3 bg-white rounded border">
                   <input
@@ -745,9 +739,9 @@ const VisitAgainModal: React.FC<VisitAgainModalProps> = ({ patient, onClose, onV
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? 'Recording...' : 
-                  watchedDoctor && watchedDoctor !== patient.primary_doctor ? 
-                    `Update Doctor & Record Visit - ₹${calculateTotalFees().toLocaleString()}` :
+                {loading ? 'Recording...' :
+                  watchedDoctor && watchedDoctor !== patient.assigned_doctor ?
+                    `Update & Record Visit - ₹${calculateTotalFees().toLocaleString()}` :
                     `Record Visit & Collect ₹${calculateTotalFees().toLocaleString()}`
                 }
               </Button>

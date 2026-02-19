@@ -4,6 +4,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import type { PatientWithRelations } from '../config/supabaseNew';
 import { supabase } from '../config/supabaseNew';
+import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import { useAuth } from '../contexts/AuthContext';
 import { getAuditContext, logPatientEdit } from '../utils/auditHelper';
 import {
@@ -12,22 +13,11 @@ import {
   CreditCard,
   X
 } from 'lucide-react';
+import { DoctorInfo } from '../services/doctorService';
 
 // Doctors and Departments data
-const DOCTORS_DATA = [
-  { name: 'DR. HEMANT KHAJJA', department: 'ORTHOPAEDIC' },
-  { name: 'DR. LALITA SUWALKA', department: 'DIETICIAN' },
-  { name: 'DR. MILIND KIRIT AKHANI', department: 'GASTRO' },
-  { name: 'DR MEETU BABLE', department: 'GYN.' },
-  { name: 'DR. AMIT PATANVADIYA', department: 'NEUROLOGY' },
-  { name: 'DR. KISHAN PATEL', department: 'UROLOGY' },
-  { name: 'DR. PARTH SHAH', department: 'SURGICAL ONCOLOGY' },
-  { name: 'DR.RAJEEDP GUPTA', department: 'MEDICAL ONCOLOGY' },
-  { name: 'DR. KULDDEP VALA', department: 'NEUROSURGERY' },
-  { name: 'DR. KURNAL PATEL', department: 'UROLOGY' },
-  { name: 'DR. SAURABH GUPTA', department: 'ENDOCRINOLOGY' },
-  { name: 'DR. BATUL PEEPAWALA', department: 'GENERAL PHYSICIAN' },
-  { name: 'DR. POONAM JAIN', department: 'PHYSIOTHERAPY' }
+const DOCTORS_DATA: DoctorInfo[] = [
+  { name: 'Doctor Naveen', department: 'General Medicine' }
 ];
 
 // Get unique departments

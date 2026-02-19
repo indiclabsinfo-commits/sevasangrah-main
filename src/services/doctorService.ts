@@ -8,18 +8,7 @@ export interface DoctorInfo {
 
 // Doctors and Departments data - same as in NewFlexiblePatientEntry
 export const DOCTORS_DATA: DoctorInfo[] = [
-  { name: 'DR. HEMANT KHAJJA', department: 'ORTHOPAEDIC' },
-  { name: 'DR. LALITA SUWALKA', department: 'DIETICIAN' },
-  { name: 'DR. MILIND KIRIT AKHANI', department: 'GASTRO' },
-  { name: 'DR MEETU BABLE', department: 'GYN.' },
-  { name: 'DR. AMIT PATANVADIYA', department: 'NEUROLOGY' },
-  { name: 'DR. KISHAN PATEL', department: 'UROLOGY' },
-  { name: 'DR. PARTH SHAH', department: 'SURGICAL ONCOLOGY' },
-  { name: 'DR.RAJEEDP GUPTA', department: 'MEDICAL ONCOLOGY' },
-  { name: 'DR. KULDDEP VALA', department: 'NEUROSURGERY' },
-  { name: 'DR. KURNAL PATEL', department: 'UROLOGY' },
-  { name: 'DR. SAURABH GUPTA', department: 'ENDOCRINOLOGY' },
-  { name: 'DR. BATUL PEEPAWALA', department: 'GENERAL PHYSICIAN' }
+  { name: 'Doctor Naveen', department: 'General Medicine' }
 ];
 
 // Get unique departments
@@ -49,7 +38,7 @@ export class DoctorService {
   static getDoctorByName(name: string): DoctorInfo | null {
     const doctor = DOCTORS_DATA.find(doc => doc.name === name);
     if (!doctor) return null;
-    
+
     const index = DOCTORS_DATA.indexOf(doctor);
     return {
       ...doctor,
@@ -62,7 +51,7 @@ export class DoctorService {
   static getDoctorById(id: string): DoctorInfo | null {
     const index = parseInt(id.replace('doc-', '')) - 1;
     if (index < 0 || index >= DOCTORS_DATA.length) return null;
-    
+
     const doctor = DOCTORS_DATA[index];
     return {
       ...doctor,

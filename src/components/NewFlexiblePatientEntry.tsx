@@ -25,21 +25,9 @@ import PatientPhotoUpload from './PatientPhotoUpload';
 import DuplicatePatientCheck from './DuplicatePatientCheck';
 
 // Doctors and Departments data
+// Doctors and Departments data
 const DOCTORS_DATA = [
-  { name: 'DR. HEMANT KHAJJA', department: 'ORTHOPAEDIC' },
-  { name: 'DR. HEMANT', department: 'ORTHO' },
-  { name: 'DR. LALITA SUWALKA', department: 'DIETICIAN' },
-  { name: 'DR. MILIND KIRIT AKHANI', department: 'GASTRO' },
-  { name: 'DR MEETU BABLE', department: 'GYN.' },
-  { name: 'DR. AMIT PATANVADIYA', department: 'NEUROLOGY' },
-  { name: 'DR. KISHAN PATEL', department: 'UROLOGY' },
-  { name: 'DR. PARTH SHAH', department: 'SURGICAL ONCOLOGY' },
-  { name: 'DR.RAJEEDP GUPTA', department: 'MEDICAL ONCOLOGY' },
-  { name: 'DR. KULDDEP VALA', department: 'NEUROSURGERY' },
-  { name: 'DR. KURNAL PATEL', department: 'UROLOGY' },
-  { name: 'DR. SAURABH GUPTA', department: 'ENDOCRINOLOGY' },
-  { name: 'DR. BATUL PEEPAWALA', department: 'GENERAL PHYSICIAN' },
-  { name: 'DR. POONAM JAIN', department: 'PHYSIOTHERAPY' }
+  { name: 'Doctor Naveen', department: 'General Medicine' }
 ];
 
 // Get unique departments

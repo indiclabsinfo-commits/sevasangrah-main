@@ -151,6 +151,31 @@ export class SupabaseHospitalService {
     }
   }
 
+  static async updatePatient(patientId: string, updateData: any): Promise<Patient | null> {
+    const supabase = await getSupabase();
+    try {
+      logger.log('🔄 Updating patient:', patientId, updateData);
+
+      const { data, error } = await supabase
+        .from('patients')
+        .update(updateData)
+        .eq('id', patientId)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Error updating patient:', error);
+        throw error;
+      }
+
+      logger.log('✅ Patient updated:', data);
+      return data;
+    } catch (error) {
+      logger.error('🚨 Failed to update patient:', error);
+      throw error;
+    }
+  }
+
   // ==================== DOCTORS ====================
 
   static async getDoctors(): Promise<User[]> {
@@ -526,6 +551,55 @@ export class SupabaseHospitalService {
   }
 
   // ==================== TRANSACTIONS ====================
+  static async createTransaction(transactionData: any): Promise<any> {
+    const supabase = await getSupabase();
+    try {
+      logger.log('💰 Creating transaction:', transactionData);
+
+      const { data, error } = await supabase
+        .from('patient_transactions')
+        .insert(transactionData)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Error creating transaction:', error);
+        throw error;
+      }
+
+      logger.log('✅ Transaction created:', data);
+      return data;
+    } catch (error) {
+      logger.error('🚨 Failed to create transaction:', error);
+      throw error;
+    }
+  }
+
+  static async updateTransaction(transactionId: string, updateData: any): Promise<any> {
+    const supabase = await getSupabase();
+    try {
+      logger.log('🔄 Updating transaction:', transactionId, updateData);
+
+      const { data, error } = await supabase
+        .from('patient_transactions')
+        .update(updateData)
+        .eq('id', transactionId)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Error updating transaction:', error);
+        throw error;
+      }
+
+      logger.log('✅ Transaction updated:', data);
+      return data;
+    } catch (error) {
+      logger.error('🚨 Failed to update transaction:', error);
+      throw error;
+    }
+  }
+
   static async getAllTransactions(): Promise<any[]> {
     const supabase = await getSupabase();
     try {

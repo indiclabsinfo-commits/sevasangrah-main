@@ -7,20 +7,9 @@ export interface DoctorDegree {
 }
 
 // Department-based degree mapping for prescription display
+// Department-based degree mapping for prescription display
 export const DEPARTMENT_DEGREES: Record<string, string> = {
-  "ORTHOPEDIC": "M.S. ORTHO/ KNEE SPECIALIST",
-  "ORTHOPAEDIC": "M.S. ORTHO/ KNEE SPECIALIST",
-  "DIETICIAN": "M.SC & phD IN FOOD & NUTRITION",
-  "GYN": "MBBS, MS, MENOPAUSE SPECIALIST CONSULTANT - OBSTRETRICS & GYNAECOLOGY",
-  "GENERAL PHYSICIAN": "MBBS ( RNT MEDICAL COLLEGE)",
-  "ENDOCRINOLOGY": "MBBS, MD MEDICINE\nMRCP Endocrinology (UK)",
-  "NEUROLOGY": "MD. DNB. (Neurology)",
-  "UROLOGY": "MS, MCH, ( UROLOGY &\nKIDNEY TRANSPLANT),\nCONSULTANT UROLOGIST\nLAPAROSCOPIC & ROBOTIC\nUROSURGEON",
-  "SURGICAL ONCOLOGY": "MBBS,DNB (GEN. SURGERY),DRNB (SURGICSAL ONCOLOGY) CONSULTANT CANCER SURGEONE",
-  "MEDICAL ONCOLOGY": "MD, DNB (MEDICAL ONCOLOGY)",
-  "NEUROSURGERY": "M.S GENERAL SURGERY,\nM.CH. NEUROSUGERY",
-  "GASTRO": "MS, MCH, DIRECTOR,GI &\nHPB SURGERY CONSULTANT,\nLIVER TRANSPLANTATION",
-  "PHYSIOTHERAPY": "B.P.Th (Mumbai),\nM.P.Th - Ortho (Mumbai)"
+  "General Medicine": "MBBS, MD"
 };
 
 // Doctor name corrections mapping

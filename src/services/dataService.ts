@@ -142,27 +142,11 @@ class DataService {
   private getHardcodedDoctors(): Doctor[] {
     return [
       {
-        id: 'hemant-khajja',
-        name: 'DR. HEMANT KHAJJA',
-        department: 'ORTHOPAEDIC',
-        specialization: 'Orthopaedic Surgeon',
-        fee: 800,
-        is_active: true
-      },
-      {
-        id: 'lalita-suwalka',
-        name: 'DR. LALITA SUWALKA',
-        department: 'DIETICIAN',
-        specialization: 'Clinical Dietician',
+        id: 'doctor-naveen',
+        name: 'Doctor Naveen',
+        department: 'General Medicine',
+        specialization: 'General Medicine',
         fee: 500,
-        is_active: true
-      },
-      {
-        id: 'poonam-jain-physiotherapy',
-        name: 'DR. POONAM JAIN',
-        department: 'PHYSIOTHERAPY',
-        specialization: 'Physiotherapist',
-        fee: 600,
         is_active: true
       }
     ];
@@ -188,21 +172,9 @@ class DataService {
   private getHardcodedDepartments(): Department[] {
     return [
       {
-        id: 'orthopaedic-dept',
-        name: 'ORTHOPAEDIC',
-        description: 'Orthopaedic Surgery and Bone Care',
-        is_active: true
-      },
-      {
-        id: 'dietician-dept',
-        name: 'DIETICIAN',
-        description: 'Nutrition and Diet Planning',
-        is_active: true
-      },
-      {
-        id: 'physiotherapy-dept',
-        name: 'PHYSIOTHERAPY',
-        description: 'Physiotherapy and Rehabilitation',
+        id: 'general-medicine-dept',
+        name: 'General Medicine',
+        description: 'General Health and Wellness',
         is_active: true
       }
     ];
@@ -231,13 +203,31 @@ class DataService {
         headers: this.getHeaders(),
         params: { patient_id: patientId }
       });
-      logger.log('✅ Transactions fetched successfully:', response.data?.length || 0, 'records');
+      logger.log('✅ Transactions fetched successfully from backend:', response.data?.length || 0, 'records');
       return response.data || [];
     } catch (error) {
       logger.error('🚨 Transactions fetch failed:', error);
       throw error;
     }
   }
+
+  // ==================== VISITS & ADMISSIONS ====================
+
+  async createPatientVisit(visitData: any): Promise<any> {
+    logger.log('📡 Creating patient visit via backend API:', visitData);
+    try {
+      const response = await axios.post(`${this.getBaseUrl()}/api/patient-visits`, visitData, {
+        headers: this.getHeaders()
+      });
+      logger.log('✅ Patient visit created successfully via backend:', response.data);
+      return response.data;
+    } catch (error) {
+      logger.error('🚨 Patient visit creation failed:', error);
+      throw error;
+    }
+  }
+
+
 
   async getPatientVisits(patientId: string): Promise<any[]> {
     logger.log('📡 Fetching patient visits from backend:', patientId);
