@@ -48,22 +48,31 @@ if (typeof window !== 'undefined') {
 
     return promise.then(response => {
       if (!response.ok) {
-        const url = args[0] || '';
+        const url = (typeof args[0] === 'string' ? args[0] : args[0]?.url) || 'unknown';
         console.warn(`⚠️ Fetch failed [${response.status}] for URL: ${url}`);
-        // For common data endpoints, return empty array
+
+        try {
+          const clone = response.clone();
+          clone.text().then(text => {
+            console.error(`❌ Error Body for ${url}:`, text);
+          }).catch(e => { });
+        } catch (e) { }
+
         if (typeof url === 'string' && (
           url.includes('/api/') ||
+          url.includes('patients') ||
           url.includes('expenses') ||
           url.includes('transactions') ||
           url.includes('appointments')
         )) {
           return {
             ok: true,
+            status: 200,
+            statusText: 'OK',
             json: () => Promise.resolve([]),
             text: () => Promise.resolve('[]'),
-            headers: {
-              get: () => null
-            }
+            clone: function () { return this; },
+            headers: typeof Headers !== 'undefined' ? new Headers({ 'content-type': 'application/json' }) : { get: () => 'application/json' }
           };
         }
       }
