@@ -22,6 +22,11 @@ export async function getSupabase() {
 
   // Create client with current config
   supabaseInstance = createSupabaseClient();
+
+  if (!supabaseInstance) {
+    throw new Error('Failed to create Supabase client. Please refresh the page.');
+  }
+
   supabase = supabaseInstance; // Update the exported let
 
   console.log('✅ Supabase client initialized');
