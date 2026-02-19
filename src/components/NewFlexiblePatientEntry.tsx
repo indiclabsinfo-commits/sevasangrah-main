@@ -245,7 +245,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
     const checkConnection = async () => {
       try {
         // Assume connected if using Supabase directly
-        setConnectionStatus(true);
+        setConnectionStatus('CONNECTED');
 
         // Fetch doctors directly from Supabase
         const docs = await SupabasePatientService.getDoctors();
@@ -2231,13 +2231,9 @@ const NewFlexiblePatientEntry: React.FC = () => {
                         onBlur={(e) => e.currentTarget.style.borderColor = '#CCCCCC'}
                       >
                         <option value="">Select Doctor</option>
-                        {/* Show DB doctors if available, falling back to legacy list if needed, filtered by department */
-                          (dbDoctors.length > 0 ? dbDoctors : filteredDoctors)
-                            .filter(doc => !formData.selected_department || doc.department === formData.selected_department)
-                            .map(doc => (
-                              <option key={doc.name} value={doc.name}>{doc.name}</option>
-                            ))
-                        }
+                        {filteredDoctors.map(doc => (
+                          <option key={`${doc.id || doc.name}`} value={doc.name}>{doc.name}</option>
+                        ))}
                         <option value="CUSTOM">Custom Doctor</option>
                       </select>
 
@@ -2705,7 +2701,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                               }}
                               showPopperArrow={false}
                               fixedHeight
-                              scrollableMonthDropdown
+                              scrollableMonthYearDropdown={true}
                               scrollableYearDropdown
                             />
                           </div>

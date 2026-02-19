@@ -12,7 +12,7 @@ const originalEvery = Array.prototype.every;
 
 // Safe wrapper for array methods
 function safeArrayMethod(method, methodName) {
-  return function(...args) {
+  return function (...args) {
     if (!this) {
       console.warn(`⚠️ Array.${methodName} called on null/undefined`);
       return methodName === 'reduce' ? 0 : [];
@@ -43,24 +43,27 @@ Array.prototype.every = safeArrayMethod(originalEvery, 'every');
 if (typeof window !== 'undefined') {
   // Patch fetch to always return arrays for common endpoints
   const originalFetch = window.fetch;
-  window.fetch = function(...args) {
+  window.fetch = function (...args) {
     const promise = originalFetch.apply(this, args);
-    
+
     return promise.then(response => {
       if (!response.ok) {
         console.warn('⚠️ Fetch failed, returning empty array');
         // For common data endpoints, return empty array
         const url = args[0] || '';
         if (typeof url === 'string' && (
-          url.includes('/api/') || 
-          url.includes('expenses') || 
+          url.includes('/api/') ||
+          url.includes('expenses') ||
           url.includes('transactions') ||
           url.includes('appointments')
         )) {
           return {
             ok: true,
             json: () => Promise.resolve([]),
-            text: () => Promise.resolve('[]')
+            text: () => Promise.resolve('[]'),
+            headers: {
+              get: () => null
+            }
           };
         }
       }

@@ -152,6 +152,7 @@ export interface PatientAdmission {
 export interface PatientTransaction {
   id: string;
   patient_id: string;
+  patient_uuid?: string;
   admission_id?: string;
   transaction_type: 'ENTRY_FEE' | 'CONSULTATION' | 'LAB_TEST' | 'XRAY' | 'MEDICINE' | 'PROCEDURE' | 'ADMISSION_FEE' | 'DAILY_CHARGE' | 'SERVICE' | 'REFUND';
   amount: number;
@@ -330,6 +331,7 @@ export interface CreatePatientData {
 // CREATE TRANSACTION DATA TYPE
 export interface CreateTransactionData {
   patient_id: string;
+  patient_uuid?: string;
   transaction_type: 'ENTRY_FEE' | 'CONSULTATION' | 'LAB_TEST' | 'XRAY' | 'MEDICINE' | 'PROCEDURE' | 'ADMISSION_FEE' | 'DAILY_CHARGE' | 'SERVICE' | 'REFUND';
   amount: number;
   payment_mode: 'CASH' | 'CARD' | 'UPI' | 'ONLINE' | 'BANK_TRANSFER' | 'INSURANCE' | 'RGHS';
