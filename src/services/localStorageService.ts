@@ -1,7 +1,7 @@
 // Local Storage Service - Emergency fallback for Supabase failures
 // Simple UUID generator fallback
 const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = Math.random() * 16 | 0;
     const v = c == 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
@@ -150,11 +150,7 @@ class LocalStorageService {
     const doctors = this.getItem<Doctor[]>('doctors') || [];
     if (doctors.length === 0) {
       const defaultDoctors: Doctor[] = [
-        { id: uuidv4(), name: 'Dr. Rajesh Kumar', department: 'General', specialization: 'General Medicine', fee: 500, is_active: true },
-        { id: uuidv4(), name: 'Dr. Priya Sharma', department: 'Cardiology', specialization: 'Cardiology', fee: 1200, is_active: true },
-        { id: uuidv4(), name: 'Dr. Amit Singh', department: 'Pediatrics', specialization: 'Child Care', fee: 800, is_active: true },
-        { id: uuidv4(), name: 'Dr. Neha Gupta', department: 'Emergency', specialization: 'Emergency Medicine', fee: 1000, is_active: true },
-        { id: uuidv4(), name: 'Dr. Suresh Patel', department: 'Orthopaedics', specialization: 'Bone & Joint', fee: 900, is_active: true },
+        { id: uuidv4(), name: 'Doctor Naveen', department: 'General', specialization: 'General Medicine', fee: 500, is_active: true },
       ];
       this.setItem('doctors', defaultDoctors);
     }
@@ -190,7 +186,7 @@ class LocalStorageService {
   async createPatient(patientData: Omit<Patient, 'id' | 'patient_id' | 'created_at' | 'updated_at' | 'created_by'>): Promise<Patient> {
     const patients = this.getItem<Patient[]>('patients') || [];
     const currentUser = this.getCurrentUser();
-    
+
     const newPatient: Patient = {
       ...patientData,
       id: uuidv4(),
@@ -232,7 +228,7 @@ class LocalStorageService {
   // Transaction Management
   async createTransaction(transactionData: Omit<PatientTransaction, 'id' | 'created_at'>): Promise<PatientTransaction> {
     const transactions = this.getItem<PatientTransaction[]>('transactions') || [];
-    
+
     const newTransaction: PatientTransaction = {
       ...transactionData,
       id: uuidv4(),
@@ -257,7 +253,7 @@ class LocalStorageService {
   // Admission Management
   async createAdmission(admissionData: Omit<PatientAdmission, 'id'>): Promise<PatientAdmission> {
     const admissions = this.getItem<PatientAdmission[]>('admissions') || [];
-    
+
     const newAdmission: PatientAdmission = {
       ...admissionData,
       id: uuidv4(),
@@ -276,7 +272,7 @@ class LocalStorageService {
   // Expense Management
   async createExpense(expenseData: Omit<DailyExpense, 'id'>): Promise<DailyExpense> {
     const expenses = this.getItem<DailyExpense[]>('expenses') || [];
-    
+
     const newExpense: DailyExpense = {
       ...expenseData,
       id: uuidv4(),

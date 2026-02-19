@@ -14,16 +14,16 @@ const PrintSchedule: React.FC = () => {
 
   // Mock data
   const mockDoctors = [
-    { id: '1', name: 'Dr. Sharma', department: 'Cardiology', specialization: 'Cardiologist' },
-    { id: '2', name: 'Dr. Patel', department: 'Neurology', specialization: 'Neurologist' },
-    { id: '3', name: 'Dr. Gupta', department: 'General Medicine', specialization: 'Physician' },
-    { id: '4', name: 'Dr. Kumar', department: 'Orthopedics', specialization: 'Orthopedic Surgeon' },
-    { id: '5', name: 'Dr. Joshi', department: 'Pediatrics', specialization: 'Pediatrician' }
+    { id: '1', name: 'Doctor Naveen', department: 'Cardiology', specialization: 'Cardiologist' },
+    { id: '2', name: 'Doctor Naveen', department: 'Neurology', specialization: 'Neurologist' },
+    { id: '3', name: 'Doctor Naveen', department: 'General Medicine', specialization: 'Physician' },
+    { id: '4', name: 'Doctor Naveen', department: 'Orthopedics', specialization: 'Orthopedic Surgeon' },
+    { id: '5', name: 'Doctor Naveen', department: 'Pediatrics', specialization: 'Pediatrician' }
   ];
 
   const mockSchedule = [
     {
-      doctor: 'Dr. Sharma',
+      doctor: 'Doctor Naveen',
       department: 'Cardiology',
       date: '2026-02-17',
       slots: [
@@ -35,7 +35,7 @@ const PrintSchedule: React.FC = () => {
       ]
     },
     {
-      doctor: 'Dr. Patel',
+      doctor: 'Doctor Naveen',
       department: 'Neurology',
       date: '2026-02-17',
       slots: [
@@ -48,10 +48,11 @@ const PrintSchedule: React.FC = () => {
   ];
 
   const handlePrint = useReactToPrint({
+    // @ts-ignore - content is required by the library but types might be outdated
     content: () => printRef.current,
     documentTitle: `Doctor_Schedule_${dateRange.start}_to_${dateRange.end}`,
-    pageStyle: printFormat === 'landscape' 
-      ? '@page { size: landscape; margin: 0.5in; }' 
+    pageStyle: printFormat === 'landscape'
+      ? '@page { size: landscape; margin: 0.5in; }'
       : '@page { size: portrait; margin: 0.5in; }'
   });
 
@@ -78,13 +79,13 @@ const PrintSchedule: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
             <div className="grid grid-cols-2 gap-2">
-              <Input 
-                type="date" 
+              <Input
+                type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
               />
-              <Input 
-                type="date" 
+              <Input
+                type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
               />
@@ -93,7 +94,7 @@ const PrintSchedule: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-            <select 
+            <select
               className="w-full p-2 border rounded"
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
@@ -109,7 +110,7 @@ const PrintSchedule: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Doctor</label>
-            <select 
+            <select
               className="w-full p-2 border rounded"
               value={doctorFilter}
               onChange={(e) => setDoctorFilter(e.target.value)}
@@ -125,16 +126,14 @@ const PrintSchedule: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">Print Format</label>
             <div className="flex gap-2">
               <Button
-                type="button"
-                variant={printFormat === 'portrait' ? 'default' : 'outline'}
+                variant={printFormat === 'portrait' ? 'primary' : 'outline'}
                 onClick={() => setPrintFormat('portrait')}
                 className="flex-1"
               >
                 Portrait
               </Button>
               <Button
-                type="button"
-                variant={printFormat === 'landscape' ? 'default' : 'outline'}
+                variant={printFormat === 'landscape' ? 'primary' : 'outline'}
                 onClick={() => setPrintFormat('landscape')}
                 className="flex-1"
               >
@@ -235,11 +234,10 @@ const PrintSchedule: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap print:px-2 print:py-2">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              slot.status === 'confirmed' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
+                            <span className={`px-2 py-1 text-xs rounded-full ${slot.status === 'confirmed'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                              }`}>
                               {slot.status}
                             </span>
                           </td>

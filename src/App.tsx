@@ -41,11 +41,12 @@ import { Login } from './pages/Login/Login'; // Import 3D Login component
 // import RemoveTriggerComponent from './components/RemoveTriggerComponent'; // Not needed - backend issue
 import TransactionDateDebugger from './components/TransactionDateDebugger'; // Temporary debugger
 import ReferralManagementSimple from './pages/ReferralManagementSimple';
-// import TeleconsultAppointment from './components/TeleconsultAppointment';
-// import WaitingHallDisplay from './components/WaitingHallDisplay';
-// import PrintScheduleSimple from './components/PrintScheduleSimple';
-// import SelfRegistrationKiosk from './components/SelfRegistrationKiosk';
-// import ExternalAppointmentCapture from './components/ExternalAppointmentCapture';
+import TeleconsultAppointment from './components/TeleconsultAppointment';
+import WaitingHallDisplay from './components/WaitingHallDisplay';
+import PrintSchedule from './components/PrintSchedule';
+import SelfRegistrationKiosk from './components/SelfRegistrationKiosk';
+import ExternalAppointmentCapture from './components/ExternalAppointmentCapture';
+import ReferralSystem from './components/ReferralSystem';
 
 // Login Component - Replaced with 3D animated version from ./pages/Login/Login
 // The old LoginPage component has been commented out and replaced with the imported Login component
@@ -966,42 +967,42 @@ const App: React.FC = () => {
     {
       id: 'referral-management',
       name: '📤 Referral Management',
-      component: ComingSoon,
+      component: ReferralSystem,
       description: 'Manage internal and external patient referrals',
       permission: 'read_patients'
     },
     {
       id: 'teleconsult',
       name: '📹 Teleconsult',
-      component: ComingSoon,
+      component: TeleconsultAppointment,
       description: 'Physical and virtual consultation appointments',
       permission: 'read_appointments'
     },
     {
       id: 'waiting-hall',
       name: '🎫 Waiting Hall',
-      component: ComingSoon,
+      component: WaitingHallDisplay,
       description: 'Public display for waiting patients and token system',
       permission: 'read_patients'
     },
     {
       id: 'print-schedule',
       name: '🖨️ Print Schedule',
-      component: ComingSoon,
+      component: PrintSchedule,
       description: 'Print and export practitioner schedules',
       permission: 'read_appointments'
     },
     {
       id: 'self-registration',
       name: '🖥️ Self Registration',
-      component: ComingSoon,
+      component: SelfRegistrationKiosk,
       description: 'Patient self-service registration kiosk',
       permission: 'create_patients'
     },
     {
       id: 'external-appointments',
       name: '🌐 External Appointments',
-      component: () => <div className="p-8">External Appointment Capture - Coming Soon</div>,
+      component: ExternalAppointmentCapture,
       description: 'Capture appointments from external booking systems',
       permission: 'read_appointments'
     }
@@ -1164,8 +1165,8 @@ const App: React.FC = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`w-full px-6 py-3 text-left text-sm font-medium transition-colors border-l-4 ${activeTab === tab.id
-                    ? 'bg-blue-50 text-blue-700 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-transparent'
+                  ? 'bg-blue-50 text-blue-700 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-transparent'
                   }`}
                 title={tab.description}
               >
