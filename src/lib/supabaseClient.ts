@@ -4,23 +4,15 @@
 import { createSupabaseClient } from '../config/supabaseConfig';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-let supabaseInstance: SupabaseClient | null = null;
+// Initialize Supabase client immediately to prevent null pointer errors when exported directly
+const supabaseInstance = createSupabaseClient();
+export const supabase: SupabaseClient = supabaseInstance;
 
 /**
  * Get or create Supabase client.
  * Returns the Supabase client instance (synchronous with npm package).
+ * Kept for backwards compatibility.
  */
-export let supabase: SupabaseClient | null = null;
-
 export async function getSupabase(): Promise<SupabaseClient> {
-  if (supabaseInstance) {
-    return supabaseInstance;
-  }
-
-  // Create client directly (no CDN loading needed)
-  supabaseInstance = createSupabaseClient();
-  supabase = supabaseInstance;
-
-  console.log('✅ Supabase client initialized');
   return supabaseInstance;
 }

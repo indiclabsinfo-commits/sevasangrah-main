@@ -1,10 +1,11 @@
-import { supabase } from '../lib/supabaseClient';
+import { getSupabase } from '../lib/supabaseClient';
 import type { PatientWithRelations, PatientTransaction, PatientAdmission } from '../config/supabaseNew';
 
 export class ExactDateService {
 
   static async getPatientsForExactDate(dateStr: string, limit = 100): Promise<PatientWithRelations[]> {
     try {
+      const supabase = await getSupabase();
       console.log('🔍 Getting patients for exact date via Supabase:', dateStr);
 
       // Start of day and end of day for the given date
@@ -45,6 +46,7 @@ export class ExactDateService {
 
   static async getPatientsForDateRange(startDateStr: string, endDateStr: string): Promise<PatientWithRelations[]> {
     try {
+      const supabase = await getSupabase();
       console.log('🔍 getPatientsForDateRange via Supabase:', { startDateStr, endDateStr });
 
       // Adjust end date to include the full day
@@ -76,6 +78,7 @@ export class ExactDateService {
 
   static async getPatientRefunds(startDateStr: string, endDateStr: string): Promise<any[]> {
     try {
+      const supabase = await getSupabase();
       console.log('🔍 getPatientRefunds via Supabase:', { startDateStr, endDateStr });
 
       const endDate = new Date(endDateStr);
@@ -131,10 +134,21 @@ export class ExactDateService {
 
     const visitCount = Math.max(registrationVisits, 1);
 
-    // Get last transaction/visit date
-    const lastTransactionDate = transactions.length > 0
-      ? new Date(Math.max(...transactions.map((t: any) => new Date(t.created_at).getTime())))
-      : new Date(patient.created_at);
+    // Get last transaction/visit date safely
+    let lastTransactionDate: Date;
+    try {
+      const validDates = transactions
+        .map((t: any) => t.created_at || t.transaction_date)
+        .filter(Boolean)
+        .map((d: string) => new Date(d).getTime())
+        .filter(t => !isNaN(t));
+
+      lastTransactionDate = validDates.length > 0
+        ? new Date(Math.max(...validDates))
+        : new Date(patient.created_at || new Date());
+    } catch (e) {
+      lastTransactionDate = new Date();
+    }
 
     return {
       ...patient,
