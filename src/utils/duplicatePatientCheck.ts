@@ -51,21 +51,21 @@ export interface DuplicateCheckResult {
 // Calculate similarity between two strings (0-100)
 const calculateStringSimilarity = (str1: string, str2: string): number => {
   if (!str1 || !str2) return 0;
-  
+
   const s1 = str1.toLowerCase().trim();
   const s2 = str2.toLowerCase().trim();
-  
+
   // Exact match
   if (s1 === s2) return 100;
-  
+
   // Contains match
   if (s1.includes(s2) || s2.includes(s1)) return 80;
-  
+
   // Levenshtein distance for names
   const distance = levenshteinDistance(s1, s2);
   const maxLength = Math.max(s1.length, s2.length);
   const similarity = Math.max(0, 100 - (distance / maxLength) * 100);
-  
+
   return Math.round(similarity);
 };
 
@@ -107,27 +107,27 @@ export const checkForDuplicates = async (
 ): Promise<DuplicateCheckResult> => {
   try {
     logger.log('🔍 Checking for duplicate patients:', patientData);
-    
+
     const matches: DuplicateMatch[] = [];
-    
+
     // 1. Check by Aadhaar (exact match)
     if (patientData.aadhaar && patientData.aadhaar.length === 12) {
       const aadhaarMatches = await checkByAadhaar(patientData.aadhaar, patientData.patientId);
       matches.push(...aadhaarMatches);
     }
-    
+
     // 2. Check by ABHA ID (exact match)
     if (patientData.abhaId) {
       const abhaMatches = await checkByABHA(patientData.abhaId, patientData.patientId);
       matches.push(...abhaMatches);
     }
-    
+
     // 3. Check by phone number (exact and similar)
     if (patientData.phone) {
       const phoneMatches = await checkByPhone(patientData.phone, patientData.patientId);
       matches.push(...phoneMatches);
     }
-    
+
     // 4. Check by name and date of birth
     if (patientData.firstName && patientData.dateOfBirth) {
       const nameDobMatches = await checkByNameAndDOB(
@@ -138,7 +138,7 @@ export const checkForDuplicates = async (
       );
       matches.push(...nameDobMatches);
     }
-    
+
     // 5. Check by name and phone similarity
     if (patientData.firstName && patientData.phone) {
       const namePhoneMatches = await checkByNameAndPhone(
@@ -149,18 +149,18 @@ export const checkForDuplicates = async (
       );
       matches.push(...namePhoneMatches);
     }
-    
+
     // Remove duplicates (same patient matched by multiple criteria)
     const uniqueMatches = removeDuplicateMatches(matches);
-    
+
     // Categorize matches
     const exactMatches = uniqueMatches.filter(m => m.matchScore >= 90);
     const potentialMatches = uniqueMatches.filter(m => m.matchScore >= 70 && m.matchScore < 90);
-    
+
     // Determine suggested action
     let suggestedAction: 'block' | 'warn' | 'allow' = 'allow';
     let confidence = 0;
-    
+
     if (exactMatches.length > 0) {
       suggestedAction = 'block';
       confidence = 95;
@@ -171,7 +171,7 @@ export const checkForDuplicates = async (
       suggestedAction = 'allow';
       confidence = 10; // Low confidence for "no duplicates"
     }
-    
+
     const result: DuplicateCheckResult = {
       hasDuplicates: exactMatches.length > 0 || potentialMatches.length > 0,
       totalMatches: uniqueMatches.length,
@@ -180,7 +180,7 @@ export const checkForDuplicates = async (
       suggestedAction,
       confidence
     };
-    
+
     logger.log('✅ Duplicate check result:', result);
     return result;
   } catch (error) {
@@ -196,17 +196,28 @@ export const checkForDuplicates = async (
   }
 };
 
+// Helper to validate UUID format
+const isValidUuid = (id: string | undefined): boolean => {
+  if (!id) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
+
 // Check by Aadhaar number
 const checkByAadhaar = async (aadhaar: string, excludePatientId?: string): Promise<DuplicateMatch[]> => {
-  const { data, error } = await supabase
+  let query = supabase
     .from('patients')
     .select('*')
-    .eq('aadhaar_number', aadhaar)
-    .neq('id', excludePatientId || '')
-    .limit(5);
-  
+    .eq('aadhaar_number', aadhaar);
+
+  if (isValidUuid(excludePatientId)) {
+    query = query.neq('id', excludePatientId);
+  }
+
+  const { data, error } = await query.limit(5);
+
   if (error || !data) return [];
-  
+
   return data.map(patient => ({
     patientId: patient.id,
     matchScore: 100, // Exact Aadhaar match
@@ -217,15 +228,19 @@ const checkByAadhaar = async (aadhaar: string, excludePatientId?: string): Promi
 
 // Check by ABHA ID
 const checkByABHA = async (abhaId: string, excludePatientId?: string): Promise<DuplicateMatch[]> => {
-  const { data, error } = await supabase
+  let query = supabase
     .from('patients')
     .select('*')
-    .eq('abha_id', abhaId)
-    .neq('id', excludePatientId || '')
-    .limit(5);
-  
+    .eq('abha_id', abhaId);
+
+  if (isValidUuid(excludePatientId)) {
+    query = query.neq('id', excludePatientId);
+  }
+
+  const { data, error } = await query.limit(5);
+
   if (error || !data) return [];
-  
+
   return data.map(patient => ({
     patientId: patient.id,
     matchScore: 100, // Exact ABHA match
@@ -238,23 +253,27 @@ const checkByABHA = async (abhaId: string, excludePatientId?: string): Promise<D
 const checkByPhone = async (phone: string, excludePatientId?: string): Promise<DuplicateMatch[]> => {
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) return [];
-  
-  const { data, error } = await supabase
+
+  let query = supabase
     .from('patients')
-    .select('*')
-    .neq('id', excludePatientId || '')
-    .limit(10);
-  
+    .select('*');
+
+  if (isValidUuid(excludePatientId)) {
+    query = query.neq('id', excludePatientId);
+  }
+
+  const { data, error } = await query.limit(10);
+
   if (error || !data) return [];
-  
+
   const matches: DuplicateMatch[] = [];
-  
+
   data.forEach(patient => {
     const patientPhone = normalizePhone(patient.phone || '');
     if (!patientPhone) return;
-    
+
     const similarity = calculateStringSimilarity(normalizedPhone, patientPhone);
-    
+
     if (similarity >= 70) {
       const reasons: string[] = [];
       if (similarity === 100) {
@@ -264,7 +283,7 @@ const checkByPhone = async (phone: string, excludePatientId?: string): Promise<D
       } else {
         reasons.push('Similar phone number');
       }
-      
+
       matches.push({
         patientId: patient.id,
         matchScore: similarity,
@@ -273,7 +292,7 @@ const checkByPhone = async (phone: string, excludePatientId?: string): Promise<D
       });
     }
   });
-  
+
   return matches;
 };
 
@@ -284,30 +303,34 @@ const checkByNameAndDOB = async (
   dateOfBirth: string,
   excludePatientId?: string
 ): Promise<DuplicateMatch[]> => {
-  const { data, error } = await supabase
+  let query = supabase
     .from('patients')
-    .select('*')
-    .neq('id', excludePatientId || '')
-    .limit(10);
-  
+    .select('*');
+
+  if (isValidUuid(excludePatientId)) {
+    query = query.neq('id', excludePatientId);
+  }
+
+  const { data, error } = await query.limit(10);
+
   if (error || !data) return [];
-  
+
   const matches: DuplicateMatch[] = [];
-  
+
   data.forEach(patient => {
     let matchScore = 0;
     const reasons: string[] = [];
-    
+
     // Check name similarity
     const firstNameSimilarity = calculateStringSimilarity(firstName, patient.first_name || '');
     const lastNameSimilarity = calculateStringSimilarity(lastName || '', patient.last_name || '');
     const nameSimilarity = Math.max(firstNameSimilarity, lastNameSimilarity);
-    
+
     if (nameSimilarity >= 80) {
       matchScore += nameSimilarity * 0.6; // 60% weight for name
       reasons.push(`Name similarity: ${nameSimilarity}%`);
     }
-    
+
     // Check date of birth
     if (dateOfBirth && patient.date_of_birth) {
       const dobSimilarity = calculateStringSimilarity(dateOfBirth, patient.date_of_birth);
@@ -316,7 +339,7 @@ const checkByNameAndDOB = async (
         reasons.push(`Date of birth match: ${dobSimilarity}%`);
       }
     }
-    
+
     if (matchScore >= 70) {
       matches.push({
         patientId: patient.id,
@@ -326,7 +349,7 @@ const checkByNameAndDOB = async (
       });
     }
   });
-  
+
   return matches;
 };
 
@@ -339,31 +362,35 @@ const checkByNameAndPhone = async (
 ): Promise<DuplicateMatch[]> => {
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) return [];
-  
-  const { data, error } = await supabase
+
+  let query = supabase
     .from('patients')
-    .select('*')
-    .neq('id', excludePatientId || '')
-    .limit(10);
-  
+    .select('*');
+
+  if (isValidUuid(excludePatientId)) {
+    query = query.neq('id', excludePatientId);
+  }
+
+  const { data, error } = await query.limit(10);
+
   if (error || !data) return [];
-  
+
   const matches: DuplicateMatch[] = [];
-  
+
   data.forEach(patient => {
     let matchScore = 0;
     const reasons: string[] = [];
-    
+
     // Check name similarity
     const firstNameSimilarity = calculateStringSimilarity(firstName, patient.first_name || '');
     const lastNameSimilarity = calculateStringSimilarity(lastName || '', patient.last_name || '');
     const nameSimilarity = Math.max(firstNameSimilarity, lastNameSimilarity);
-    
+
     if (nameSimilarity >= 70) {
       matchScore += nameSimilarity * 0.5; // 50% weight for name
       reasons.push(`Name similarity: ${nameSimilarity}%`);
     }
-    
+
     // Check phone similarity
     const patientPhone = normalizePhone(patient.phone || '');
     if (patientPhone) {
@@ -373,7 +400,7 @@ const checkByNameAndPhone = async (
         reasons.push(`Phone similarity: ${phoneSimilarity}%`);
       }
     }
-    
+
     if (matchScore >= 70) {
       matches.push({
         patientId: patient.id,
@@ -383,21 +410,21 @@ const checkByNameAndPhone = async (
       });
     }
   });
-  
+
   return matches;
 };
 
 // Remove duplicate matches (same patient matched multiple times)
 const removeDuplicateMatches = (matches: DuplicateMatch[]): DuplicateMatch[] => {
   const uniquePatients = new Map<string, DuplicateMatch>();
-  
+
   matches.forEach(match => {
     const existing = uniquePatients.get(match.patientId);
     if (!existing || match.matchScore > existing.matchScore) {
       uniquePatients.set(match.patientId, match);
     }
   });
-  
+
   return Array.from(uniquePatients.values());
 };
 
@@ -408,16 +435,16 @@ export const mergeDuplicatePatients = async (
 ): Promise<boolean> => {
   try {
     logger.log('🔄 Merging duplicate patients:', { primaryPatientId, duplicatePatientIds });
-    
+
     // In a real implementation, this would:
     // 1. Transfer all records (appointments, transactions, etc.) to primary patient
     // 2. Update foreign keys in related tables
     // 3. Mark duplicate patients as merged/inactive
     // 4. Log the merge operation
-    
+
     // For now, we'll just log and return success
     logger.log('✅ Merge operation logged (simulated)');
-    
+
     // Update duplicate patients to mark them as merged
     const { error } = await supabase
       .from('patients')
@@ -427,12 +454,12 @@ export const mergeDuplicatePatients = async (
         updated_at: new Date().toISOString()
       })
       .in('id', duplicatePatientIds);
-    
+
     if (error) {
       logger.error('❌ Error marking duplicates as merged:', error);
       return false;
     }
-    
+
     // Log merge operation
     await supabase
       .from('patient_merge_logs')
@@ -442,7 +469,7 @@ export const mergeDuplicatePatients = async (
         merged_at: new Date().toISOString(),
         merged_by: 'system' // In real app, use current user ID
       });
-    
+
     logger.log('✅ Duplicate patients merged successfully');
     return true;
   } catch (error) {
@@ -458,11 +485,11 @@ export const getMergeHistory = async (patientId: string): Promise<any[]> => {
     .select('*')
     .or(`primary_patient_id.eq.${patientId},duplicate_patient_ids.cs.{${patientId}}`)
     .order('merged_at', { ascending: false });
-  
+
   if (error) {
     logger.error('❌ Error fetching merge history:', error);
     return [];
   }
-  
+
   return data || [];
 };
