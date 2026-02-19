@@ -143,24 +143,24 @@ export class SupabasePatientService {
 
             console.log('📤 Inserting into Supabase:', supabaseData);
 
-            // Insert via SECURITY DEFINER function (bypasses RLS completely)
+            // Direct REST API insert (fetch interceptor that was masking errors has been removed)
             let data, error;
             try {
                 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
                 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
-                console.log('🔄 Inserting patient via RPC function...');
-                console.log('📋 Insert data keys:', Object.keys(supabaseData));
+                console.log('🔄 Inserting patient via REST API...');
+                console.log('📋 Insert data:', JSON.stringify(supabaseData).substring(0, 300));
 
-                // Call the SECURITY DEFINER function via RPC
-                const insertResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/insert_patient_record`, {
+                const insertResponse = await fetch(`${supabaseUrl}/rest/v1/patients`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'apikey': supabaseKey,
-                        'Authorization': `Bearer ${supabaseKey}`
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Prefer': 'return=representation'
                     },
-                    body: JSON.stringify({ patient_data: supabaseData })
+                    body: JSON.stringify(supabaseData)
                 });
 
                 const responseText = await insertResponse.text();
@@ -177,15 +177,17 @@ export class SupabasePatientService {
                     throw new Error(`Insert failed (${insertResponse.status}): ${errorMsg}`);
                 }
 
-                // Parse the returned patient record
-                data = JSON.parse(responseText);
+                // Parse response
+                const insertedData = JSON.parse(responseText);
+                data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
+
                 if (!data || !data.id) {
-                    console.error('❌ RPC returned invalid data:', responseText);
-                    throw new Error('Patient insert returned invalid data');
+                    console.error('❌ Insert returned empty/invalid data:', responseText);
+                    throw new Error('Patient insert returned empty response. Check RLS policies - run disable_rls.sql in Supabase SQL Editor.');
                 }
 
                 error = null;
-                console.log('✅ Patient inserted via RPC! ID:', data.patient_id, 'UUID:', data.id);
+                console.log('✅ Patient inserted! ID:', data.patient_id, 'UUID:', data.id);
 
             } catch (dbError: any) {
                 console.error('❌ Database Insert Error:', dbError);
@@ -249,16 +251,17 @@ export class SupabasePatientService {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
-            console.log('💰 Creating transaction via RPC function:', Object.keys(transactionData));
+            console.log('💰 Creating transaction via REST API:', Object.keys(transactionData));
 
-            const response = await fetch(`${supabaseUrl}/rest/v1/rpc/insert_transaction_record`, {
+            const response = await fetch(`${supabaseUrl}/rest/v1/patient_transactions`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Prefer': 'return=representation'
                 },
-                body: JSON.stringify({ transaction_data: transactionData })
+                body: JSON.stringify(transactionData)
             });
 
             const responseText = await response.text();
@@ -274,8 +277,9 @@ export class SupabasePatientService {
                 throw new Error(`Transaction insert failed (${response.status}): ${errorMsg}`);
             }
 
-            const data = JSON.parse(responseText);
-            console.log('✅ Transaction created via RPC:', data?.id);
+            const insertedData = JSON.parse(responseText);
+            const data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
+            console.log('✅ Transaction created:', data?.id);
             return data || transactionData;
         } catch (error: any) {
             console.error('❌ Error creating transaction:', error);

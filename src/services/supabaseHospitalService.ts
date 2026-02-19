@@ -553,19 +553,20 @@ export class SupabaseHospitalService {
   // ==================== TRANSACTIONS ====================
   static async createTransaction(transactionData: any): Promise<any> {
     try {
-      logger.log('💰 Creating transaction via RPC function:', transactionData);
+      logger.log('💰 Creating transaction via REST API:', transactionData);
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
-      const response = await fetch(`${supabaseUrl}/rest/v1/rpc/insert_transaction_record`, {
+      const response = await fetch(`${supabaseUrl}/rest/v1/patient_transactions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Prefer': 'return=representation'
         },
-        body: JSON.stringify({ transaction_data: transactionData })
+        body: JSON.stringify(transactionData)
       });
 
       const responseText = await response.text();
@@ -581,8 +582,9 @@ export class SupabaseHospitalService {
         throw new Error(`Transaction insert failed (${response.status}): ${errorMsg}`);
       }
 
-      const data = JSON.parse(responseText);
-      logger.log('✅ Transaction created via RPC:', data?.id);
+      const insertedData = JSON.parse(responseText);
+      const data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
+      logger.log('✅ Transaction created:', data?.id);
       return data || transactionData;
     } catch (error) {
       logger.error('🚨 Failed to create transaction:', error);
