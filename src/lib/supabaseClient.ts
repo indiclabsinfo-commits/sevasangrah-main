@@ -1,33 +1,25 @@
 // Supabase Client - Zero Backend Architecture
-// Auto-loads Supabase and creates client with current configuration
+// Uses npm package @supabase/supabase-js directly
 
-import { ensureSupabaseLoaded, createSupabaseClient } from '../config/supabaseConfig';
+import { createSupabaseClient } from '../config/supabaseConfig';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-let supabaseInstance: any = null;
+let supabaseInstance: SupabaseClient | null = null;
 
 /**
  * Get or create Supabase client.
- * Returns a promise that resolves to the Supabase client instance.
- * Use this instead of direct 'supabase' export for maximum safety and async loading.
+ * Returns the Supabase client instance (synchronous with npm package).
  */
-export let supabase: any = null;
+export let supabase: SupabaseClient | null = null;
 
-export async function getSupabase() {
+export async function getSupabase(): Promise<SupabaseClient> {
   if (supabaseInstance) {
     return supabaseInstance;
   }
 
-  // Ensure Supabase is loaded
-  await ensureSupabaseLoaded();
-
-  // Create client with current config
+  // Create client directly (no CDN loading needed)
   supabaseInstance = createSupabaseClient();
-
-  if (!supabaseInstance) {
-    throw new Error('Failed to create Supabase client. Please refresh the page.');
-  }
-
-  supabase = supabaseInstance; // Update the exported let
+  supabase = supabaseInstance;
 
   console.log('✅ Supabase client initialized');
   return supabaseInstance;

@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS uhid_config (
     UNIQUE(hospital_id)
 );
 
--- 3. Ensure generate_uhid function exists
+-- 3. Drop and recreate generate_uhid function (handles return type mismatch)
+DROP FUNCTION IF EXISTS generate_uhid(uuid);
 CREATE OR REPLACE FUNCTION generate_uhid(p_hospital_id UUID DEFAULT '550e8400-e29b-41d4-a716-446655440000')
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -65,7 +66,29 @@ BEGIN
 END;
 $$;
 
--- 4. Grant permissions
+-- 4. Ensure transactions table exists
+CREATE TABLE IF NOT EXISTS transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID REFERENCES patients(id),
+    amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    description TEXT,
+    transaction_type TEXT DEFAULT 'CONSULTATION',
+    payment_mode TEXT DEFAULT 'CASH',
+    online_payment_method TEXT,
+    rghs_number TEXT,
+    doctor_name TEXT,
+    department TEXT,
+    discount_type TEXT,
+    discount_value NUMERIC(10, 2) DEFAULT 0,
+    discount_reason TEXT,
+    status TEXT DEFAULT 'COMPLETED',
+    transaction_date TEXT,
+    hospital_id UUID REFERENCES hospitals(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 5. Grant permissions
 GRANT ALL ON TABLE hospitals TO authenticated;
 GRANT ALL ON TABLE uhid_config TO authenticated;
 GRANT ALL ON FUNCTION generate_uhid TO authenticated;
