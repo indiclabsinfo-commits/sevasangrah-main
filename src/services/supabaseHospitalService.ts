@@ -705,6 +705,61 @@ export class SupabaseHospitalService {
     logger.log('✅ User profile created:', newUser);
     return newUser as User;
   }
+
+  // ==================== PATIENT DATA ====================
+
+  static async getPatientById(patientId: string): Promise<any | null> {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
+
+      // Try by UUID first, then by patient_id string
+      const res = await fetch(
+        `${supabaseUrl}/rest/v1/patients?or=(id.eq.${patientId},patient_id.eq.${patientId})&limit=1`,
+        {
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+          }
+        }
+      );
+      if (!res.ok) {
+        logger.error('getPatientById fetch failed:', res.status);
+        return null;
+      }
+      const data = await res.json();
+      return Array.isArray(data) && data.length > 0 ? data[0] : null;
+    } catch (e) {
+      logger.error('getPatientById error:', e);
+      return null;
+    }
+  }
+
+  static async getTransactionsByPatient(patientId: string): Promise<any[]> {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
+
+      const res = await fetch(
+        `${supabaseUrl}/rest/v1/patient_transactions?or=(patient_id.eq.${patientId},patient_uuid.eq.${patientId})&order=created_at.desc`,
+        {
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+          }
+        }
+      );
+      if (!res.ok) {
+        logger.error('getTransactionsByPatient fetch failed:', res.status);
+        return [];
+      }
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      logger.error('getTransactionsByPatient error:', e);
+      return [];
+    }
+  }
 }
 
 export default SupabaseHospitalService;
