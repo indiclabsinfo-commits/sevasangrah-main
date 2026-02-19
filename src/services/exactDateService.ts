@@ -24,7 +24,7 @@ export class ExactDateService {
         .from('patients')
         .select(`
           *,
-          patient_transactions (*),
+          patient_transactions!patient_transactions_patient_id_fkey (*),
           patient_admissions (*)
         `)
         .gte('created_at', startOfDay.toISOString())
@@ -57,7 +57,7 @@ export class ExactDateService {
         .from('patients')
         .select(`
           *,
-          patient_transactions (*),
+          patient_transactions!patient_transactions_patient_id_fkey (*),
           patient_admissions (*)
         `)
         .gte('created_at', new Date(startDateStr).toISOString())
@@ -88,7 +88,7 @@ export class ExactDateService {
         .from('patient_transactions')
         .select(`
           *,
-          patients (
+          patients!patient_transactions_patient_id_fkey (
             first_name,
             last_name,
             phone

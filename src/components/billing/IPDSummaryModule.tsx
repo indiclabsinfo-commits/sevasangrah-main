@@ -165,7 +165,7 @@ const IPDSummaryModule: React.FC = () => {
           .from('patients')
           .select(`
             *,
-            transactions:patient_transactions(*),
+            transactions:patient_transactions!patient_transactions_patient_id_fkey(*),
             admissions:patient_admissions(*)
           `)
           // .eq('hospital_id', HOSPITAL_ID) // Removed as hospital may not exist
@@ -991,9 +991,8 @@ const IPDSummaryModule: React.FC = () => {
                           <div
                             key={patient.id}
                             onClick={() => setSelectedPatient(patient)}
-                            className={`p-3 cursor-pointer hover:bg-gray-50 border-b ${
-                              selectedPatient?.id === patient.id ? 'bg-blue-50 border-blue-200' : ''
-                            }`}
+                            className={`p-3 cursor-pointer hover:bg-gray-50 border-b ${selectedPatient?.id === patient.id ? 'bg-blue-50 border-blue-200' : ''
+                              }`}
                           >
                             <div className="font-medium">{patient.first_name} {patient.last_name}</div>
                             <div className="text-sm text-gray-500">ID: {patient.patient_id} | Age: {patient.age} | {patient.gender}</div>

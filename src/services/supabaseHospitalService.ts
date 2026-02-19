@@ -625,7 +625,7 @@ export class SupabaseHospitalService {
         .from('patient_transactions')
         .select(`
           *,
-          patient:patients(id, first_name, last_name, patient_id)
+          patient:patients!patient_transactions_patient_id_fkey(id, first_name, last_name, patient_id)
         `)
         .order('created_at', { ascending: false });
 
