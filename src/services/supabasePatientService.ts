@@ -143,35 +143,32 @@ export class SupabasePatientService {
 
             console.log('📤 Inserting into Supabase:', supabaseData);
 
-            // Insert into Supabase using raw fetch (bypasses supabase-js internal TypeError)
+            // Insert via SECURITY DEFINER function (bypasses RLS completely)
             let data, error;
             try {
                 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
                 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
-                console.log('🔄 Inserting patient via REST API...');
+                console.log('🔄 Inserting patient via RPC function...');
                 console.log('📋 Insert data keys:', Object.keys(supabaseData));
-                console.log('🔗 Supabase URL:', supabaseUrl);
 
-                // Direct REST API call for INSERT
-                const insertResponse = await fetch(`${supabaseUrl}/rest/v1/patients`, {
+                // Call the SECURITY DEFINER function via RPC
+                const insertResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/insert_patient_record`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'apikey': supabaseKey,
-                        'Authorization': `Bearer ${supabaseKey}`,
-                        'Prefer': 'return=representation'
+                        'Authorization': `Bearer ${supabaseKey}`
                     },
-                    body: JSON.stringify(supabaseData)
+                    body: JSON.stringify({ patient_data: supabaseData })
                 });
 
                 const responseText = await insertResponse.text();
                 console.log('📥 Insert response status:', insertResponse.status);
-                console.log('📥 Insert response body:', responseText);
+                console.log('📥 Insert response body:', responseText.substring(0, 500));
 
                 if (!insertResponse.ok) {
                     console.error('❌ Insert failed with status:', insertResponse.status);
-                    console.error('❌ Response body:', responseText);
                     let errorMsg = `HTTP ${insertResponse.status}`;
                     try {
                         const errorJson = JSON.parse(responseText);
@@ -180,18 +177,15 @@ export class SupabasePatientService {
                     throw new Error(`Insert failed (${insertResponse.status}): ${errorMsg}`);
                 }
 
-                // Parse successful response
-                const insertedData = JSON.parse(responseText);
-                data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
-
-                // If RLS blocks the insert, data will be empty
-                if (!data) {
-                    console.error('❌ Insert returned empty response - RLS may be blocking. Run fix_rls_policies.sql in Supabase SQL Editor.');
-                    throw new Error('Patient insert returned empty response. Please check database RLS policies.');
+                // Parse the returned patient record
+                data = JSON.parse(responseText);
+                if (!data || !data.id) {
+                    console.error('❌ RPC returned invalid data:', responseText);
+                    throw new Error('Patient insert returned invalid data');
                 }
 
                 error = null;
-                console.log('✅ Insert successful! Patient ID:', data?.patient_id);
+                console.log('✅ Patient inserted via RPC! ID:', data.patient_id, 'UUID:', data.id);
 
             } catch (dbError: any) {
                 console.error('❌ Database Insert Error:', dbError);
@@ -255,22 +249,21 @@ export class SupabasePatientService {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
-            console.log('💰 Creating transaction via REST API:', Object.keys(transactionData));
+            console.log('💰 Creating transaction via RPC function:', Object.keys(transactionData));
 
-            const response = await fetch(`${supabaseUrl}/rest/v1/patient_transactions`, {
+            const response = await fetch(`${supabaseUrl}/rest/v1/rpc/insert_transaction_record`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`,
-                    'Prefer': 'return=representation'
+                    'Authorization': `Bearer ${supabaseKey}`
                 },
-                body: JSON.stringify(transactionData)
+                body: JSON.stringify({ transaction_data: transactionData })
             });
 
             const responseText = await response.text();
             console.log('📥 Transaction response status:', response.status);
-            console.log('📥 Transaction response body:', responseText);
+            console.log('📥 Transaction response body:', responseText.substring(0, 300));
 
             if (!response.ok) {
                 let errorMsg = `HTTP ${response.status}`;
@@ -281,9 +274,8 @@ export class SupabasePatientService {
                 throw new Error(`Transaction insert failed (${response.status}): ${errorMsg}`);
             }
 
-            const insertedData = JSON.parse(responseText);
-            const data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
-            console.log('✅ Transaction created:', data?.id);
+            const data = JSON.parse(responseText);
+            console.log('✅ Transaction created via RPC:', data?.id);
             return data || transactionData;
         } catch (error: any) {
             console.error('❌ Error creating transaction:', error);
