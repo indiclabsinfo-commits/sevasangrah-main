@@ -13,7 +13,7 @@ export interface CreatePatientData {
     email?: string;
     address?: string;
     blood_group?: string;
-    aadhar_number?: string;
+    aadhaar_number?: string;
     abha_id?: string;
     rghs_number?: string;
     date_of_birth?: string;
@@ -79,7 +79,15 @@ export class SupabasePatientService {
             console.log('👤 Creating patient via Supabase:', patientData);
 
             // Generate patient ID
-            const patient_id = await this.generatePatientId();
+            let patient_id = '';
+            try {
+                console.log('🔄 Generating Patient ID...');
+                patient_id = await this.generatePatientId();
+                console.log('✅ Generated Patient ID:', patient_id);
+            } catch (pidError: any) {
+                console.error('❌ Error generating Patient ID:', pidError);
+                throw new Error(`Patient ID Generation Failed: ${pidError.message}`);
+            }
 
             // Generate UHID if not provided
             let uhid = patientData.uhid;
@@ -90,11 +98,10 @@ export class SupabasePatientService {
                     console.log('✅ uhidService returned:', uhidResult); // Log result
                     uhid = uhidResult.uhid;
                     console.log('✅ Generated UHID:', uhid);
-                } catch (uhidError) {
+                } catch (uhidError: any) {
                     console.error('❌ CRITICAL: Failed to generate UHID:', uhidError);
                     console.error('UHID Error details:', uhidError.message);
-                    // Don't continue - UHID is required for Magnus Hospital
-                    throw new Error(`Failed to generate UHID: ${uhidError.message}. Patient creation aborted.`);
+                    throw new Error(`UHID Generation Failed: ${uhidError.message}`);
                 }
             } else {
                 console.log('📝 Using provided UHID:', uhid);
@@ -113,7 +120,7 @@ export class SupabasePatientService {
                 email: patientData.email || null,
                 address: patientData.address || null,
                 blood_group: patientData.blood_group || null,
-                aadhaar_number: patientData.aadhar_number || null,
+                aadhaar_number: patientData.aadhaar_number || null,
                 abha_id: patientData.abha_id || null,
                 rghs_number: patientData.rghs_number || null,
                 date_of_birth: patientData.date_of_birth || null,
@@ -137,15 +144,24 @@ export class SupabasePatientService {
             console.log('📤 Inserting into Supabase:', supabaseData);
 
             // Insert into Supabase
-            console.log('🔄 Getting Supabase client...'); // Log
-            const supabaseClient = await getSupabase();
-            console.log('✅ Got Supabase client, inserting data...'); // Log
+            let data, error;
+            try {
+                console.log('🔄 Getting Supabase client...');
+                const supabaseClient = await getSupabase();
+                console.log('✅ Got Supabase client, inserting data...');
 
-            const { data, error } = await supabaseClient
-                .from('patients')
-                .insert([supabaseData])
-                .select()
-                .single();
+                const result = await supabaseClient
+                    .from('patients')
+                    .insert([supabaseData])
+                    .select()
+                    .single();
+
+                data = result.data;
+                error = result.error;
+            } catch (dbError: any) {
+                console.error('❌ Supabase Client/Insert Error:', dbError);
+                throw new Error(`Database Insert Failed: ${dbError.message}`);
+            }
 
 
             if (error) {
@@ -260,5 +276,28 @@ export class SupabasePatientService {
             return [];
         }
         return data || [];
+    }
+
+    static async updatePatient(patientId: string, updateData: any): Promise<any> {
+        try {
+            console.log('📝 Updating patient:', patientId, updateData);
+            const supabaseClient = await getSupabase();
+
+            // Remove uuid from update data if present to avoid changing primary key
+            const { id, ...dataToUpdate } = updateData;
+
+            const { data, error } = await supabaseClient
+                .from('patients')
+                .update(dataToUpdate)
+                .eq('id', patientId)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        } catch (error: any) {
+            console.error('Error updating patient:', error);
+            throw new Error(`Failed to update patient: ${error.message}`);
+        }
     }
 }

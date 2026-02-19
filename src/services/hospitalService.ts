@@ -17,7 +17,7 @@ import type {
   AppointmentWithRelations
 } from '../config/supabaseNew';
 
-const HOSPITAL_ID = 'b8a8c5e2-5c4d-4a8b-9e6f-3d2c1a0b9c8d'; // Default hospital ID
+const HOSPITAL_ID = '550e8400-e29b-41d4-a716-446655440000'; // Default hospital ID (Matches azure.ts)
 
 export class HospitalService {
 

@@ -155,6 +155,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
     appointment_doctor_name: '', // For existing patient manual entry
     appointment_department: '', // For existing patient manual entry
     appointment_type: 'consultation',
+    appointment_duration: 30, // Default duration
+    appointment_cost: 500, // Default cost
     appointment_notes: '',
 
     // Payment
@@ -781,18 +783,17 @@ const NewFlexiblePatientEntry: React.FC = () => {
 
         if (finalDoctorName && finalDepartmentName) {
           assignedDoctorsData.push({
-            doctor_name: finalDoctorName,
+            name: finalDoctorName,
             department: finalDepartmentName,
-            consultation_fee: formData.consultation_fee
+            consultationFee: formData.consultation_fee
           });
         }
       } else {
         // Multiple doctors mode
         assignedDoctorsData = selectedDoctors.map(doc => ({
-          doctor_name: doc.doctorName,
           name: doc.doctorName, // Fix for AssignedDoctor type
           department: doc.department,
-          consultation_fee: doc.consultationFee || 0
+          consultationFee: doc.consultationFee || 0
         }));
       }
 
@@ -801,7 +802,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
         try {
           for (const doctor of assignedDoctorsData) {
             // Calculate discounted amount
-            const originalAmount = doctor.consultation_fee || 0;
+            const originalAmount = doctor.consultationFee || 0;
             let discountAmount = 0;
             if (formData.discount_type === 'PERCENTAGE') {
               discountAmount = originalAmount * (formData.discount_value / 100);
@@ -811,7 +812,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
             const finalAmount = originalAmount - discountAmount;
 
             // Build description with discount info if applicable
-            let description = `Consultation with ${doctor.doctor_name} - ${doctor.department}`;
+            let description = `Consultation with ${doctor.name} - ${doctor.department}`;
 
             // Add discount information to description for backward compatibility
             if (formData.discount_value > 0) {
@@ -836,7 +837,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
               online_payment_method: formData.payment_mode === 'ONLINE' ? formData.online_payment_method : undefined,
               rghs_number: formData.payment_mode === 'RGHS' ? formData.rghs_number : undefined,
               transaction_type: 'CONSULTATION',
-              doctor_name: doctor.doctor_name,
+              doctor_name: doctor.name,
               department: doctor.department,
               status: 'COMPLETED',
               transaction_date: formData.date_of_entry
@@ -1089,7 +1090,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
 
     } catch (error: any) {
       logger.error('Patient creation failed:', error);
-      toast.error(`Failed to save patient: ${error.message}`);
+      console.error('Registration Error Details:', error);
+      toast.error(`Registration Failed: ${error.message || 'Unknown error'}. Please check console for details.`);
     } finally {
       setLoading(false);
     }
