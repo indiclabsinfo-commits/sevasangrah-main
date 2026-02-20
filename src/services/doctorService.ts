@@ -51,11 +51,11 @@ export class DoctorService {
       // Transform to DoctorInfo format
       const doctors: DoctorInfo[] = data.map(doc => ({
         id: doc.id,
-        name: doc.name,
-        department: doc.department,
-        specialization: doc.specialization || doc.department,
-        fee: doc.fee,
-        is_active: doc.is_active
+        name: doc.name || `${doc.first_name || ''} ${doc.last_name || ''}`.trim() || 'Unknown Doctor',
+        department: doc.department || 'General',
+        specialization: doc.specialization || doc.department || 'General',
+        fee: doc.fee || doc.consultation_fee || 0,
+        is_active: doc.is_active !== false
       }));
 
       // Update cache
@@ -112,18 +112,18 @@ export class DoctorService {
   private static getFallbackDoctors(): DoctorInfo[] {
     logger.log('🔄 Using fallback doctors data');
     return [
-      { id: 'doc-1', name: 'DR. HEMANT KHAJJA', department: 'ORTHOPAEDIC', specialization: 'Orthopaedic Surgeon' },
-      { id: 'doc-2', name: 'DR. LALITA SUWALKA', department: 'DIETICIAN', specialization: 'Clinical Dietician' },
-      { id: 'doc-3', name: 'DR. MILIND KIRIT AKHANI', department: 'GASTRO', specialization: 'Gastroenterologist' },
-      { id: 'doc-4', name: 'DR MEETU BABLE', department: 'GYN.', specialization: 'Gynecologist' },
-      { id: 'doc-5', name: 'DR. AMIT PATANVADIYA', department: 'NEUROLOGY', specialization: 'Neurologist' },
-      { id: 'doc-6', name: 'DR. KISHAN PATEL', department: 'UROLOGY', specialization: 'Urologist' },
-      { id: 'doc-7', name: 'DR. PARTH SHAH', department: 'SURGICAL ONCOLOGY', specialization: 'Surgical Oncologist' },
-      { id: 'doc-8', name: 'DR.RAJEEDP GUPTA', department: 'MEDICAL ONCOLOGY', specialization: 'Medical Oncologist' },
-      { id: 'doc-9', name: 'DR. KULDDEP VALA', department: 'NEUROSURGERY', specialization: 'Neurosurgeon' },
-      { id: 'doc-10', name: 'DR. KURNAL PATEL', department: 'UROLOGY', specialization: 'Urologist' },
-      { id: 'doc-11', name: 'DR. SAURABH GUPTA', department: 'ENDOCRINOLOGY', specialization: 'Endocrinologist' },
-      { id: 'doc-12', name: 'DR. BATUL PEEPAWALA', department: 'GENERAL PHYSICIAN', specialization: 'General Physician' }
+      { id: 'doc-1', name: 'DR. HEMANT KHAJJA', department: 'ORTHOPAEDIC', specialization: 'Orthopaedic Surgeon', fee: 800 },
+      { id: 'doc-2', name: 'DR. LALITA SUWALKA', department: 'DIETICIAN', specialization: 'Clinical Dietician', fee: 500 },
+      { id: 'doc-3', name: 'DR. MILIND KIRIT AKHANI', department: 'GASTRO', specialization: 'Gastroenterologist', fee: 1000 },
+      { id: 'doc-4', name: 'DR MEETU BABLE', department: 'GYN.', specialization: 'Gynecologist', fee: 900 },
+      { id: 'doc-5', name: 'DR. AMIT PATANVADIYA', department: 'NEUROLOGY', specialization: 'Neurologist', fee: 1200 },
+      { id: 'doc-6', name: 'DR. KISHAN PATEL', department: 'UROLOGY', specialization: 'Urologist', fee: 1000 },
+      { id: 'doc-7', name: 'DR. PARTH SHAH', department: 'SURGICAL ONCOLOGY', specialization: 'Surgical Oncologist', fee: 1500 },
+      { id: 'doc-8', name: 'DR.RAJEEDP GUPTA', department: 'MEDICAL ONCOLOGY', specialization: 'Medical Oncologist', fee: 1500 },
+      { id: 'doc-9', name: 'DR. KULDDEP VALA', department: 'NEUROSURGERY', specialization: 'Neurosurgeon', fee: 2000 },
+      { id: 'doc-10', name: 'DR. KURNAL PATEL', department: 'UROLOGY', specialization: 'Urologist', fee: 1000 },
+      { id: 'doc-11', name: 'DR. SAURABH GUPTA', department: 'ENDOCRINOLOGY', specialization: 'Endocrinologist', fee: 800 },
+      { id: 'doc-12', name: 'DR. BATUL PEEPAWALA', department: 'GENERAL PHYSICIAN', specialization: 'General Physician', fee: 600 }
     ];
   }
 
@@ -132,6 +132,12 @@ export class DoctorService {
     doctorsCache = null;
     lastFetchTime = 0;
     logger.log('🧹 Cleared doctors cache');
+  }
+
+  // Force refresh (clear cache and fetch fresh)
+  static async refreshDoctors(): Promise<DoctorInfo[]> {
+    this.clearCache();
+    return this.fetchAllDoctors();
   }
 }
 
