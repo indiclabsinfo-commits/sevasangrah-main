@@ -15,28 +15,85 @@ const WaitingHallDisplay: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Mock data for waiting hall display
-  const mockCurrentTokens = [
-    { token: 'A101', counter: 'Counter 1', doctor: 'Dr. Sharma', department: 'Cardiology', waitTime: 'Now Serving' },
-    { token: 'B202', counter: 'Counter 2', doctor: 'Dr. Patel', department: 'Neurology', waitTime: 'Now Serving' },
-    { token: 'C303', counter: 'Counter 3', doctor: 'Dr. Gupta', department: 'General Medicine', waitTime: 'Next' }
-  ];
+  // Real queue data state
+  const [currentTokens, setCurrentTokens] = useState<any[]>([]);
+  const [upcomingTokens, setUpcomingTokens] = useState<any[]>([]);
+  const [doctorAvailability, setDoctorAvailability] = useState<any[]>([]);
 
-  const mockUpcomingTokens = [
-    { token: 'A102', patient: 'Rajesh Kumar', doctor: 'Dr. Sharma', estimatedTime: '5 min', status: 'waiting' },
-    { token: 'A103', patient: 'Priya Sharma', doctor: 'Dr. Sharma', estimatedTime: '15 min', status: 'waiting' },
-    { token: 'B203', patient: 'Amit Patel', doctor: 'Dr. Patel', estimatedTime: '8 min', status: 'waiting' },
-    { token: 'C304', patient: 'Suresh Reddy', doctor: 'Dr. Gupta', estimatedTime: '12 min', status: 'waiting' },
-    { token: 'C305', patient: 'Meena Singh', doctor: 'Dr. Gupta', estimatedTime: '20 min', status: 'waiting' }
-  ];
+  // Fetch real queue data
+  useEffect(() => {
+    const fetchQueueData = async () => {
+      try {
+        const { getSupabase } = await import('../lib/supabaseClient');
+        const supabase = await getSupabase();
 
-  const mockDoctorAvailability = [
-    { doctor: 'Dr. Sharma', department: 'Cardiology', status: 'available', currentPatient: 'A101', waitTime: '0 min' },
-    { doctor: 'Dr. Patel', department: 'Neurology', status: 'available', currentPatient: 'B202', waitTime: '0 min' },
-    { doctor: 'Dr. Gupta', department: 'General Medicine', status: 'busy', currentPatient: 'C303', waitTime: '5 min' },
-    { doctor: 'Dr. Kumar', department: 'Orthopedics', status: 'break', currentPatient: 'None', waitTime: '30 min' },
-    { doctor: 'Dr. Joshi', department: 'Pediatrics', status: 'available', currentPatient: 'D404', waitTime: '0 min' }
-  ];
+        // Get today's queue with patient and doctor details
+        const { data: queues, error } = await supabase
+          .from('opd_queue')
+          .select(`
+            *,
+            patient:patients(first_name, last_name, phone),
+            doctor:users!opd_queue_doctor_id_fkey(first_name, last_name)
+          `)
+          .gte('created_at', new Date().toISOString().split('T')[0])
+          .order('queue_number', { ascending: true });
+
+        if (error) throw error;
+
+        // Separate in-consultation and waiting
+        const inConsultation = queues?.filter(q => q.queue_status === 'IN_CONSULTATION') || [];
+        const waiting = queues?.filter(q => ['WAITING', 'VITALS_DONE'].includes(q.queue_status)) || [];
+
+        // Format current tokens (in consultation)
+        setCurrentTokens(inConsultation.slice(0, 3).map((q, idx) => ({
+          token: `#${q.queue_number}`,
+          counter: `Counter ${idx + 1}`,
+          doctor: q.doctor ? `Dr. ${q.doctor.first_name} ${q.doctor.last_name}` : 'Doctor',
+          department: q.department || 'General',
+          waitTime: 'Now Serving'
+        })));
+
+        // Format upcoming tokens (waiting)
+        setUpcomingTokens(waiting.slice(0, 5).map(q => ({
+          token: `#${q.queue_number}`,
+          patient: q.patient ? `${q.patient.first_name} ${q.patient.last_name}` : 'Patient',
+          doctor: q.doctor ? `Dr. ${q.doctor.first_name} ${q.doctor.last_name}` : 'Doctor',
+          estimatedTime: q.wait_time ? `${q.wait_time} min` : 'Calculating...',
+          status: q.queue_status
+        })));
+
+        // Get unique doctors and their status
+        const doctorGroups = queues?.reduce((acc: any, q) => {
+          const docKey = q.doctor_id;
+          if (!acc[docKey]) {
+            acc[docKey] = {
+              doctor: q.doctor ? `Dr. ${q.doctor.first_name} ${q.doctor.last_name}` : 'Doctor',
+              department: q.department || 'General',
+              status: 'available',
+              currentPatient: 'None',
+              waitTime: '0 min'
+            };
+          }
+          if (q.queue_status === 'IN_CONSULTATION') {
+            acc[docKey].status = 'busy';
+            acc[docKey].currentPatient = `#${q.queue_number}`;
+          }
+          return acc;
+        }, {});
+
+        setDoctorAvailability(Object.values(doctorGroups || {}));
+
+      } catch (error) {
+        console.error('Error fetching queue data:', error);
+        // Keep existing data or show empty
+      }
+    };
+
+    fetchQueueData();
+    const interval = setInterval(fetchQueueData, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -116,7 +173,7 @@ const WaitingHallDisplay: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {mockCurrentTokens.map((token, index) => (
+              {currentTokens.map((token, index) => (
                 <div 
                   key={index} 
                   className="bg-white text-blue-900 rounded-xl p-6 text-center transform hover:scale-105 transition-transform duration-300 shadow-lg"
@@ -160,7 +217,7 @@ const WaitingHallDisplay: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {mockUpcomingTokens.map((token, index) => (
+                  {upcomingTokens.map((token, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-4 py-4">
                         <div className="text-2xl font-bold text-blue-700">{token.token}</div>
@@ -195,7 +252,7 @@ const WaitingHallDisplay: React.FC = () => {
             </h2>
 
             <div className="space-y-4">
-              {mockDoctorAvailability.map((doctor, index) => (
+              {doctorAvailability.map((doctor, index) => (
                 <div 
                   key={index} 
                   className="border rounded-lg p-4 hover:shadow-md transition-shadow"
