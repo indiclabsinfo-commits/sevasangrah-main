@@ -24,14 +24,8 @@ import { parseLocalDate } from '../utils';
 import PatientPhotoUpload from './PatientPhotoUpload';
 import DuplicatePatientCheck from './DuplicatePatientCheck';
 
-// Doctors and Departments data
-// Doctors and Departments data
-const DOCTORS_DATA = [
-  { name: 'Doctor Naveen', department: 'General Medicine' }
-];
+// Doctors data now fetched from database via DoctorService
 
-// Get unique departments
-const DEPARTMENTS = [...new Set(DOCTORS_DATA.map(doc => doc.department))].sort();
 
 // Aadhaar Verhoeff validation
 //  Returns: true if valid, false if invalid, null if incomplete
@@ -92,6 +86,8 @@ const validateAadhaarFormat = (aadhaarInput: string): boolean | null => {
   return c === 0;
 };
 
+import DoctorsDropdown from './DoctorsDropdown';
+import DepartmentsDropdown from './DepartmentsDropdown';
 const NewFlexiblePatientEntry: React.FC = () => {
   // Helper functions for date format conversion
   const formatDateToDD_MM_YYYY = (dateString: string): string => {

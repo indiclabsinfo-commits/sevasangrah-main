@@ -1,51 +1,139 @@
-// Shared doctor data service - same as used in patient entry
+// Shared doctor data service - fetches from Supabase database
+import { getSupabase } from '../lib/supabaseClient';
+import { logger } from '../utils/logger';
+
 export interface DoctorInfo {
+  id: string;
   name: string;
   department: string;
-  id?: string; // Added for billing system compatibility
-  specialization?: string; // Alias for department
+  specialization?: string;
+  fee?: number;
+  is_active?: boolean;
 }
 
-// Doctors and Departments data - same as in NewFlexiblePatientEntry
-export const DOCTORS_DATA: DoctorInfo[] = [
-  { name: 'Doctor Naveen', department: 'General Medicine' }
-];
-
-// Get unique departments
-export const DEPARTMENTS = [...new Set(DOCTORS_DATA.map(doc => doc.department))].sort();
+// Cache for doctors data (to avoid repeated fetches)
+let doctorsCache: DoctorInfo[] | null = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export class DoctorService {
-  // Get all doctors with billing system compatibility
-  static getAllDoctors(): DoctorInfo[] {
-    return DOCTORS_DATA.map((doctor, index) => ({
-      ...doctor,
-      id: `doc-${index + 1}`, // Generate IDs for billing system
-      specialization: doctor.department // Add specialization alias
-    }));
+  // Fetch all doctors from Supabase
+  static async fetchAllDoctors(): Promise<DoctorInfo[]> {
+    // Return cached data if recent
+    const now = Date.now();
+    if (doctorsCache && (now - lastFetchTime) < CACHE_DURATION) {
+      logger.log('📋 Returning cached doctors data');
+      return doctorsCache;
+    }
+
+    try {
+      const supabase = await getSupabase();
+      logger.log('🔍 Fetching doctors from Supabase...');
+      
+      const { data, error } = await supabase
+        .from('doctors')
+        .select('*')
+        .eq('is_active', true)
+        .order('department')
+        .order('name');
+
+      if (error) {
+        logger.error('❌ Error fetching doctors:', error);
+        // Fallback to hardcoded data
+        return this.getFallbackDoctors();
+      }
+
+      if (!data || data.length === 0) {
+        logger.warn('⚠️ No doctors found in database, using fallback');
+        return this.getFallbackDoctors();
+      }
+
+      // Transform to DoctorInfo format
+      const doctors: DoctorInfo[] = data.map(doc => ({
+        id: doc.id,
+        name: doc.name,
+        department: doc.department,
+        specialization: doc.specialization || doc.department,
+        fee: doc.fee,
+        is_active: doc.is_active
+      }));
+
+      // Update cache
+      doctorsCache = doctors;
+      lastFetchTime = now;
+      
+      logger.log(`✅ Fetched ${doctors.length} doctors from database`);
+      return doctors;
+      
+    } catch (error) {
+      logger.error('❌ Exception fetching doctors:', error);
+      return this.getFallbackDoctors();
+    }
+  }
+
+  // Get all doctors (cached)
+  static async getAllDoctors(): Promise<DoctorInfo[]> {
+    return this.fetchAllDoctors();
   }
 
   // Get doctors by department
-  static getDoctorsByDepartment(department: string): DoctorInfo[] {
-    return this.getAllDoctors().filter(doc => doc.department === department);
+  static async getDoctorsByDepartment(department: string): Promise<DoctorInfo[]> {
+    const allDoctors = await this.fetchAllDoctors();
+    return allDoctors.filter(doc => 
+      doc.department.toLowerCase() === department.toLowerCase() || 
+      doc.department === department
+    );
   }
 
-  // Get all departments
-  static getAllDepartments(): string[] {
-    return DEPARTMENTS;
+  // Get all unique departments
+  static async getAllDepartments(): Promise<string[]> {
+    const allDoctors = await this.fetchAllDoctors();
+    const departments = [...new Set(allDoctors.map(doc => doc.department))].sort();
+    return departments;
   }
 
   // Find doctor by name
-  static getDoctorByName(name: string): DoctorInfo | null {
-    const doctor = DOCTORS_DATA.find(doc => doc.name === name);
-    if (!doctor) return null;
-
-    const index = DOCTORS_DATA.indexOf(doctor);
-    return {
-      ...doctor,
-      id: `doc-${index + 1}`,
-      specialization: doctor.department
-    };
+  static async getDoctorByName(name: string): Promise<DoctorInfo | null> {
+    const allDoctors = await this.fetchAllDoctors();
+    const doctor = allDoctors.find(doc => 
+      doc.name.toLowerCase().includes(name.toLowerCase()) || 
+      name.toLowerCase().includes(doc.name.toLowerCase())
+    );
+    return doctor || null;
   }
+
+  // Find doctor by ID
+  static async getDoctorById(id: string): Promise<DoctorInfo | null> {
+    const allDoctors = await this.fetchAllDoctors();
+    return allDoctors.find(doc => doc.id === id) || null;
+  }
+
+  // Get fallback doctors (if database fails)
+  private static getFallbackDoctors(): DoctorInfo[] {
+    logger.log('🔄 Using fallback doctors data');
+    return [
+      { id: 'doc-1', name: 'DR. HEMANT KHAJJA', department: 'ORTHOPAEDIC', specialization: 'Orthopaedic Surgeon' },
+      { id: 'doc-2', name: 'DR. LALITA SUWALKA', department: 'DIETICIAN', specialization: 'Clinical Dietician' },
+      { id: 'doc-3', name: 'DR. MILIND KIRIT AKHANI', department: 'GASTRO', specialization: 'Gastroenterologist' },
+      { id: 'doc-4', name: 'DR MEETU BABLE', department: 'GYN.', specialization: 'Gynecologist' },
+      { id: 'doc-5', name: 'DR. AMIT PATANVADIYA', department: 'NEUROLOGY', specialization: 'Neurologist' },
+      { id: 'doc-6', name: 'DR. KISHAN PATEL', department: 'UROLOGY', specialization: 'Urologist' },
+      { id: 'doc-7', name: 'DR. PARTH SHAH', department: 'SURGICAL ONCOLOGY', specialization: 'Surgical Oncologist' },
+      { id: 'doc-8', name: 'DR.RAJEEDP GUPTA', department: 'MEDICAL ONCOLOGY', specialization: 'Medical Oncologist' },
+      { id: 'doc-9', name: 'DR. KULDDEP VALA', department: 'NEUROSURGERY', specialization: 'Neurosurgeon' },
+      { id: 'doc-10', name: 'DR. KURNAL PATEL', department: 'UROLOGY', specialization: 'Urologist' },
+      { id: 'doc-11', name: 'DR. SAURABH GUPTA', department: 'ENDOCRINOLOGY', specialization: 'Endocrinologist' },
+      { id: 'doc-12', name: 'DR. BATUL PEEPAWALA', department: 'GENERAL PHYSICIAN', specialization: 'General Physician' }
+    ];
+  }
+
+  // Clear cache (useful after adding new doctors)
+  static clearCache(): void {
+    doctorsCache = null;
+    lastFetchTime = 0;
+    logger.log('🧹 Cleared doctors cache');
+  }
+}
 
   // Find doctor by ID
   static getDoctorById(id: string): DoctorInfo | null {
