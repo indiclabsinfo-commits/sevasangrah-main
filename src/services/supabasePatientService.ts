@@ -166,18 +166,38 @@ export class SupabasePatientService {
 
                     const responseText = await insertResponse.text();
                     console.log('Insert response status:', insertResponse.status);
+                    console.log('Insert response preview:', responseText.substring(0, 200));
+
+                    // Check for UHID duplicate key constraint violation
+                    // Supabase returns 200 with error code 23505 in response body
+                    let isDuplicateUhid = false;
+                    if (responseText) {
+                        try {
+                            const parsedResponse = JSON.parse(responseText);
+                            // Check if response is an error object with code 23505 (unique constraint violation)
+                            if (parsedResponse.code === '23505' &&
+                                parsedResponse.message &&
+                                parsedResponse.message.includes('patients_uhid_key')) {
+                                isDuplicateUhid = true;
+                            }
+                        } catch (parseError) {
+                            // Not JSON or parsing failed, continue with normal flow
+                        }
+                    }
 
                     // Handle UHID conflict - retry with new UHID
-                    if (insertResponse.status === 409 && attempt < MAX_RETRIES) {
-                        console.warn('409 Conflict on attempt ' + attempt + '. Regenerating UHID...');
+                    if ((isDuplicateUhid || insertResponse.status === 409) && attempt < MAX_RETRIES) {
+                        console.warn(`⚠️ UHID conflict detected on attempt ${attempt}/${MAX_RETRIES}. Regenerating UHID...`);
+                        console.warn('Current UHID:', supabaseData.uhid);
                         try {
                             const uhidResult = await uhidService.generateUhid(patientData.hospital_id);
                             supabaseData.uhid = uhidResult.uhid;
-                        } catch {
+                            console.log('✅ New UHID generated:', supabaseData.uhid);
+                        } catch (uhidError) {
+                            console.error('Failed to generate new UHID, using timestamp fallback');
                             supabaseData.uhid = 'UHID-' + Date.now();
                         }
-                        console.log('New UHID:', supabaseData.uhid);
-                        continue;
+                        continue; // Retry with new UHID
                     }
 
                     if (!insertResponse.ok) {
@@ -191,6 +211,14 @@ export class SupabasePatientService {
 
                     // Parse response
                     const insertedData = JSON.parse(responseText);
+
+                    // Check if response is an error object (has 'code' field from database)
+                    if (insertedData && insertedData.code && insertedData.message) {
+                        // This is a database error response
+                        const errorMsg = insertedData.message || insertedData.details || insertedData.hint || 'Database error';
+                        throw new Error(`Database Insert Failed: ${errorMsg} (Error code: ${insertedData.code})`);
+                    }
+
                     data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
 
                     if (!data || !data.id) {
