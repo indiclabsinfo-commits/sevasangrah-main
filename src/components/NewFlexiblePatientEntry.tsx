@@ -1771,8 +1771,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
                   )}
                 </div>
 
-                {/* Duplicate Patient Check */}
-                {(formData.first_name || formData.full_name) && formData.phone && (
+                {/* Duplicate Patient Check - TEMPORARILY DISABLED (causes blank screen) */}
+                {/* {(formData.first_name || formData.full_name) && formData.phone && (
                   <div className="mb-6">
                     <DuplicatePatientCheck
                       patientData={{
@@ -1809,7 +1809,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                       showDetails={true}
                     />
                   </div>
-                )}
+                )} */}
 
                 {/* RGHS Number Field - Moved below Aadhaar as requested */}
                 <div className="mb-4">
