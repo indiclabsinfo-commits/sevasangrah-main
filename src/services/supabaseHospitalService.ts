@@ -553,20 +553,19 @@ export class SupabaseHospitalService {
   // ==================== TRANSACTIONS ====================
   static async createTransaction(transactionData: any): Promise<any> {
     try {
-      logger.log('💰 Creating transaction via REST API:', transactionData);
+      logger.log('💰 Creating transaction via RPC function:', transactionData);
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
-      const response = await fetch(`${supabaseUrl}/rest/v1/patient_transactions`, {
+      const response = await fetch(`${supabaseUrl}/rest/v1/rpc/insert_transaction_record`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Prefer': 'return=representation'
+          'Authorization': `Bearer ${supabaseKey}`
         },
-        body: JSON.stringify(transactionData)
+        body: JSON.stringify({ transaction_data: transactionData })
       });
 
       const responseText = await response.text();
@@ -582,9 +581,8 @@ export class SupabaseHospitalService {
         throw new Error(`Transaction insert failed (${response.status}): ${errorMsg}`);
       }
 
-      const insertedData = JSON.parse(responseText);
-      const data = Array.isArray(insertedData) ? insertedData[0] : insertedData;
-      logger.log('✅ Transaction created:', data?.id);
+      const data = JSON.parse(responseText);
+      logger.log('✅ Transaction created via RPC:', data?.id);
       return data || transactionData;
     } catch (error) {
       logger.error('🚨 Failed to create transaction:', error);
@@ -625,7 +623,7 @@ export class SupabaseHospitalService {
         .from('patient_transactions')
         .select(`
           *,
-          patient:patients!patient_transactions_patient_id_fkey(id, first_name, last_name, patient_id)
+          patient:patients(id, first_name, last_name, patient_id)
         `)
         .order('created_at', { ascending: false });
 
@@ -704,63 +702,6 @@ export class SupabaseHospitalService {
 
     logger.log('✅ User profile created:', newUser);
     return newUser as User;
-  }
-
-  // ==================== PATIENT DATA ====================
-
-  static async getPatientById(patientId: string): Promise<any | null> {
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
-
-      // Try by UUID first, then by patient_id string
-      const res = await fetch(
-        `${supabaseUrl}/rest/v1/patients?or=(id.eq.${patientId},patient_id.eq.${patientId})&limit=1`,
-        {
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-          }
-        }
-      );
-      if (!res.ok) {
-        logger.error('getPatientById fetch failed:', res.status);
-        return null;
-      }
-      const data = await res.json();
-      return Array.isArray(data) && data.length > 0 ? data[0] : null;
-    } catch (e) {
-      logger.error('getPatientById error:', e);
-      return null;
-    }
-  }
-
-  static async getTransactionsByPatient(patientId: string): Promise<any[]> {
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
-
-      // Query by both patient_id (record link) and patient_uuid if possible. 
-      // If patient_uuid doesn't exist yet, we fallback to just patient_id to avoid 400 errors.
-      const res = await fetch(
-        `${supabaseUrl}/rest/v1/patient_transactions?patient_id=eq.${patientId}&order=created_at.desc`,
-        {
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-          }
-        }
-      );
-      if (!res.ok) {
-        logger.error('getTransactionsByPatient fetch failed:', res.status);
-        return [];
-      }
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    } catch (e) {
-      logger.error('getTransactionsByPatient error:', e);
-      return [];
-    }
   }
 }
 
