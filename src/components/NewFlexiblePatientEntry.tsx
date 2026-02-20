@@ -201,14 +201,18 @@ const NewFlexiblePatientEntry: React.FC = () => {
   // Filter doctors based on available data and department selection
   const filteredDoctors = useMemo(() => {
     // 1. Determine Source
-    // Map dbDoctors to match DOCTORS_DATA shape if needed, or use as is
+    // Map dbDoctors to match doctor shape if needed, or use fallback
     const source = dbDoctors.length > 0 ? dbDoctors.map(d => ({
       ...d,
       name: d.name || `${d.first_name} ${d.last_name}`,
       department: d.department || d.specialization || 'General',
       // Ensure consultation_fee is present if possible, else 0 or undefined
       consultation_fee: d.consultation_fee || 0
-    })) : DOCTORS_DATA;
+    })) : [
+      { name: 'DR. NAVEEN', department: 'GYN.', consultation_fee: 500 },
+      { name: 'DR. RAJESH KUMAR', department: 'General', consultation_fee: 500 },
+      { name: 'DR. PRIYA SHARMA', department: 'Cardiology', consultation_fee: 1200 }
+    ];
 
     let result = source;
 
@@ -2166,7 +2170,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                         onBlur={(e) => e.currentTarget.style.borderColor = '#CCCCCC'}
                       >
                         <option value="">Select Department</option>
-                        {DEPARTMENTS.map(dept => (
+                        {['General', 'GYN.', 'Cardiology', 'Emergency', 'Orthopaedics', 'Pediatrics'].map(dept => (
                           <option key={dept} value={dept}>{dept}</option>
                         ))}
                         <option value="CUSTOM">Custom Department</option>
@@ -2285,7 +2289,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                           onBlur={(e) => e.currentTarget.style.borderColor = '#CCCCCC'}
                         >
                           <option value="">Select Department</option>
-                          {DEPARTMENTS.map(dept => (
+                          {['General', 'GYN.', 'Cardiology', 'Emergency', 'Orthopaedics', 'Pediatrics'].map(dept => (
                             <option key={dept} value={dept}>{dept}</option>
                           ))}
                         </select>
@@ -2804,7 +2808,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                                 }}
                               >
                                 <option value="">Select Department</option>
-                                {DEPARTMENTS.map(dept => (
+                                {['General', 'GYN.', 'Cardiology', 'Emergency', 'Orthopaedics', 'Pediatrics'].map(dept => (
                                   <option key={dept} value={dept}>{dept}</option>
                                 ))}
                               </select>
@@ -2830,7 +2834,14 @@ const NewFlexiblePatientEntry: React.FC = () => {
                                 }}
                               >
                                 <option value="">Select Doctor</option>
-                                {DOCTORS_DATA
+                                {[
+                                  { name: 'DR. NAVEEN', department: 'GYN.' },
+                                  { name: 'DR. RAJESH KUMAR', department: 'General' },
+                                  { name: 'DR. PRIYA SHARMA', department: 'Cardiology' },
+                                  { name: 'DR. AMIT SINGH', department: 'Pediatrics' },
+                                  { name: 'DR. SURESH PATEL', department: 'Orthopaedics' },
+                                  { name: 'DR. NEHA GUPTA', department: 'Emergency' }
+                                ]
                                   .filter(doc => !formData.appointment_department || doc.department === formData.appointment_department)
                                   .map(doc => (
                                     <option key={doc.name} value={doc.name}>{doc.name}</option>
