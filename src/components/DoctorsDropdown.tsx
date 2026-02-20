@@ -27,7 +27,32 @@ const DoctorsDropdown: React.FC<DoctorsDropdownProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchDoctors();
+    let mounted = true;
+    
+    const loadDoctors = async () => {
+      try {
+        await fetchDoctors();
+      } catch (error) {
+        if (mounted) {
+          console.error('Failed to load doctors:', error);
+          setError('Failed to load doctors. Using fallback data.');
+          // Use fallback doctors immediately
+          const fallbackDoctors = [
+            { id: 'doc-1', name: 'DR. NAVEEN', department: 'GYN.', specialization: 'Gynecologist', fee: 500 },
+            { id: 'doc-2', name: 'DR. RAJESH KUMAR', department: 'General', specialization: 'General Medicine', fee: 500 },
+            { id: 'doc-3', name: 'DR. PRIYA SHARMA', department: 'Cardiology', specialization: 'Cardiology', fee: 1200 }
+          ];
+          setDoctors(fallbackDoctors);
+          setLoading(false);
+        }
+      }
+    };
+    
+    loadDoctors();
+    
+    return () => {
+      mounted = false;
+    };
   }, [department]);
 
   const fetchDoctors = async () => {

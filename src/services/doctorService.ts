@@ -28,6 +28,11 @@ class DoctorService {
 
     try {
       const supabase = await getSupabase();
+      if (!supabase) {
+        logger.error('❌ Supabase client not available');
+        return this.getFallbackDoctors();
+      }
+      
       logger.log('🔍 Fetching doctors from Supabase...');
       
       const { data, error } = await supabase

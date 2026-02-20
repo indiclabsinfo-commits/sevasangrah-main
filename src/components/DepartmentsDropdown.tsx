@@ -26,7 +26,28 @@ const DepartmentsDropdown: React.FC<DepartmentsDropdownProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchDepartments();
+    let mounted = true;
+    
+    const loadDepartments = async () => {
+      try {
+        await fetchDepartments();
+      } catch (error) {
+        if (mounted) {
+          console.error('Failed to load departments:', error);
+          setError('Failed to load departments. Using fallback data.');
+          // Use fallback departments immediately
+          const fallbackDepartments = ['General', 'GYN.', 'Cardiology', 'Emergency', 'Orthopaedics', 'Pediatrics'];
+          setDepartments(fallbackDepartments);
+          setLoading(false);
+        }
+      }
+    };
+    
+    loadDepartments();
+    
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const fetchDepartments = async () => {

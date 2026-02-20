@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Doctor Service</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Test Doctor Service</h1>
+    <div id="status">Testing...</div>
+    <div id="results"></div>
+    
+    <script type="module">
+        // Simple test to check if DoctorService would work
+        console.log('🧪 Testing DoctorService...');
+        
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+        
+        async function testDoctorService() {
+            try {
+                status.innerHTML = '<span class="warning">Checking Supabase connection...</span>';
+                
+                // Test 1: Check if we can access doctors table via REST API
+                const supabaseUrl = 'https://plkbxjedbjpmbfrekmrr.supabase.co';
+                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
+                
+                const response = await fetch(`${supabaseUrl}/rest/v1/doctors?select=*&is_active=eq.true&limit=5`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const doctors = await response.json();
+                
+                status.innerHTML = `<span class="success">✅ Connected to Supabase! Found ${doctors.length} doctors</span>`;
+                
+                // Display doctors
+                let html = '<h2>Doctors in Database:</h2>';
+                if (doctors.length === 0) {
+                    html += '<p class="warning">⚠️ No doctors found in database</p>';
+                } else {
+                    html += '<ul>';
+                    doctors.forEach(doc => {
+                        html += `<li><strong>${doc.name}</strong> - ${doc.department} (₹${doc.fee || 0})</li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                // Test 2: Check departments
+                const deptResponse = await fetch(`${supabaseUrl}/rest/v1/doctors?select=department&is_active=eq.true`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                if (deptResponse.ok) {
+                    const allDoctors = await deptResponse.json();
+                    const departments = [...new Set(allDoctors.map(d => d.department))].sort();
+                    
+                    html += `<h2>Departments (${departments.length}):</h2>`;
+                    html += '<ul>';
+                    departments.forEach(dept => {
+                        html += `<li>${dept}</li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                results.innerHTML = html;
+                
+                // Test 3: Simulate what the UI does
+                html += '<h2>UI Simulation:</h2>';
+                html += '<p>When user selects a department, doctors should filter accordingly.</p>';
+                
+                if (doctors.length > 0) {
+                    const sampleDept = doctors[0].department;
+                    const deptDoctors = doctors.filter(d => d.department === sampleDept);
+                    
+                    html += `<p><strong>Example:</strong> If user selects "${sampleDept}" department, they should see:</p>`;
+                    html += '<ul>';
+                    deptDoctors.forEach(doc => {
+                        html += `<li>${doc.name} (₹${doc.fee || 0})</li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                results.innerHTML = html;
+                
+            } catch (error) {
+                status.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                results.innerHTML = `
+                    <h2>Possible Issues:</h2>
+                    <ol>
+                        <li>Supabase connection failed</li>
+                        <li>CORS issue (try from same domain)</li>
+                        <li>Doctors table doesn't exist</li>
+                        <li>API key invalid</li>
+                    </ol>
+                    <p>Check browser console for detailed error.</p>
+                `;
+                console.error('Test failed:', error);
+            }
+        }
+        
+        testDoctorService();
+    </script>
+</body>
+</html>
