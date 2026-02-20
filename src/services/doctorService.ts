@@ -139,29 +139,19 @@ export class DoctorService {
     this.clearCache();
     return this.fetchAllDoctors();
   }
-}
-
-  // Find doctor by ID
-  static getDoctorById(id: string): DoctorInfo | null {
-    const index = parseInt(id.replace('doc-', '')) - 1;
-    if (index < 0 || index >= DOCTORS_DATA.length) return null;
-
-    const doctor = DOCTORS_DATA[index];
-    return {
-      ...doctor,
-      id,
-      specialization: doctor.department
-    };
-  }
 
   // Search doctors by name or department
-  static searchDoctors(query: string): DoctorInfo[] {
+  static async searchDoctors(query: string): Promise<DoctorInfo[]> {
     const searchTerm = query.toLowerCase();
-    return this.getAllDoctors().filter(doctor =>
+    const allDoctors = await this.fetchAllDoctors();
+    return allDoctors.filter(doctor =>
       doctor.name.toLowerCase().includes(searchTerm) ||
-      doctor.department.toLowerCase().includes(searchTerm)
+      doctor.department.toLowerCase().includes(searchTerm) ||
+      (doctor.specialization && doctor.specialization.toLowerCase().includes(searchTerm))
     );
   }
 }
 
+// Export both as named and default for compatibility
+export { DoctorService };
 export default DoctorService;
