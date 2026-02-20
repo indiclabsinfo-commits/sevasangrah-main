@@ -54,7 +54,7 @@ export class SupabaseQueueService {
       logger.log('🔍 Fetching OPD queues from Supabase', { status, doctor_id, date });
       
       let query = supabase
-        .from('opd_queues')
+        .from('opd_queue')
         .select(`
           *,
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
@@ -113,7 +113,7 @@ export class SupabaseQueueService {
       tomorrow.setDate(tomorrow.getDate() + 1);
       
       const { data: lastQueue, error: queueError } = await supabase
-        .from('opd_queues')
+        .from('opd_queue')
         .select('queue_number')
         .eq('doctor_id', data.doctor_id)
         .gte('created_at', today.toISOString())
@@ -139,7 +139,7 @@ export class SupabaseQueueService {
       };
       
       const { data: newQueue, error } = await supabase
-        .from('opd_queues')
+        .from('opd_queue')
         .insert(queueData)
         .select(`
           *,
@@ -182,7 +182,7 @@ export class SupabaseQueueService {
         
         // Calculate consultation duration if start time exists
         const { data: queue } = await supabase
-          .from('opd_queues')
+          .from('opd_queue')
           .select('consultation_start_time')
           .eq('id', queueId)
           .single();
@@ -196,7 +196,7 @@ export class SupabaseQueueService {
       }
       
       const { data, error } = await supabase
-        .from('opd_queues')
+        .from('opd_queue')
         .update(updateData)
         .eq('id', queueId)
         .select(`
@@ -227,7 +227,7 @@ export class SupabaseQueueService {
       // Update each queue item
       for (const item of items) {
         const { error } = await supabase
-          .from('opd_queues')
+          .from('opd_queue')
           .update({ queue_number: item.queue_number, updated_at: new Date().toISOString() })
           .eq('id', item.id);
           
@@ -256,7 +256,7 @@ export class SupabaseQueueService {
       logger.log('📊 Getting queue statistics');
       
       let query = supabase
-        .from('opd_queues')
+        .from('opd_queue')
         .select('queue_status, estimated_wait_time, consultation_start_time, consultation_end_time');
       
       if (doctor_id) {
@@ -368,7 +368,7 @@ export class SupabaseQueueService {
       tomorrow.setDate(tomorrow.getDate() + 1);
       
       const { data, error } = await supabase
-        .from('opd_queues')
+        .from('opd_queue')
         .select(`
           *,
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),

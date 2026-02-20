@@ -214,7 +214,7 @@ export class SupabaseHospitalService {
       logger.log('🔍 Fetching OPD queues from Supabase', { status, doctor_id, date });
 
       let query = supabase
-        .from('opd_queues')
+        .from('opd_queue')
         .select(`
           *,
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
@@ -272,7 +272,7 @@ export class SupabaseHospitalService {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       const { data: lastQueue, error: queueError } = await supabase
-        .from('opd_queues')
+        .from('opd_queue')
         .select('queue_number')
         .eq('doctor_id', data.doctor_id)
         .gte('created_at', today.toISOString())
@@ -294,7 +294,7 @@ export class SupabaseHospitalService {
       };
 
       const { data: newQueue, error } = await supabase
-        .from('opd_queues')
+        .from('opd_queue')
         .insert(queueData)
         .select(`
           *,
@@ -337,7 +337,7 @@ export class SupabaseHospitalService {
 
       const supabase = await getSupabase();
       const { data, error } = await supabase
-        .from('opd_queues')
+        .from('opd_queue')
         .update(updateData)
         .eq('id', queueId)
         .select(`
@@ -368,7 +368,7 @@ export class SupabaseHospitalService {
       // Update each queue item
       for (const item of items) {
         const { error } = await supabase
-          .from('opd_queues')
+          .from('opd_queue')
           .update({ queue_number: item.order, updated_at: new Date().toISOString() })
           .eq('id', item.id);
 
@@ -456,7 +456,7 @@ export class SupabaseHospitalService {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const { count, error } = await supabase
-      .from('opd_queues')
+      .from('opd_queue')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', today.toISOString())
       .lt('created_at', tomorrow.toISOString());
