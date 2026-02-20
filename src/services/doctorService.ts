@@ -16,7 +16,7 @@ let doctorsCache: DoctorInfo[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-export class DoctorService {
+class DoctorService {
   // Fetch all doctors from Supabase
   static async fetchAllDoctors(): Promise<DoctorInfo[]> {
     // Return cached data if recent
@@ -88,7 +88,10 @@ export class DoctorService {
   // Get all unique departments
   static async getAllDepartments(): Promise<string[]> {
     const allDoctors = await this.fetchAllDoctors();
-    const departments = [...new Set(allDoctors.map(doc => doc.department))].sort();
+    // Alternative to [...new Set()] that works with older targets
+    const departmentSet = new Set<string>();
+    allDoctors.forEach(doc => departmentSet.add(doc.department));
+    const departments = Array.from(departmentSet).sort();
     return departments;
   }
 
@@ -152,6 +155,6 @@ export class DoctorService {
   }
 }
 
-// Export both as named and default for compatibility
+// Export as both named and default for compatibility
 export { DoctorService };
 export default DoctorService;
