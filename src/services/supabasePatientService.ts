@@ -334,6 +334,13 @@ export class SupabasePatientService {
 
             console.log('💰 Creating transaction via REST API:', Object.keys(transactionData));
 
+            // Remove patient_uuid if it's not a valid UUID (the column has FK to patients.id)
+            // The patient_id field already contains the correct UUID reference
+            const cleanData = { ...transactionData };
+            if (cleanData.patient_uuid && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanData.patient_uuid)) {
+                delete cleanData.patient_uuid;
+            }
+
             const response = await fetch(`${supabaseUrl}/rest/v1/patient_transactions`, {
                 method: 'POST',
                 headers: {
@@ -342,7 +349,7 @@ export class SupabasePatientService {
                     'Authorization': `Bearer ${supabaseKey}`,
                     'Prefer': 'return=representation'
                 },
-                body: JSON.stringify(transactionData)
+                body: JSON.stringify(cleanData)
             });
 
             const responseText = await response.text();

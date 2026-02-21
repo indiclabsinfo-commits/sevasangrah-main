@@ -649,6 +649,12 @@ export class SupabaseHospitalService {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://plkbxjedbjpmbfrekmrr.supabase.co';
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa2J4amVkYmpwbWJmcmVrbXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njg5MDEsImV4cCI6MjA4NjU0NDkwMX0.6zlXnUoEmGoOPVJ8S6uAwWZX3yWbShlagDykjgm6BUM';
 
+      // Remove patient_uuid if it's not a valid UUID (the column has FK to patients.id)
+      const cleanData = { ...transactionData };
+      if (cleanData.patient_uuid && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanData.patient_uuid)) {
+        delete cleanData.patient_uuid;
+      }
+
       const response = await fetch(`${supabaseUrl}/rest/v1/patient_transactions`, {
         method: 'POST',
         headers: {
@@ -657,7 +663,7 @@ export class SupabaseHospitalService {
           'Authorization': `Bearer ${supabaseKey}`,
           'Prefer': 'return=representation'
         },
-        body: JSON.stringify(transactionData)
+        body: JSON.stringify(cleanData)
       });
 
       const responseText = await response.text();
