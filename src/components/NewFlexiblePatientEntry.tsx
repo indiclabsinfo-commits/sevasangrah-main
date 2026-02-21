@@ -863,8 +863,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
             }
 
             const transactionData: CreateTransactionData = {
-              patient_id: newPatient.patient_id,  // String ID (e.g. P000001)
-              patient_uuid: newPatient.id,       // Record link (UUID)
+              patient_id: newPatient.id,  // UUID for database foreign key
+              patient_uuid: newPatient.patient_id,  // String ID (e.g. P000024) for reference
               amount: finalAmount, // Use discounted amount
               description: description,
               discount_type: formData.discount_type as 'PERCENTAGE' | 'AMOUNT',
