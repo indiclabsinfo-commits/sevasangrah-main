@@ -27,7 +27,7 @@ function getEnvConfig(): SupabaseConfig {
   const projectMatch = finalUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
   const projectName = projectMatch ? projectMatch[1] : 'Unknown';
 
-  return { url, anonKey, projectName };
+  return { url: finalUrl, anonKey: finalAnonKey, projectName };
 }
 
 // Get current configuration

@@ -36,7 +36,7 @@ const WaitingHallDisplay: React.FC = () => {
             doctor:users!opd_queue_doctor_id_fkey(first_name, last_name)
           `)
           .gte('created_at', new Date().toISOString().split('T')[0])
-          .order('queue_number', { ascending: true });
+          .order('queue_no', { ascending: true });
 
         if (error) throw error;
 
@@ -46,7 +46,7 @@ const WaitingHallDisplay: React.FC = () => {
 
         // Format current tokens (in consultation)
         setCurrentTokens(inConsultation.slice(0, 3).map((q, idx) => ({
-          token: `#${q.queue_number}`,
+          token: `#${q.queue_no}`,
           counter: `Counter ${idx + 1}`,
           doctor: q.doctor ? `Dr. ${q.doctor.first_name} ${q.doctor.last_name}` : 'Doctor',
           department: q.department || 'General',
@@ -55,7 +55,7 @@ const WaitingHallDisplay: React.FC = () => {
 
         // Format upcoming tokens (waiting)
         setUpcomingTokens(waiting.slice(0, 5).map(q => ({
-          token: `#${q.queue_number}`,
+          token: `#${q.queue_no}`,
           patient: q.patient ? `${q.patient.first_name} ${q.patient.last_name}` : 'Patient',
           doctor: q.doctor ? `Dr. ${q.doctor.first_name} ${q.doctor.last_name}` : 'Doctor',
           estimatedTime: q.wait_time ? `${q.wait_time} min` : 'Calculating...',
@@ -76,7 +76,7 @@ const WaitingHallDisplay: React.FC = () => {
           }
           if (q.queue_status === 'IN_CONSULTATION') {
             acc[docKey].status = 'busy';
-            acc[docKey].currentPatient = `#${q.queue_number}`;
+            acc[docKey].currentPatient = `#${q.queue_no}`;
           }
           return acc;
         }, {});

@@ -234,7 +234,7 @@ export class SupabaseHospitalService {
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
           doctor:doctors(id, name, first_name, last_name, department, specialization)
         `)
-        .order('queue_number', { ascending: true });
+        .order('queue_no', { ascending: true });
 
       if (status && status !== 'all') {
         query = query.eq('queue_status', status);
@@ -287,20 +287,20 @@ export class SupabaseHospitalService {
 
       const { data: lastQueue, error: queueError } = await supabase
         .from('opd_queue')
-        .select('queue_number')
+        .select('queue_no')
         .eq('doctor_id', data.doctor_id)
         .gte('created_at', today.toISOString())
         .lt('created_at', tomorrow.toISOString())
-        .order('queue_number', { ascending: false })
+        .order('queue_no', { ascending: false })
         .limit(1);
 
-      const nextQueueNumber = (lastQueue?.[0]?.queue_number || 0) + 1;
+      const nextQueueNumber = (lastQueue?.[0]?.queue_no || 0) + 1;
 
       // Create queue entry
       const queueData = {
         patient_id: data.patient_id,
         doctor_id: data.doctor_id,
-        queue_number: nextQueueNumber,
+        queue_no: nextQueueNumber,
         queue_status: 'waiting',
         priority: data.priority || 'normal',
         notes: data.notes,
@@ -383,7 +383,7 @@ export class SupabaseHospitalService {
       for (const item of items) {
         const { error } = await supabase
           .from('opd_queue')
-          .update({ queue_number: item.order, updated_at: new Date().toISOString() })
+          .update({ queue_no: item.order, updated_at: new Date().toISOString() })
           .eq('id', item.id);
 
         if (error) {

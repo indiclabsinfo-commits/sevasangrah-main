@@ -103,7 +103,7 @@ const OPDQueueManager: React.FC = () => {
                 ...item,
                 id: item.id,
                 status: item.queue_status || 'waiting',
-                token_number: item.queue_number,
+                token_number: item.queue_no,
                 patient: item.patient ? {
                     id: item.patient.id,
                     first_name: item.patient.first_name,
@@ -156,7 +156,7 @@ const OPDQueueManager: React.FC = () => {
                 if (item && item.patient) {
                     announcePatient({
                         patientName: `${item.patient.first_name} ${item.patient.last_name}`,
-                        tokenNumber: String(item.queue_number || item.token_number || '0'),
+                        tokenNumber: String(item.queue_no || item.token_number || '0'),
                         doctorName: item.doctor ? `Dr. ${item.doctor.first_name} ${item.doctor.last_name}` : undefined
                     });
                 }
@@ -178,7 +178,7 @@ const OPDQueueManager: React.FC = () => {
         setQueue(newQueue);
 
         try {
-            // Prepare the payload: array of { id, queue_number }
+            // Prepare the payload: array of { id, queue_no }
             const reorderPayload = newQueue.map((item, index) => ({
                 id: item.id,
                 order: index + 1

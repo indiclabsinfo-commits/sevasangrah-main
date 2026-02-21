@@ -14,7 +14,7 @@ export interface OPDQueueItem {
   id: string;
   patient_id: string;
   doctor_id: string;
-  queue_number: number;
+  queue_no: number;
   queue_status: 'waiting' | 'in_consultation' | 'completed' | 'cancelled';
   priority: 'normal' | 'urgent' | 'emergency';
   estimated_wait_time?: number;
@@ -60,7 +60,7 @@ export class SupabaseQueueService {
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
           doctor:users(id, first_name, last_name, email, specialization)
         `)
-        .order('queue_number', { ascending: true });
+        .order('queue_no', { ascending: true });
 
       // Apply filters
       if (status && status !== 'all') {
@@ -114,24 +114,24 @@ export class SupabaseQueueService {
       
       const { data: lastQueue, error: queueError } = await supabase
         .from('opd_queue')
-        .select('queue_number')
+        .select('queue_no')
         .eq('doctor_id', data.doctor_id)
         .gte('created_at', today.toISOString())
         .lt('created_at', tomorrow.toISOString())
-        .order('queue_number', { ascending: false })
+        .order('queue_no', { ascending: false })
         .limit(1);
       
       if (queueError) {
         logger.error('❌ Error getting last queue number:', queueError);
       }
       
-      const nextQueueNumber = (lastQueue?.[0]?.queue_number || 0) + 1;
+      const nextQueueNumber = (lastQueue?.[0]?.queue_no || 0) + 1;
       
       // Create queue entry
       const queueData = {
         patient_id: data.patient_id,
         doctor_id: data.doctor_id,
-        queue_number: nextQueueNumber,
+        queue_no: nextQueueNumber,
         queue_status: 'waiting',
         priority: data.priority || 'normal',
         notes: data.notes,
@@ -220,7 +220,7 @@ export class SupabaseQueueService {
   }
 
   // Reorder queues
-  static async reorderQueues(items: { id: string; queue_number: number }[]): Promise<void> {
+  static async reorderQueues(items: { id: string; queue_no: number }[]): Promise<void> {
     try {
       logger.log('📋 Reordering queues:', items);
       
@@ -228,7 +228,7 @@ export class SupabaseQueueService {
       for (const item of items) {
         const { error } = await supabase
           .from('opd_queue')
-          .update({ queue_number: item.queue_number, updated_at: new Date().toISOString() })
+          .update({ queue_no: item.queue_no, updated_at: new Date().toISOString() })
           .eq('id', item.id);
           
         if (error) {

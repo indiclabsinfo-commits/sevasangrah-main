@@ -13,7 +13,7 @@ import {
   CreditCard,
   X
 } from 'lucide-react';
-import { DoctorInfo } from '../services/doctorService';
+import type { DoctorInfo } from '../services/doctorService';
 
 // Doctors and Departments data
 const DOCTORS_DATA: DoctorInfo[] = [
