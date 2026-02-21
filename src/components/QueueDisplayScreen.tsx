@@ -303,10 +303,10 @@ const QueueDisplayScreen: React.FC = () => {
               {currentPatient.queue_no}
             </div>
             <div style={{ fontSize: '48px', fontWeight: '700', color: '#111827', marginBottom: '8px' }}>
-              {currentPatient.first_name} {currentPatient.last_name}
+              {currentPatient.patient?.first_name || 'Unknown'} {currentPatient.patient?.last_name || ''}
             </div>
             <div style={{ fontSize: '24px', color: '#666666', marginTop: '16px' }}>
-              Patient ID: {currentPatient.patient_id}
+              Patient ID: {currentPatient.patient?.patient_id || currentPatient.id}
             </div>
           </div>
         </div>
