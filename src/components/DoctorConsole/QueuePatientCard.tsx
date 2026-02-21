@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, PlayCircle, User } from 'lucide-react';
+import { Clock, PlayCircle, User, Video, ExternalLink } from 'lucide-react';
 import type { QueueEntry } from './hooks/useDoctorQueue';
 
 interface QueuePatientCardProps {
@@ -46,9 +46,21 @@ const QueuePatientCard: React.FC<QueuePatientCardProps> = ({ entry, isSelected, 
             {status.label}
           </span>
         </div>
-        {entry.priority && (
-          <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">Priority</span>
-        )}
+        <div className="flex items-center gap-1">
+          {entry.consultation_mode && entry.consultation_mode !== 'physical' && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1 ${
+              entry.consultation_mode === 'google_meet' ? 'bg-blue-100 text-blue-700' :
+              entry.consultation_mode === 'zoom' ? 'bg-indigo-100 text-indigo-700' :
+              'bg-green-100 text-green-700'
+            }`}>
+              <Video size={10} />
+              {entry.consultation_mode === 'google_meet' ? 'Meet' : entry.consultation_mode === 'zoom' ? 'Zoom' : 'WhatsApp'}
+            </span>
+          )}
+          {entry.priority && (
+            <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">Priority</span>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-2 mb-1">
@@ -74,6 +86,20 @@ const QueuePatientCard: React.FC<QueuePatientCardProps> = ({ entry, isSelected, 
           <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800">
             <PlayCircle size={13} /> Start Consultation
           </span>
+        </div>
+      )}
+
+      {!isCompleted && entry.join_url && entry.consultation_mode !== 'physical' && (
+        <div className="mt-2">
+          <a
+            href={entry.join_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-800 bg-green-50 px-2 py-1 rounded"
+          >
+            <ExternalLink size={11} /> Join Call
+          </a>
         </div>
       )}
     </button>

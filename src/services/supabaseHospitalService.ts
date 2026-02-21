@@ -334,6 +334,8 @@ export class SupabaseHospitalService {
     doctor_id: string;
     priority?: string;
     notes?: string;
+    consultation_mode?: string;
+    join_url?: string;
   }): Promise<any> {
     const supabase = await getSupabase();
     try {
@@ -357,7 +359,7 @@ export class SupabaseHospitalService {
       const nextQueueNumber = (lastQueue?.[0]?.queue_no || 0) + 1;
 
       // Create queue entry - priority is BOOLEAN, status is UPPERCASE
-      const queueData = {
+      const queueData: any = {
         patient_id: data.patient_id,
         doctor_id: data.doctor_id,
         queue_no: nextQueueNumber,
@@ -365,7 +367,9 @@ export class SupabaseHospitalService {
         priority: data.priority === 'urgent' || data.priority === 'emergency' || data.priority === true ? true : false,
         notes: data.notes,
         queue_date: todayStr,
-        token_number: String(nextQueueNumber)
+        token_number: String(nextQueueNumber),
+        consultation_mode: data.consultation_mode || 'physical',
+        join_url: data.join_url || null,
       };
 
       const { data: newQueue, error } = await supabase

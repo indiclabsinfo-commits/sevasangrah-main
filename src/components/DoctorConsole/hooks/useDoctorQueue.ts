@@ -21,6 +21,8 @@ export interface QueueEntry {
   };
   doctor_id: string;
   doctor?: any;
+  consultation_mode?: 'google_meet' | 'zoom' | 'whatsapp' | 'physical';
+  join_url?: string;
   queue_date: string;
   wait_time?: number;
   consultation_start_time?: string;

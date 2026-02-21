@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   MessageSquare, Stethoscope, FileSearch, Pill, CalendarCheck,
-  Save, Printer, CheckCircle, Loader2
+  Save, Printer, CheckCircle, Loader2, Video, ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PatientBanner from './PatientBanner';
@@ -115,6 +115,28 @@ const ConsultationWorkspace: React.FC<ConsultationWorkspaceProps> = ({
         onToggleHistory={onOpenHistory}
         showHistoryActive={showHistoryActive}
       />
+
+      {/* Teleconsult Banner */}
+      {queueEntry.consultation_mode && queueEntry.consultation_mode !== 'physical' && queueEntry.join_url && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2.5 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2 text-sm text-blue-800">
+            <Video size={16} className="text-blue-600" />
+            <span className="font-medium">
+              {queueEntry.consultation_mode === 'google_meet' ? 'Google Meet' :
+               queueEntry.consultation_mode === 'zoom' ? 'Zoom' : 'WhatsApp'} Teleconsult
+            </span>
+          </div>
+          <a
+            href={queueEntry.join_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+          >
+            <ExternalLink size={14} />
+            Join Call
+          </a>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div className="bg-white border-b border-gray-200 px-4 flex items-center gap-1 flex-shrink-0">

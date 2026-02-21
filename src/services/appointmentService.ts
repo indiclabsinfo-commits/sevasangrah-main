@@ -248,6 +248,8 @@ class AppointmentService {
       if (appointmentData.priority) insertData.priority = appointmentData.priority;
       if (appointmentData.notes) insertData.notes = appointmentData.notes;
       if (appointmentData.created_from) insertData.created_from = appointmentData.created_from;
+      if (appointmentData.consultation_mode) insertData.consultation_mode = appointmentData.consultation_mode;
+      if (appointmentData.join_url) insertData.join_url = appointmentData.join_url;
 
       const { data, error } = await supabase
         .from('future_appointments')
