@@ -2709,6 +2709,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                                     selected_existing_patient: patient,
                                     existing_patient_search: `${patient.first_name} ${patient.last_name} (${patient.patient_id})`
                                   });
+                                  setSelectedExistingPatient(patient);
                                   setFilteredPatients([]);
                                 }}
                                 style={{
