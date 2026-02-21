@@ -628,33 +628,46 @@ const NewFlexiblePatientEntry: React.FC = () => {
             // Try to find doctor in dbDoctors first (contains UUIDs)
             const dbDoc = dbDoctors.find(d =>
               d.name === doctorName ||
-              `DR. ${d.first_name} ${d.last_name}`.toUpperCase() === doctorName
+              d.name?.toUpperCase() === doctorName?.toUpperCase()
             );
 
             if (dbDoc) {
               doctorId = dbDoc.id;
             } else {
-              // Fallback to searching in static DOCTORS_DATA to get context, but we need a UUID for the backend potentially
-              // If we can't find a UUID, we might have trouble. 
-              // However, for this demo/legacy mode, we'll try to use what we have or a placeholder ensuring it doesn't break if FKs are loose.
-              doctorId = 'doc-1';
+              logger.error('❌ Could not find doctor UUID for:', doctorName);
+              toast.error('Please select a valid doctor from the dropdown');
+              setLoading(false);
+              return;
             }
           }
 
+          if (!doctorId) {
+            toast.error('Please select a doctor for the appointment');
+            setLoading(false);
+            return;
+          }
+
+          // Format date to YYYY-MM-DD
+          let appointmentDateStr = '';
+          if (formData.appointment_date instanceof Date) {
+            appointmentDateStr = `${formData.appointment_date.getFullYear()}-${String(formData.appointment_date.getMonth() + 1).padStart(2, '0')}-${String(formData.appointment_date.getDate()).padStart(2, '0')}`;
+          } else if (typeof formData.appointment_date === 'string') {
+            appointmentDateStr = formData.appointment_date;
+          }
+
           const appointmentData = {
-            patient_id: selectedExistingPatient.id, // Use UUID from patient record
-            doctor_id: doctorId || 'doc-1',
-            department_id: departmentName,
-            appointment_date: formatDateToYYYY_MM_DD(formData.appointment_date.toLocaleDateString('en-GB').replace(/\//g, '-')),
+            patient_id: selectedExistingPatient.id,
+            doctor_id: doctorId,
+            appointment_date: appointmentDateStr,
             appointment_time: formData.appointment_time,
-            type: formData.appointment_type,
-            status: 'scheduled',
+            appointment_type: (formData.appointment_type || 'FOLLOW_UP').toUpperCase().replace(/-/g, '_'),
+            status: 'SCHEDULED',
             reason: formData.appointment_notes || 'Consultation',
-            notes: `Payment Mode: ${formData.payment_mode}`
+            notes: `Department: ${departmentName || 'General'} | Payment Mode: ${formData.payment_mode}`
           };
 
           logger.log('📅 Scheduling appointment for existing patient...', appointmentData);
-          await appointmentService.createAppointment(appointmentData);
+          await SupabaseHospitalService.createAppointment(appointmentData);
 
           toast.success('Appointment scheduled successfully!');
           // Reset form or redirect
@@ -1454,7 +1467,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                       }}
                       onFocus={(e) => e.currentTarget.style.borderColor = '#0056B3'}
                       onBlur={(e) => e.currentTarget.style.borderColor = '#CCCCCC'}
-                      required
+                      required={formData.appointment_mode !== 'existing_patient'}
                     >
                       <option value="Mr">Mr</option>
                       <option value="Mrs">Mrs</option>
@@ -1532,7 +1545,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                           // Hide dropdown with delay to allow click
                           setTimeout(() => setShowPatientDropdown(false), 300);
                         }}
-                        required
+                        required={formData.appointment_mode !== 'existing_patient'}
                       />
 
                       {/* Patient Search Dropdown */}
