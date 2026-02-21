@@ -37,37 +37,99 @@ export interface CreatePatientData {
 
 export class SupabasePatientService {
 
+    // Convert date to PostgreSQL format (YYYY-MM-DD)
+    private static formatDateForPostgres(dateString: string | null | undefined): string | null {
+        if (!dateString) return null;
+
+        try {
+            // Check if already in ISO format (YYYY-MM-DD)
+            if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+                return dateString.split('T')[0]; // Return just the date part
+            }
+
+            // Handle DD-MM-YYYY format
+            if (/^\d{2}-\d{2}-\d{4}$/.test(dateString)) {
+                const [day, month, year] = dateString.split('-');
+                return `${year}-${month}-${day}`;
+            }
+
+            // Handle DD/MM/YYYY format
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+                const [day, month, year] = dateString.split('/');
+                return `${year}-${month}-${day}`;
+            }
+
+            console.warn('⚠️ Unknown date format:', dateString, '- returning as is');
+            return dateString;
+        } catch (error) {
+            console.error('❌ Error formatting date:', error);
+            return null;
+        }
+    }
+
     /**
      * Generate next patient ID (P000001, P000002, etc.)
      */
     private static async generatePatientId(): Promise<string> {
         try {
-            // Get the latest patient ID
+            console.log('🔍 [DEBUG] Starting patient ID generation...');
+
+            // Get the latest patient ID - only get valid patient IDs that match pattern P######
             const supabaseClient = await getSupabase();
+            console.log('🔍 [DEBUG] Supabase client obtained');
+
             const { data, error } = await supabaseClient
                 .from('patients')
                 .select('patient_id')
-                .order('created_at', { ascending: false })
-                .limit(1);
+                .not('patient_id', 'is', null)
+                .order('patient_id', { ascending: false })
+                .limit(100); // Get more records to filter valid ones
 
-            if (error) throw error;
+            console.log('🔍 [DEBUG] Query result:', { data, error });
+
+            if (error) {
+                console.error('❌ [ERROR] Database query error:', error);
+                throw error;
+            }
 
             if (!data || data.length === 0) {
+                console.log('✅ [INFO] No existing patients found. Returning P000001');
                 return 'P000001'; // First patient
             }
 
-            // Extract number from last patient_id (e.g., "P000005" -> 5)
-            const lastId = data[0].patient_id;
-            const lastNumber = parseInt(lastId.replace('P', ''));
-            const nextNumber = lastNumber + 1;
+            // Find the highest valid patient_id (format: P######)
+            let maxNumber = 0;
+            const validPattern = /^P\d{6}$/; // Pattern: P followed by exactly 6 digits
+
+            for (const row of data) {
+                const patientId = row.patient_id;
+                console.log('🔍 [DEBUG] Checking patient_id:', patientId);
+
+                if (patientId && validPattern.test(patientId)) {
+                    const number = parseInt(patientId.substring(1)); // Extract number after 'P'
+                    if (!isNaN(number) && number > maxNumber) {
+                        maxNumber = number;
+                        console.log('🔍 [DEBUG] New max number found:', maxNumber);
+                    }
+                } else {
+                    console.warn('⚠️ [WARN] Invalid patient_id format found:', patientId);
+                }
+            }
+
+            const nextNumber = maxNumber + 1;
+            console.log('🔍 [DEBUG] Max number:', maxNumber, 'Next number:', nextNumber);
 
             // Format with leading zeros (P000006)
-            return `P${nextNumber.toString().padStart(6, '0')}`;
+            const newId = `P${nextNumber.toString().padStart(6, '0')}`;
+            console.log('✅ [SUCCESS] Generated patient ID:', newId);
+            return newId;
         } catch (error) {
-            console.error('Error generating patient ID:', error);
-            // Fallback to random ID
-            const randomNum = Math.floor(Math.random() * 999999);
-            return `P${randomNum.toString().padStart(6, '0')}`;
+            console.error('❌ [ERROR] Exception in generatePatientId:', error);
+            // Fallback to timestamp-based ID to avoid duplicates
+            const timestamp = Date.now() % 999999;
+            const fallbackId = `P${timestamp.toString().padStart(6, '0')}`;
+            console.log('⚠️ [FALLBACK] Using timestamp-based ID:', fallbackId);
+            return fallbackId;
         }
     }
 
@@ -89,19 +151,47 @@ export class SupabasePatientService {
                 throw new Error(`Patient ID Generation Failed: ${pidError.message}`);
             }
 
-            // Generate UHID if not provided
+            // Generate UHID if not provided - with retry logic
             let uhid = patientData.uhid;
             if (!uhid) {
                 console.log('🔄 Generating UHID for new patient...');
-                try {
-                    const uhidResult = await uhidService.generateUhid(patientData.hospital_id);
-                    console.log('✅ uhidService returned:', uhidResult); // Log result
-                    uhid = uhidResult.uhid;
-                    console.log('✅ Generated UHID:', uhid);
-                } catch (uhidError: any) {
-                    console.error('❌ CRITICAL: Failed to generate UHID:', uhidError);
-                    console.error('UHID Error details:', uhidError.message);
-                    throw new Error(`UHID Generation Failed: ${uhidError.message}`);
+                const MAX_UHID_RETRIES = 3;
+                let uhidAttempt = 0;
+
+                while (uhidAttempt < MAX_UHID_RETRIES && !uhid) {
+                    try {
+                        uhidAttempt++;
+                        console.log(`🔄 UHID generation attempt ${uhidAttempt}/${MAX_UHID_RETRIES}`);
+
+                        const uhidResult = await uhidService.generateUhid(patientData.hospital_id);
+                        console.log('✅ uhidService returned:', uhidResult);
+                        uhid = uhidResult.uhid;
+                        console.log('✅ Generated UHID:', uhid);
+
+                        // Verify UHID doesn't exist in database
+                        const supabaseClient = await getSupabase();
+                        const { data: existingPatient } = await supabaseClient
+                            .from('patients')
+                            .select('uhid')
+                            .eq('uhid', uhid)
+                            .single();
+
+                        if (existingPatient) {
+                            console.warn(`⚠️ UHID ${uhid} already exists, regenerating...`);
+                            uhid = ''; // Reset to trigger retry
+                            await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+                        }
+                    } catch (uhidError: any) {
+                        console.error(`❌ UHID generation attempt ${uhidAttempt} failed:`, uhidError);
+
+                        if (uhidAttempt >= MAX_UHID_RETRIES) {
+                            console.error('❌ CRITICAL: All UHID generation attempts failed');
+                            throw new Error(`UHID Generation Failed after ${MAX_UHID_RETRIES} attempts: ${uhidError.message}`);
+                        }
+
+                        // Wait before retry
+                        await new Promise(resolve => setTimeout(resolve, 200 * uhidAttempt));
+                    }
                 }
             } else {
                 console.log('📝 Using provided UHID:', uhid);
@@ -123,7 +213,7 @@ export class SupabasePatientService {
                 aadhaar_number: patientData.aadhaar_number || null,
                 abha_id: patientData.abha_id || null,
                 rghs_number: patientData.rghs_number || null,
-                date_of_birth: patientData.date_of_birth || null,
+                date_of_birth: this.formatDateForPostgres(patientData.date_of_birth),
                 patient_tag: patientData.patient_tag || 'Regular',
                 medical_history: patientData.medical_history || null,
                 allergies: patientData.allergies || null,
@@ -334,32 +424,88 @@ export class SupabasePatientService {
     static async addToOPDQueue(queueData: any): Promise<any> {
         try {
             const supabaseClient = await getSupabase();
+
+            // Generate queue number for today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            // Get the last queue number for this doctor today
+            const { data: lastQueue } = await supabaseClient
+                .from('opd_queue')
+                .select('queue_number')
+                .eq('doctor_id', queueData.doctor_id)
+                .gte('created_at', today.toISOString())
+                .lt('created_at', tomorrow.toISOString())
+                .order('queue_number', { ascending: false })
+                .limit(1);
+
+            const nextQueueNumber = (lastQueue?.[0]?.queue_number || 0) + 1;
+
+            // Add queue_number to the data
+            const completeQueueData = {
+                ...queueData,
+                queue_number: nextQueueNumber,
+                queue_status: queueData.queue_status || 'waiting'
+            };
+
+            console.log('📝 Inserting to queue with number:', nextQueueNumber);
+
             const { data, error } = await supabaseClient
                 .from('opd_queue')
-                .insert([queueData])
+                .insert([completeQueueData])
                 .select()
                 .single();
 
             if (error) throw error;
+
+            console.log('✅ Successfully added to queue:', data);
             return data;
         } catch (error: any) {
-            console.error('Error adding to OPD queue:', error);
+            console.error('❌ Error adding to OPD queue:', error);
             throw new Error(`Failed to add to queue: ${error.message}`);
         }
     }
 
     static async getDoctors(): Promise<any[]> {
         const supabaseClient = await getSupabase();
-        const { data, error } = await supabaseClient
+
+        console.log('🔍 Fetching doctors from Supabase...');
+
+        // Try doctors table first
+        let { data, error } = await supabaseClient
             .from('doctors')
             .select('*')
             .eq('is_active', true);
 
         if (error) {
-            console.error('Error fetching doctors:', error);
+            console.warn('⚠️ Doctors table query failed:', error.message);
+            console.log('🔄 Trying users table with role=doctor...');
+
+            // Fallback: Try users table with doctor role
+            const result = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('role', 'doctor')
+                .eq('is_active', true);
+
+            data = result.data;
+            error = result.error;
+
+            if (error) {
+                console.error('❌ Failed to fetch doctors from users table:', error);
+                return [];
+            }
+        }
+
+        if (!data || data.length === 0) {
+            console.warn('⚠️ No doctors found in database');
             return [];
         }
-        return data || [];
+
+        console.log(`✅ Loaded ${data.length} doctors:`, data);
+        return data;
     }
 
     static async getAllPatients(): Promise<any[]> {

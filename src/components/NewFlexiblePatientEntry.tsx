@@ -200,6 +200,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
 
   // Filter doctors based on available data and department selection
   const filteredDoctors = useMemo(() => {
+    console.log('🔄 Filtering doctors. dbDoctors.length:', dbDoctors.length);
+
     // 1. Determine Source
     // Map dbDoctors to match doctor shape if needed, or use fallback
     const source = dbDoctors.length > 0 ? dbDoctors.map(d => ({
@@ -214,6 +216,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
       { name: 'DR. PRIYA SHARMA', department: 'Cardiology', consultation_fee: 1200 }
     ];
 
+    console.log('📋 Source doctors before filtering:', source.length, source);
+
     let result = source;
 
     // 2. Filter by Department
@@ -221,9 +225,19 @@ const NewFlexiblePatientEntry: React.FC = () => {
     const activeDept = formData.selected_department || tempDepartment;
 
     if (activeDept && activeDept !== 'CUSTOM') {
-      result = result.filter(doc => doc.department === activeDept);
+      const filteredByDept = result.filter(doc =>
+        doc.department?.toUpperCase() === activeDept.toUpperCase()
+      );
+
+      // Only apply filter if we found matching doctors
+      if (filteredByDept.length > 0) {
+        result = filteredByDept;
+      } else {
+        console.warn(`⚠️ No doctors found for department: ${activeDept}. Showing all doctors.`);
+      }
     }
 
+    console.log('✅ Final filtered doctors:', result.length, result);
     return result;
   }, [dbDoctors, formData.selected_department, tempDepartment]);
   const [showCustomDepartment, setShowCustomDepartment] = useState(false);
@@ -244,22 +258,43 @@ const NewFlexiblePatientEntry: React.FC = () => {
   useEffect(() => {
     const checkConnection = async () => {
       try {
+        console.log('🚀 NewFlexiblePatientEntry: Initializing...');
         // Assume connected if using Supabase directly
         setConnectionStatus('CONNECTED');
 
         // Fetch doctors directly from Supabase
+        console.log('📞 NewFlexiblePatientEntry: Calling SupabasePatientService.getDoctors()...');
         const docs = await SupabasePatientService.getDoctors();
+        console.log('📦 NewFlexiblePatientEntry: Received doctors:', docs?.length || 0, docs);
 
         if (docs && docs.length > 0) {
-          setDbDoctors(docs);
+          console.log('📋 Raw doctors from DB:', docs);
+
           // Map DB doctors to compatible format for dropdown
-          const formattedDocs = docs.map((d: any) => ({
-            id: d.id,
-            name: `DR. ${d.first_name} ${d.last_name}`.toUpperCase(),
-            department: d.department?.toUpperCase() || 'GENERAL',
-            consultationFee: d.consultation_fee
-          }));
+          const formattedDocs = docs.map((d: any) => {
+            // Use existing name field, or build from first_name/last_name
+            let doctorName = d.name;
+            if (!doctorName && d.first_name && d.last_name) {
+              doctorName = `DR. ${d.first_name} ${d.last_name}`.toUpperCase();
+            } else if (!doctorName && d.first_name) {
+              doctorName = `DR. ${d.first_name}`.toUpperCase();
+            } else if (!doctorName) {
+              doctorName = `DOCTOR ${d.id.substring(0, 8)}`;
+            }
+
+            return {
+              id: d.id,
+              name: doctorName,
+              department: d.department?.toUpperCase() || 'GENERAL',
+              consultationFee: d.consultation_fee || d.fee || 500
+            };
+          });
+
+          console.log('📋 Formatted doctors for dropdown:', formattedDocs);
           setDbDoctors(formattedDocs);
+          console.log('✅ NewFlexiblePatientEntry: Set dbDoctors state with', formattedDocs.length, 'doctors');
+        } else {
+          console.warn('⚠️ NewFlexiblePatientEntry: No doctors returned from database');
         }
 
         // Fetch next UHID for display
@@ -268,7 +303,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
         setNextUhid(uhidResult.next_uhid);
         setUhidLoading(false);
       } catch (e) {
-        console.error('Init error:', e);
+        console.error('❌ NewFlexiblePatientEntry Init error:', e);
         setUhidLoading(false);
       }
     };
@@ -924,6 +959,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
       }
 
       // Auto-add to OPD Queue if doctor is selected
+      console.log('🔍 Queue Check - consultation_mode:', formData.consultation_mode, 'doctor_id:', formData.doctor_id, 'selected_doctor:', formData.selected_doctor);
+
       if (formData.consultation_mode === 'single' && (formData.doctor_id || formData.selected_doctor)) {
         try {
           logger.log('🚶‍♂️ Auto-adding to OPD Queue...');
@@ -931,8 +968,11 @@ const NewFlexiblePatientEntry: React.FC = () => {
 
           // Fallback: If no ID but name exists, try one last lookup
           if (!doctorId && formData.selected_doctor && dbDoctors.length > 0) {
+            console.log('🔄 Looking up doctor ID for:', formData.selected_doctor);
+            console.log('📋 Available dbDoctors:', dbDoctors);
             const foundDoc = dbDoctors.find(d => d.name === formData.selected_doctor);
             doctorId = foundDoc?.id;
+            console.log('✅ Found doctor ID:', doctorId);
           }
 
           if (doctorId) {
@@ -945,18 +985,28 @@ const NewFlexiblePatientEntry: React.FC = () => {
             console.log('🚀 Auto-Queue Payload:', queuePayload);
 
             // Use SupabasePatientService directly
-            await SupabasePatientService.addToOPDQueue(queuePayload);
+            const queueResult = await SupabasePatientService.addToOPDQueue(queuePayload);
+            console.log('✅ Queue add result:', queueResult);
             toast.success('Added to OPD Queue automatically');
           } else {
-            console.warn('Skipping queue: No valid Doctor ID found for', formData.selected_doctor);
+            console.warn('⚠️ Skipping queue: No valid Doctor ID found for', formData.selected_doctor);
+            console.warn('⚠️ formData.doctor_id:', formData.doctor_id);
+            console.warn('⚠️ dbDoctors.length:', dbDoctors.length);
           }
         } catch (queueError: any) {
           console.error('❌ Auto-queue failed:', queueError);
+          console.error('❌ Error details:', queueError.message, queueError);
           if (queueError.response) {
             console.error('❌ Server Error Details:', queueError.response.data);
           }
+          toast.error('Failed to add to queue: ' + queueError.message);
           // Don't block registration success
         }
+      } else {
+        console.log('⚠️ Not adding to queue because:');
+        console.log('  - consultation_mode:', formData.consultation_mode, '(expected: "single")');
+        console.log('  - doctor_id:', formData.doctor_id);
+        console.log('  - selected_doctor:', formData.selected_doctor);
       }
 
       // Calculate total amount

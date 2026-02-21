@@ -183,11 +183,25 @@ export class SupabaseHospitalService {
     try {
       logger.log('👨‍⚕️ Fetching doctors from Supabase');
 
-      const { data, error } = await supabase
-        .from('users')
+      // Try doctors table first
+      let { data, error } = await supabase
+        .from('doctors')
         .select('*')
-        .eq('role', 'doctor')
+        .eq('is_active', true)
         .order('first_name');
+
+      // Fallback to users table if doctors table doesn't exist or is empty
+      if (error || !data || data.length === 0) {
+        logger.log('⚠️ Doctors table query failed or empty, trying users table...');
+        const result = await supabase
+          .from('users')
+          .select('*')
+          .eq('role', 'doctor')
+          .order('first_name');
+
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) {
         logger.error('❌ Error fetching doctors:', error);
@@ -218,7 +232,7 @@ export class SupabaseHospitalService {
         .select(`
           *,
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
-          doctor:users(id, first_name, last_name, email, specialization)
+          doctor:doctors(id, name, first_name, last_name, department, specialization)
         `)
         .order('queue_number', { ascending: true });
 
