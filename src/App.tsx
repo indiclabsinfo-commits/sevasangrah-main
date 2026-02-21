@@ -45,6 +45,7 @@ import ReferralManagementSimple from './pages/ReferralManagementSimple';
 import TeleconsultAppointment from './components/TeleconsultAppointment';
 import WaitingHallDisplay from './components/WaitingHallDisplay';
 import PrintSchedule from './components/PrintSchedule';
+import DigitalMedicalRecords from './components/DigitalMedicalRecords';
 import SelfRegistrationKiosk from './components/SelfRegistrationKiosk';
 import ExternalAppointmentCapture from './components/ExternalAppointmentCapture';
 import ReferralSystem from './components/ReferralSystem';
@@ -1008,6 +1009,13 @@ const App: React.FC = () => {
       name: '🎫 Waiting Hall',
       component: WaitingHallDisplay,
       description: 'Public display for waiting patients and token system',
+      permission: 'read_patients'
+    },
+    {
+      id: 'medical-records',
+      name: '📋 Medical Records',
+      component: DigitalMedicalRecords,
+      description: 'Digital medical records management',
       permission: 'read_patients'
     },
     {
