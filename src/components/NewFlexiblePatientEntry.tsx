@@ -191,8 +191,9 @@ const NewFlexiblePatientEntry: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('');
   const [dbDoctors, setDbDoctors] = useState<any[]>([]); // New state for DB doctors
-  const [nextUhid, setNextUhid] = useState<string>(''); // UHID preview for new patients
-  const [uhidLoading, setUhidLoading] = useState(false);
+  // UHID DISABLED - Using patient_id only
+  // const [nextUhid, setNextUhid] = useState<string>('');
+  // const [uhidLoading, setUhidLoading] = useState(false);
 
   const [tempDepartment, setTempDepartment] = useState('');
   const [tempDoctor, setTempDoctor] = useState('');
@@ -297,14 +298,14 @@ const NewFlexiblePatientEntry: React.FC = () => {
           console.warn('⚠️ NewFlexiblePatientEntry: No doctors returned from database');
         }
 
-        // Fetch next UHID for display
-        setUhidLoading(true);
-        const uhidResult = await PatientService.getNextUHID();
-        setNextUhid(uhidResult.next_uhid);
-        setUhidLoading(false);
+        // UHID fetch disabled - using patient_id only
+        // setUhidLoading(true);
+        // const uhidResult = await PatientService.getNextUHID();
+        // setNextUhid(uhidResult.next_uhid);
+        // setUhidLoading(false);
       } catch (e) {
         console.error('❌ NewFlexiblePatientEntry Init error:', e);
-        setUhidLoading(false);
+        // setUhidLoading(false);
       }
     };
     checkConnection();
@@ -802,8 +803,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
         newPatient = await SupabasePatientService.createPatient({
           ...patientData,
           full_name: formData.full_name,
-          age: patientData.age ? parseInt(patientData.age) : 0,
-          uhid: nextUhid // Pass the displayed UHID to be saved
+          age: patientData.age ? parseInt(patientData.age) : 0
+          // uhid removed - using patient_id only
         } as any);
         logger.log('✅ Patient created successfully (Direct Mode):', newPatient);
       }
@@ -1350,8 +1351,8 @@ const NewFlexiblePatientEntry: React.FC = () => {
                     <User className="w-5 h-5" style={{ color: '#0056B3' }} />
                     <h2 style={{ fontSize: '24px', color: '#0056B3', fontWeight: '600' }}>Patient Information</h2>
                   </div>
-                  {/* UHID Display */}
-                  <div style={{
+                  {/* UHID Display DISABLED - Using patient_id only */}
+                  {/* <div style={{
                     backgroundColor: '#E8F4FD',
                     border: '2px solid #0056B3',
                     borderRadius: '8px',
@@ -1370,7 +1371,7 @@ const NewFlexiblePatientEntry: React.FC = () => {
                     }}>
                       {uhidLoading ? 'Loading...' : (nextUhid || 'MH-2026-000001')}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Patient Photo Upload */}

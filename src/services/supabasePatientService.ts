@@ -151,51 +151,10 @@ export class SupabasePatientService {
                 throw new Error(`Patient ID Generation Failed: ${pidError.message}`);
             }
 
-            // Generate UHID if not provided - with retry logic
-            let uhid = patientData.uhid;
-            if (!uhid) {
-                console.log('🔄 Generating UHID for new patient...');
-                const MAX_UHID_RETRIES = 3;
-                let uhidAttempt = 0;
-
-                while (uhidAttempt < MAX_UHID_RETRIES && !uhid) {
-                    try {
-                        uhidAttempt++;
-                        console.log(`🔄 UHID generation attempt ${uhidAttempt}/${MAX_UHID_RETRIES}`);
-
-                        const uhidResult = await uhidService.generateUhid(patientData.hospital_id);
-                        console.log('✅ uhidService returned:', uhidResult);
-                        uhid = uhidResult.uhid;
-                        console.log('✅ Generated UHID:', uhid);
-
-                        // Verify UHID doesn't exist in database
-                        const supabaseClient = await getSupabase();
-                        const { data: existingPatient } = await supabaseClient
-                            .from('patients')
-                            .select('uhid')
-                            .eq('uhid', uhid)
-                            .single();
-
-                        if (existingPatient) {
-                            console.warn(`⚠️ UHID ${uhid} already exists, regenerating...`);
-                            uhid = ''; // Reset to trigger retry
-                            await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
-                        }
-                    } catch (uhidError: any) {
-                        console.error(`❌ UHID generation attempt ${uhidAttempt} failed:`, uhidError);
-
-                        if (uhidAttempt >= MAX_UHID_RETRIES) {
-                            console.error('❌ CRITICAL: All UHID generation attempts failed');
-                            throw new Error(`UHID Generation Failed after ${MAX_UHID_RETRIES} attempts: ${uhidError.message}`);
-                        }
-
-                        // Wait before retry
-                        await new Promise(resolve => setTimeout(resolve, 200 * uhidAttempt));
-                    }
-                }
-            } else {
-                console.log('📝 Using provided UHID:', uhid);
-            }
+            // UHID GENERATION DISABLED - Using patient_id only
+            // UHID is now optional and set to null
+            const uhid = null;
+            console.log('ℹ️ UHID generation disabled - using patient_id only');
 
             // Prepare data for Supabase
             const supabaseData = {
@@ -275,20 +234,8 @@ export class SupabasePatientService {
                         }
                     }
 
-                    // Handle UHID conflict - retry with new UHID
-                    if ((isDuplicateUhid || insertResponse.status === 409) && attempt < MAX_RETRIES) {
-                        console.warn(`⚠️ UHID conflict detected on attempt ${attempt}/${MAX_RETRIES}. Regenerating UHID...`);
-                        console.warn('Current UHID:', supabaseData.uhid);
-                        try {
-                            const uhidResult = await uhidService.generateUhid(patientData.hospital_id);
-                            supabaseData.uhid = uhidResult.uhid;
-                            console.log('✅ New UHID generated:', supabaseData.uhid);
-                        } catch (uhidError) {
-                            console.error('Failed to generate new UHID, using timestamp fallback');
-                            supabaseData.uhid = 'UHID-' + Date.now();
-                        }
-                        continue; // Retry with new UHID
-                    }
+                    // UHID conflict handling removed - UHID is now disabled
+                    // No retry needed as UHID is always null
 
                     if (!insertResponse.ok) {
                         let errorMsg = `HTTP ${insertResponse.status}`;
