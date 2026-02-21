@@ -1,8 +1,11 @@
-import axios from 'axios';
+// OPD Service - Direct Supabase database access
+// Zero Backend Architecture - No API dependencies
+
+import { getSupabase } from '../lib/supabaseClient';
 import { logger } from '../utils/logger';
 import { SupabaseHospitalService } from './supabaseHospitalService';
 
-const HOSPITAL_ID = 'b8a8c5e2-5c4d-4a8b-9e6f-3d2c1a0b9c8d';
+const HOSPITAL_ID = '550e8400-e29b-41d4-a716-446655440000';
 
 // ==================== TYPES ====================
 
@@ -49,18 +52,6 @@ export interface ConsultationWithRelations extends OPDConsultation {
 // ==================== OPD SERVICE ====================
 
 class OPDService {
-    private getHeaders() {
-        const token = localStorage.getItem('auth_token');
-        return {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-        };
-    }
-
-    private getBaseUrl() {
-        return import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
-    }
-
     // ==================== CONSULTATION OPERATIONS ====================
 
     /**
@@ -68,26 +59,37 @@ class OPDService {
      */
     async createConsultation(data: CreateConsultationData): Promise<OPDConsultation> {
         try {
+            const supabase = await getSupabase();
             logger.log('📝 Creating OPD consultation...');
-            logger.log('👤 Patient ID:', data.patient_id);
-            logger.log('👨‍⚕️ Doctor ID:', data.doctor_id);
-            logger.log('🩺 Chief complaints:', data.chief_complaints);
 
             const consultationData = {
-                ...data,
+                patient_id: data.patient_id,
+                doctor_id: data.doctor_id,
+                queue_id: data.queue_id || null,
+                chief_complaints: data.chief_complaints,
+                examination_findings: data.examination_findings || null,
+                diagnosis: data.diagnosis,
+                diagnosis_codes: data.diagnosis_codes || [],
+                treatment_plan: data.treatment_plan || null,
+                follow_up_date: data.follow_up_date || null,
+                follow_up_notes: data.follow_up_notes || null,
                 hospital_id: HOSPITAL_ID,
                 consultation_date: new Date().toISOString(),
-                status: 'IN_PROGRESS' as const
+                status: 'IN_PROGRESS'
             };
 
-            const response = await axios.post(
-                `${this.getBaseUrl()}/api/opd-consultations`,
-                consultationData,
-                { headers: this.getHeaders() }
-            );
+            const { data: newConsultation, error } = await supabase
+                .from('opd_consultations')
+                .insert(consultationData)
+                .select()
+                .single();
 
-            logger.log('✅ Consultation created successfully');
-            logger.log('🆔 Consultation ID:', response.data.id);
+            if (error) {
+                logger.error('❌ Error creating consultation:', error);
+                throw new Error(error.message);
+            }
+
+            logger.log('✅ Consultation created successfully:', newConsultation.id);
 
             // If queue_id is provided, update queue status to IN_CONSULTATION
             if (data.queue_id) {
@@ -95,10 +97,9 @@ class OPDService {
                 logger.log('✅ Queue status updated to IN_CONSULTATION');
             }
 
-            return response.data;
+            return newConsultation;
         } catch (error: any) {
             logger.error('❌ Error creating consultation:', error);
-            logger.error('Error response:', error.response?.data);
             throw error;
         }
     }
@@ -108,15 +109,27 @@ class OPDService {
      */
     async getConsultationById(id: string): Promise<ConsultationWithRelations | null> {
         try {
+            const supabase = await getSupabase();
             logger.log('📋 Fetching consultation:', id);
 
-            const response = await axios.get(
-                `${this.getBaseUrl()}/api/opd-consultations/${id}`,
-                { headers: this.getHeaders() }
-            );
+            const { data, error } = await supabase
+                .from('opd_consultations')
+                .select(`
+                    *,
+                    patient:patients(id, first_name, last_name, age, gender, phone, uhid),
+                    doctor:users(id, first_name, last_name, email, role)
+                `)
+                .eq('id', id)
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') return null;
+                logger.error('❌ Error fetching consultation:', error);
+                throw new Error(error.message);
+            }
 
             logger.log('✅ Consultation retrieved');
-            return response.data;
+            return data;
         } catch (error: any) {
             logger.error('❌ Error fetching consultation:', error);
             return null;
@@ -128,19 +141,26 @@ class OPDService {
      */
     async getPatientConsultations(patientId: string): Promise<ConsultationWithRelations[]> {
         try {
+            const supabase = await getSupabase();
             logger.log('📋 Fetching consultations for patient:', patientId);
 
-            const response = await axios.get(
-                `${this.getBaseUrl()}/api/opd-consultations`,
-                {
-                    headers: this.getHeaders(),
-                    params: { patient_id: patientId }
-                }
-            );
+            const { data, error } = await supabase
+                .from('opd_consultations')
+                .select(`
+                    *,
+                    patient:patients(id, first_name, last_name, age, gender, phone, uhid),
+                    doctor:users(id, first_name, last_name, email)
+                `)
+                .eq('patient_id', patientId)
+                .order('consultation_date', { ascending: false });
 
-            const consultations = response.data || [];
+            if (error) {
+                logger.error('❌ Error fetching patient consultations:', error);
+                throw new Error(error.message);
+            }
+
+            const consultations = data || [];
             logger.log(`✅ Retrieved ${consultations.length} consultations`);
-
             return consultations;
         } catch (error: any) {
             logger.error('❌ Error fetching patient consultations:', error);
@@ -153,19 +173,27 @@ class OPDService {
      */
     async getConsultationsByDateRange(startDate: string, endDate: string): Promise<ConsultationWithRelations[]> {
         try {
+            const supabase = await getSupabase();
             logger.log('📅 Fetching consultations from', startDate, 'to', endDate);
 
-            const response = await axios.get(
-                `${this.getBaseUrl()}/api/opd-consultations`,
-                {
-                    headers: this.getHeaders(),
-                    params: { start_date: startDate, end_date: endDate }
-                }
-            );
+            const { data, error } = await supabase
+                .from('opd_consultations')
+                .select(`
+                    *,
+                    patient:patients(id, first_name, last_name, age, gender, phone, uhid),
+                    doctor:users(id, first_name, last_name, email)
+                `)
+                .gte('consultation_date', startDate)
+                .lte('consultation_date', endDate)
+                .order('consultation_date', { ascending: false });
 
-            const consultations = response.data || [];
+            if (error) {
+                logger.error('❌ Error fetching consultations by date:', error);
+                throw new Error(error.message);
+            }
+
+            const consultations = data || [];
             logger.log(`✅ Retrieved ${consultations.length} consultations`);
-
             return consultations;
         } catch (error: any) {
             logger.error('❌ Error fetching consultations by date:', error);
@@ -178,17 +206,26 @@ class OPDService {
      */
     async updateConsultation(id: string, updates: Partial<CreateConsultationData>): Promise<OPDConsultation> {
         try {
+            const supabase = await getSupabase();
             logger.log('🔄 Updating consultation:', id);
-            logger.log('📦 Updates:', updates);
 
-            const response = await axios.put(
-                `${this.getBaseUrl()}/api/opd-consultations/${id}`,
-                updates,
-                { headers: this.getHeaders() }
-            );
+            const { data, error } = await supabase
+                .from('opd_consultations')
+                .update({
+                    ...updates,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) {
+                logger.error('❌ Error updating consultation:', error);
+                throw new Error(error.message);
+            }
 
             logger.log('✅ Consultation updated successfully');
-            return response.data;
+            return data;
         } catch (error: any) {
             logger.error('❌ Error updating consultation:', error);
             throw error;
@@ -200,13 +237,23 @@ class OPDService {
      */
     async completeConsultation(id: string, queueId?: string): Promise<OPDConsultation> {
         try {
+            const supabase = await getSupabase();
             logger.log('✅ Completing consultation:', id);
 
-            const response = await axios.put(
-                `${this.getBaseUrl()}/api/opd-consultations/${id}/complete`,
-                {},
-                { headers: this.getHeaders() }
-            );
+            const { data, error } = await supabase
+                .from('opd_consultations')
+                .update({
+                    status: 'COMPLETED',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) {
+                logger.error('❌ Error completing consultation:', error);
+                throw new Error(error.message);
+            }
 
             logger.log('✅ Consultation marked as completed');
 
@@ -216,7 +263,7 @@ class OPDService {
                 logger.log('✅ Queue status updated to COMPLETED');
             }
 
-            return response.data;
+            return data;
         } catch (error: any) {
             logger.error('❌ Error completing consultation:', error);
             throw error;
@@ -228,12 +275,18 @@ class OPDService {
      */
     async deleteConsultation(id: string): Promise<void> {
         try {
+            const supabase = await getSupabase();
             logger.log('🗑️ Deleting consultation:', id);
 
-            await axios.delete(
-                `${this.getBaseUrl()}/api/opd-consultations/${id}`,
-                { headers: this.getHeaders() }
-            );
+            const { error } = await supabase
+                .from('opd_consultations')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                logger.error('❌ Error deleting consultation:', error);
+                throw new Error(error.message);
+            }
 
             logger.log('✅ Consultation deleted successfully');
         } catch (error: any) {
@@ -249,23 +302,44 @@ class OPDService {
      */
     async getConsultationStats(doctorId?: string, startDate?: string, endDate?: string): Promise<any> {
         try {
+            const supabase = await getSupabase();
             logger.log('📊 Fetching consultation statistics');
 
-            const params: any = {};
-            if (doctorId) params.doctor_id = doctorId;
-            if (startDate) params.start_date = startDate;
-            if (endDate) params.end_date = endDate;
+            let query = supabase
+                .from('opd_consultations')
+                .select('id, status, consultation_date');
 
-            const response = await axios.get(
-                `${this.getBaseUrl()}/api/opd-consultations/stats`,
-                {
-                    headers: this.getHeaders(),
-                    params
-                }
-            );
+            if (doctorId) {
+                query = query.eq('doctor_id', doctorId);
+            }
 
-            logger.log('✅ Statistics retrieved');
-            return response.data;
+            if (startDate) {
+                query = query.gte('consultation_date', startDate);
+            }
+
+            if (endDate) {
+                query = query.lte('consultation_date', endDate);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                logger.error('❌ Error fetching consultation stats:', error);
+                throw new Error(error.message);
+            }
+
+            const consultations = data || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            const stats = {
+                total: consultations.length,
+                today: consultations.filter(c => c.consultation_date?.startsWith(todayStr)).length,
+                completed: consultations.filter(c => c.status === 'COMPLETED').length,
+                in_progress: consultations.filter(c => c.status === 'IN_PROGRESS').length
+            };
+
+            logger.log('✅ Statistics retrieved:', stats);
+            return stats;
         } catch (error: any) {
             logger.error('❌ Error fetching consultation stats:', error);
             return {

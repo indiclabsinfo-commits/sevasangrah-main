@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, UserPlus, AlertCircle, User, Phone, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import type { User as Doctor, Patient } from '../../config/supabaseNew';
+import { SupabaseHospitalService } from '../../services/supabaseHospitalService';
+import type { Patient } from '../../services/supabaseHospitalService';
 
 interface WalkInQueueModalProps {
     isOpen: boolean;
@@ -285,8 +286,8 @@ const WalkInQueueModal: React.FC<WalkInQueueModalProps> = ({ isOpen, onClose, on
                             onChange={(e) => setSelectedDoctor(e.target.value)}
                         >
                             <option value="">-- Choose Doctor --</option>
-                            {doctors.map(doc => (
-                                <option key={doc.id} value={doc.id}>Dr. {doc.first_name} {doc.last_name} - {doc.specialization || doc.department || 'General'}</option>
+                            {doctors.map((doc: any) => (
+                                <option key={doc.id} value={doc.id}>{doc.name || `Dr. ${doc.first_name} ${doc.last_name}`} - {doc.specialization || doc.department || 'General'}</option>
                             ))}
                         </select>
                     </div>

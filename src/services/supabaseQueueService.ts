@@ -15,14 +15,21 @@ export interface OPDQueueItem {
   patient_id: string;
   doctor_id: string;
   queue_no: number;
-  queue_status: 'waiting' | 'in_consultation' | 'completed' | 'cancelled';
-  priority: 'normal' | 'urgent' | 'emergency';
-  estimated_wait_time?: number;
+  queue_status: 'WAITING' | 'IN_CONSULTATION' | 'COMPLETED' | 'CANCELLED' | 'VITALS_DONE';
+  priority: boolean;
+  token_number?: string;
+  queue_date?: string;
   consultation_start_time?: string;
   consultation_end_time?: string;
+  consultation_duration?: number;
+  wait_time?: number;
+  total_tat?: number;
+  tat_status?: string;
+  tat_notes?: string;
+  notes?: string;
   created_at: string;
   updated_at: string;
-  
+
   // Joined data
   patient?: {
     id: string;
@@ -33,12 +40,13 @@ export interface OPDQueueItem {
     phone: string;
     uhid?: string;
   };
-  
+
   doctor?: {
     id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
+    name: string;
+    first_name?: string;
+    last_name?: string;
+    department?: string;
     specialization?: string;
   };
 }
@@ -58,27 +66,21 @@ export class SupabaseQueueService {
         .select(`
           *,
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
-          doctor:users(id, first_name, last_name, email, specialization)
+          doctor:doctors(id, name, first_name, last_name, department, specialization)
         `)
         .order('queue_no', { ascending: true });
 
-      // Apply filters
+      // Apply filters - use UPPERCASE to match DB defaults
       if (status && status !== 'all') {
-        query = query.eq('queue_status', status);
+        query = query.eq('queue_status', status.toUpperCase());
       }
-      
+
       if (doctor_id) {
         query = query.eq('doctor_id', doctor_id);
       }
-      
+
       if (date) {
-        const startDate = new Date(date);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(date);
-        endDate.setHours(23, 59, 59, 999);
-        
-        query = query.gte('created_at', startDate.toISOString())
-                    .lte('created_at', endDate.toISOString());
+        query = query.eq('queue_date', date);
       }
 
       const { data, error } = await query;
@@ -100,59 +102,56 @@ export class SupabaseQueueService {
   static async addToQueue(data: {
     patient_id: string;
     doctor_id: string;
-    priority?: 'normal' | 'urgent' | 'emergency';
+    priority?: boolean;
     notes?: string;
   }): Promise<OPDQueueItem> {
     try {
       logger.log('➕ Adding patient to OPD queue:', data);
-      
-      // Get next queue number for this doctor today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
+      // Get today's date string for queue_date filter
+      const todayStr = new Date().toISOString().split('T')[0];
+
       const { data: lastQueue, error: queueError } = await supabase
         .from('opd_queue')
         .select('queue_no')
         .eq('doctor_id', data.doctor_id)
-        .gte('created_at', today.toISOString())
-        .lt('created_at', tomorrow.toISOString())
+        .eq('queue_date', todayStr)
         .order('queue_no', { ascending: false })
         .limit(1);
-      
+
       if (queueError) {
         logger.error('❌ Error getting last queue number:', queueError);
       }
-      
+
       const nextQueueNumber = (lastQueue?.[0]?.queue_no || 0) + 1;
-      
-      // Create queue entry
+
+      // Create queue entry - priority is BOOLEAN, status is UPPERCASE
       const queueData = {
         patient_id: data.patient_id,
         doctor_id: data.doctor_id,
         queue_no: nextQueueNumber,
-        queue_status: 'waiting',
-        priority: data.priority || 'normal',
+        queue_status: 'WAITING',
+        priority: data.priority || false,
         notes: data.notes,
-        estimated_wait_time: data.priority === 'urgent' ? 15 : data.priority === 'emergency' ? 5 : 30
+        queue_date: todayStr,
+        token_number: String(nextQueueNumber)
       };
-      
+
       const { data: newQueue, error } = await supabase
         .from('opd_queue')
         .insert(queueData)
         .select(`
           *,
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
-          doctor:users(id, first_name, last_name, email, specialization)
+          doctor:doctors(id, name, first_name, last_name, department, specialization)
         `)
         .single();
-      
+
       if (error) {
         logger.error('❌ Error adding to queue:', error);
         throw error;
       }
-      
+
       logger.log('✅ Patient added to queue:', newQueue);
       return newQueue;
     } catch (error) {
@@ -164,37 +163,53 @@ export class SupabaseQueueService {
   // Update queue status
   static async updateQueueStatus(
     queueId: string,
-    status: 'waiting' | 'in_consultation' | 'completed' | 'cancelled'
+    status: string
   ): Promise<OPDQueueItem> {
     try {
-      logger.log('🔄 Updating queue status:', { queueId, status });
-      
+      // Normalize status to UPPERCASE
+      const normalizedStatus = status.toUpperCase();
+      logger.log('🔄 Updating queue status:', { queueId, status: normalizedStatus });
+
       const updateData: any = {
-        queue_status: status,
+        queue_status: normalizedStatus,
         updated_at: new Date().toISOString()
       };
-      
+
       // Set consultation timestamps
-      if (status === 'in_consultation') {
+      if (normalizedStatus === 'IN_CONSULTATION') {
         updateData.consultation_start_time = new Date().toISOString();
-      } else if (status === 'completed' || status === 'cancelled') {
-        updateData.consultation_end_time = new Date().toISOString();
-        
-        // Calculate consultation duration if start time exists
+        // Calculate wait_time from created_at
         const { data: queue } = await supabase
           .from('opd_queue')
-          .select('consultation_start_time')
+          .select('created_at')
           .eq('id', queueId)
           .single();
-          
+        if (queue?.created_at) {
+          const waitMinutes = Math.round((Date.now() - new Date(queue.created_at).getTime()) / (1000 * 60));
+          updateData.wait_time = waitMinutes;
+        }
+      } else if (normalizedStatus === 'COMPLETED' || normalizedStatus === 'CANCELLED') {
+        updateData.consultation_end_time = new Date().toISOString();
+
+        // Calculate consultation duration and total TAT
+        const { data: queue } = await supabase
+          .from('opd_queue')
+          .select('consultation_start_time, created_at')
+          .eq('id', queueId)
+          .single();
+
         if (queue?.consultation_start_time) {
           const startTime = new Date(queue.consultation_start_time);
           const endTime = new Date();
           const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
           updateData.consultation_duration = durationMinutes;
         }
+        if (queue?.created_at) {
+          const totalMinutes = Math.round((Date.now() - new Date(queue.created_at).getTime()) / (1000 * 60));
+          updateData.total_tat = totalMinutes;
+        }
       }
-      
+
       const { data, error } = await supabase
         .from('opd_queue')
         .update(updateData)
@@ -202,15 +217,15 @@ export class SupabaseQueueService {
         .select(`
           *,
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
-          doctor:users(id, first_name, last_name, email, specialization)
+          doctor:doctors(id, name, first_name, last_name, department, specialization)
         `)
         .single();
-      
+
       if (error) {
         logger.error('❌ Error updating queue status:', error);
         throw error;
       }
-      
+
       logger.log('✅ Queue status updated:', data);
       return data;
     } catch (error) {
@@ -255,44 +270,36 @@ export class SupabaseQueueService {
     try {
       logger.log('📊 Getting queue statistics');
       
+      const todayStr = new Date().toISOString().split('T')[0];
       let query = supabase
         .from('opd_queue')
-        .select('queue_status, estimated_wait_time, consultation_start_time, consultation_end_time');
-      
+        .select('queue_status, wait_time, consultation_start_time, consultation_end_time, consultation_duration, total_tat')
+        .eq('queue_date', todayStr);
+
       if (doctor_id) {
         query = query.eq('doctor_id', doctor_id);
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) {
         logger.error('❌ Error getting queue stats:', error);
         throw error;
       }
-      
+
       const stats = {
         total: data?.length || 0,
-        waiting: data?.filter(q => q.queue_status === 'waiting').length || 0,
-        in_consultation: data?.filter(q => q.queue_status === 'in_consultation').length || 0,
-        completed: data?.filter(q => q.queue_status === 'completed').length || 0,
+        waiting: data?.filter(q => q.queue_status === 'WAITING').length || 0,
+        in_consultation: data?.filter(q => q.queue_status === 'IN_CONSULTATION').length || 0,
+        completed: data?.filter(q => q.queue_status === 'COMPLETED').length || 0,
         avg_wait_time: 0
       };
       
-      // Calculate average wait time for completed consultations
-      const completedQueues = data?.filter(q => 
-        q.queue_status === 'completed' && 
-        q.consultation_start_time && 
-        q.consultation_end_time
-      ) || [];
-      
-      if (completedQueues.length > 0) {
-        const totalWaitTime = completedQueues.reduce((sum, queue) => {
-          const start = new Date(queue.consultation_start_time!);
-          const end = new Date(queue.consultation_end_time!);
-          return sum + (end.getTime() - start.getTime());
-        }, 0);
-        
-        stats.avg_wait_time = Math.round(totalWaitTime / (completedQueues.length * 1000 * 60)); // Convert to minutes
+      // Calculate average wait time from wait_time column
+      const queuesWithWait = data?.filter(q => q.wait_time != null) || [];
+      if (queuesWithWait.length > 0) {
+        const totalWaitTime = queuesWithWait.reduce((sum, q) => sum + (q.wait_time || 0), 0);
+        stats.avg_wait_time = Math.round(totalWaitTime / queuesWithWait.length);
       }
       
       logger.log('✅ Queue statistics:', stats);
@@ -313,18 +320,18 @@ export class SupabaseQueueService {
   static async getDoctors(): Promise<any[]> {
     try {
       logger.log('👨‍⚕️ Fetching doctors from Supabase');
-      
+
       const { data, error } = await supabase
-        .from('users')
-        .select('id, first_name, last_name, email, specialization, role')
-        .eq('role', 'doctor')
-        .order('first_name');
-      
+        .from('doctors')
+        .select('id, name, first_name, last_name, department, specialization, fee, consultation_fee')
+        .eq('is_active', true)
+        .order('name');
+
       if (error) {
         logger.error('❌ Error fetching doctors:', error);
         throw error;
       }
-      
+
       logger.log(`✅ Found ${data?.length || 0} doctors`);
       return data || [];
     } catch (error) {
@@ -367,16 +374,16 @@ export class SupabaseQueueService {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       
+      const todayStr = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('opd_queue')
         .select(`
           *,
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
-          doctor:users(id, first_name, last_name, email, specialization)
+          doctor:doctors(id, name, first_name, last_name, department, specialization)
         `)
         .eq('patient_id', patientId)
-        .gte('created_at', today.toISOString())
-        .lt('created_at', tomorrow.toISOString())
+        .eq('queue_date', todayStr)
         .order('created_at', { ascending: false });
       
       if (error) {

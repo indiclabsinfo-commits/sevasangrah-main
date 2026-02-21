@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { logger } from '../../utils/logger';
+import { SupabaseHospitalService } from '../../services/supabaseHospitalService';
 
 interface VitalsRecordingModalProps {
     isOpen: boolean;

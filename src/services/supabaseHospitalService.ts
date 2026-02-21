@@ -227,6 +227,7 @@ export class SupabaseHospitalService {
     try {
       logger.log('🔍 Fetching OPD queues from Supabase', { status, doctor_id, date });
 
+      const todayStr = date || new Date().toISOString().split('T')[0];
       let query = supabase
         .from('opd_queue')
         .select(`
@@ -234,24 +235,15 @@ export class SupabaseHospitalService {
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
           doctor:doctors(id, name, first_name, last_name, department, specialization)
         `)
+        .eq('queue_date', todayStr)
         .order('queue_no', { ascending: true });
 
       if (status && status !== 'all') {
-        query = query.eq('queue_status', status);
+        query = query.eq('queue_status', status.toUpperCase());
       }
 
       if (doctor_id) {
         query = query.eq('doctor_id', doctor_id);
-      }
-
-      if (date) {
-        const startDate = new Date(date);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(date);
-        endDate.setHours(23, 59, 59, 999);
-
-        query = query.gte('created_at', startDate.toISOString())
-          .lte('created_at', endDate.toISOString());
       }
 
       const { data, error } = await query;
@@ -285,26 +277,27 @@ export class SupabaseHospitalService {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
+      const todayStr = new Date().toISOString().split('T')[0];
       const { data: lastQueue, error: queueError } = await supabase
         .from('opd_queue')
         .select('queue_no')
         .eq('doctor_id', data.doctor_id)
-        .gte('created_at', today.toISOString())
-        .lt('created_at', tomorrow.toISOString())
+        .eq('queue_date', todayStr)
         .order('queue_no', { ascending: false })
         .limit(1);
 
       const nextQueueNumber = (lastQueue?.[0]?.queue_no || 0) + 1;
 
-      // Create queue entry
+      // Create queue entry - priority is BOOLEAN, status is UPPERCASE
       const queueData = {
         patient_id: data.patient_id,
         doctor_id: data.doctor_id,
         queue_no: nextQueueNumber,
-        queue_status: 'waiting',
-        priority: data.priority || 'normal',
+        queue_status: 'WAITING',
+        priority: data.priority === 'urgent' || data.priority === 'emergency' || data.priority === true ? true : false,
         notes: data.notes,
-        estimated_wait_time: data.priority === 'urgent' ? 15 : data.priority === 'emergency' ? 5 : 30
+        queue_date: todayStr,
+        token_number: String(nextQueueNumber)
       };
 
       const { data: newQueue, error } = await supabase
@@ -313,7 +306,7 @@ export class SupabaseHospitalService {
         .select(`
           *,
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
-          doctor:users(id, first_name, last_name, email, specialization)
+          doctor:doctors(id, name, first_name, last_name, department, specialization)
         `)
         .single();
 
@@ -337,19 +330,36 @@ export class SupabaseHospitalService {
     try {
       logger.log('🔄 Updating queue status:', { queueId, status });
 
+      // Normalize to UPPERCASE
+      const normalizedStatus = status.toUpperCase();
       const updateData: any = {
-        queue_status: status,
+        queue_status: normalizedStatus,
         updated_at: new Date().toISOString()
       };
 
+      const supabase = await getSupabase();
+
       // Set consultation timestamps
-      if (status === 'in_consultation') {
+      if (normalizedStatus === 'IN_CONSULTATION') {
         updateData.consultation_start_time = new Date().toISOString();
-      } else if (status === 'completed' || status === 'cancelled') {
+        // Calculate wait_time
+        const { data: queue } = await supabase
+          .from('opd_queue').select('created_at').eq('id', queueId).single();
+        if (queue?.created_at) {
+          updateData.wait_time = Math.round((Date.now() - new Date(queue.created_at).getTime()) / (1000 * 60));
+        }
+      } else if (normalizedStatus === 'COMPLETED' || normalizedStatus === 'CANCELLED') {
         updateData.consultation_end_time = new Date().toISOString();
+        const { data: queue } = await supabase
+          .from('opd_queue').select('consultation_start_time, created_at').eq('id', queueId).single();
+        if (queue?.consultation_start_time) {
+          updateData.consultation_duration = Math.round((Date.now() - new Date(queue.consultation_start_time).getTime()) / (1000 * 60));
+        }
+        if (queue?.created_at) {
+          updateData.total_tat = Math.round((Date.now() - new Date(queue.created_at).getTime()) / (1000 * 60));
+        }
       }
 
-      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('opd_queue')
         .update(updateData)
@@ -357,7 +367,7 @@ export class SupabaseHospitalService {
         .select(`
           *,
           patient:patients(id, first_name, last_name, age, gender, phone, uhid),
-          doctor:users(id, first_name, last_name, email, specialization)
+          doctor:doctors(id, name, first_name, last_name, department, specialization)
         `)
         .single();
 
@@ -455,9 +465,9 @@ export class SupabaseHospitalService {
   private static async getDoctorsCount(): Promise<number> {
     const supabase = await getSupabase();
     const { count, error } = await supabase
-      .from('users')
+      .from('doctors')
       .select('*', { count: 'exact', head: true })
-      .eq('role', 'doctor');
+      .eq('is_active', true);
 
     return error ? 0 : count || 0;
   }
@@ -480,16 +490,12 @@ export class SupabaseHospitalService {
 
   private static async getTodayAppointmentsCount(): Promise<number> {
     const supabase = await getSupabase();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const todayStr = new Date().toISOString().split('T')[0];
 
     const { count, error } = await supabase
-      .from('appointments')
+      .from('future_appointments')
       .select('*', { count: 'exact', head: true })
-      .gte('appointment_date', today.toISOString())
-      .lt('appointment_date', tomorrow.toISOString());
+      .eq('appointment_date', todayStr);
 
     return error ? 0 : count || 0;
   }
@@ -502,22 +508,16 @@ export class SupabaseHospitalService {
       logger.log('📅 Fetching appointments from Supabase');
 
       let query = supabase
-        .from('appointments')
+        .from('future_appointments')
         .select(`
           *,
           patient:patients(id, first_name, last_name, age, gender, phone),
-          doctor:users(id, first_name, last_name, email)
+          doctor:users!future_appointments_doctor_id_fkey(id, first_name, last_name, email)
         `)
-        .order('appointment_time', { ascending: true });
+        .order('appointment_date', { ascending: true });
 
       if (date) {
-        const startDate = new Date(date);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(date);
-        endDate.setHours(23, 59, 59, 999);
-
-        query = query.gte('appointment_date', startDate.toISOString())
-          .lte('appointment_date', endDate.toISOString());
+        query = query.eq('appointment_date', date);
       }
 
       const { data, error } = await query;
@@ -533,6 +533,83 @@ export class SupabaseHospitalService {
       logger.error('🚨 Failed to fetch appointments:', error);
       return [];
     }
+  }
+
+  static async createAppointment(data: any): Promise<any> {
+    const supabase = await getSupabase();
+    try {
+      logger.log('📅 Creating appointment in Supabase');
+
+      // Only include columns that exist in future_appointments table
+      const appointmentData: any = {
+        patient_id: data.patient_id,
+        doctor_id: data.doctor_id,
+        appointment_date: data.appointment_date,
+        appointment_type: data.appointment_type || 'CONSULTATION',
+        status: data.status || 'SCHEDULED',
+        hospital_id: '550e8400-e29b-41d4-a716-446655440000',
+      };
+
+      // Optional fields that exist in the table
+      if (data.appointment_time) appointmentData.appointment_time = data.appointment_time;
+      if (data.department_id) appointmentData.department_id = data.department_id;
+      if (data.reason) appointmentData.reason = data.reason;
+      if (data.priority) appointmentData.priority = data.priority;
+      if (data.notes) appointmentData.notes = data.notes;
+      if (data.created_from) appointmentData.created_from = data.created_from;
+
+      const { data: newAppointment, error } = await supabase
+        .from('future_appointments')
+        .insert(appointmentData)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Error creating appointment:', error);
+        throw error;
+      }
+
+      logger.log('✅ Appointment created:', newAppointment.id);
+      return newAppointment;
+    } catch (error) {
+      logger.error('🚨 Failed to create appointment:', error);
+      throw error;
+    }
+  }
+
+  static async updateAppointment(id: string, updates: any): Promise<any> {
+    const supabase = await getSupabase();
+    try {
+      logger.log('🔄 Updating appointment:', id);
+
+      // Remove fields that don't exist in the table
+      const { duration_minutes, estimated_cost, ...validUpdates } = updates;
+
+      const { data, error } = await supabase
+        .from('future_appointments')
+        .update({
+          ...validUpdates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Error updating appointment:', error);
+        throw error;
+      }
+
+      logger.log('✅ Appointment updated');
+      return data;
+    } catch (error) {
+      logger.error('🚨 Failed to update appointment:', error);
+      throw error;
+    }
+  }
+
+  static async cancelAppointment(id: string): Promise<any> {
+    return this.updateAppointment(id, { status: 'CANCELLED' });
   }
 
   // ==================== PATIENTS LIST ====================
@@ -651,6 +728,39 @@ export class SupabaseHospitalService {
     }
   }
 
+  // ==================== VITALS ====================
+  static async recordVitals(vitalsData: any): Promise<any> {
+    const supabase = await getSupabase();
+    try {
+      logger.log('📋 Recording vitals:', vitalsData);
+
+      const { data, error } = await supabase
+        .from('patient_vitals')
+        .insert(vitalsData)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Error recording vitals:', error);
+        throw error;
+      }
+
+      // Update queue status to VITALS_DONE if queueId provided
+      if (vitalsData.queue_id) {
+        await supabase
+          .from('opd_queue')
+          .update({ queue_status: 'VITALS_DONE', updated_at: new Date().toISOString() })
+          .eq('id', vitalsData.queue_id);
+      }
+
+      logger.log('✅ Vitals recorded:', data);
+      return data;
+    } catch (error) {
+      logger.error('🚨 Failed to record vitals:', error);
+      throw error;
+    }
+  }
+
   // ==================== EXPENSES ====================
   static async getAllExpenses(): Promise<any[]> {
     const supabase = await getSupabase();
@@ -659,7 +769,7 @@ export class SupabaseHospitalService {
       const { data, error } = await supabase
         .from('daily_expenses')
         .select('*')
-        .order('expense_date', { ascending: false });
+        .order('date', { ascending: false });
 
       if (error) throw error;
       return data || [];

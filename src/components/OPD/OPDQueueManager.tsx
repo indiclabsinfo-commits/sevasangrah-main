@@ -102,7 +102,7 @@ const OPDQueueManager: React.FC = () => {
             const mappedData = data.map((item: any) => ({
                 ...item,
                 id: item.id,
-                status: item.queue_status || 'waiting',
+                status: (item.queue_status || 'WAITING').toUpperCase(),
                 token_number: item.queue_no,
                 patient: item.patient ? {
                     id: item.patient.id,
@@ -121,12 +121,14 @@ const OPDQueueManager: React.FC = () => {
                 },
                 doctor: item.doctor ? {
                     id: item.doctor.id,
-                    first_name: item.doctor.first_name,
-                    last_name: item.doctor.last_name,
-                    email: item.doctor.email,
+                    name: item.doctor.name,
+                    first_name: item.doctor.first_name || item.doctor.name?.split(' ').slice(0, -1).join(' '),
+                    last_name: item.doctor.last_name || item.doctor.name?.split(' ').pop() || '',
+                    department: item.doctor.department,
                     specialization: item.doctor.specialization
                 } : {
                     id: item.doctor_id,
+                    name: 'Unknown Doctor',
                     first_name: 'Unknown',
                     last_name: 'Doctor'
                 }
@@ -157,7 +159,7 @@ const OPDQueueManager: React.FC = () => {
                     announcePatient({
                         patientName: `${item.patient.first_name} ${item.patient.last_name}`,
                         tokenNumber: String(item.queue_no || item.token_number || '0'),
-                        doctorName: item.doctor ? `Dr. ${item.doctor.first_name} ${item.doctor.last_name}` : undefined
+                        doctorName: item.doctor?.name || undefined
                     });
                 }
             }
@@ -254,8 +256,8 @@ const OPDQueueManager: React.FC = () => {
                         className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
                     >
                         <option value="">All Doctors</option>
-                        {doctors.map(doc => (
-                            <option key={doc.id} value={doc.id}>{doc.first_name} {doc.last_name}</option>
+                        {doctors.map((doc: any) => (
+                            <option key={doc.id} value={doc.id}>{doc.name || `${doc.first_name} ${doc.last_name}`}</option>
                         ))}
                     </select>
                 </div>
@@ -306,7 +308,7 @@ const OPDQueueManager: React.FC = () => {
                                                         </span>
                                                     )}
                                                     <span className="text-xs text-gray-500">
-                                                        👨‍⚕️ {item.doctor?.first_name || item.assigned_doctor || 'Unassigned'} {item.doctor?.last_name || ''}
+                                                        👨‍⚕️ {item.doctor?.name || item.assigned_doctor || 'Unassigned'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -371,8 +373,8 @@ const OPDQueueManager: React.FC = () => {
                                                             setSelectedPatientForConsultation({
                                                                 patientId: item.patient?.id,
                                                                 patientName: `${item.patient?.first_name} ${item.patient?.last_name}`,
-                                                                doctorId: item.doctor?.id || item.assigned_doctor,
-                                                                doctorName: `Dr. ${item.doctor?.first_name || item.assigned_doctor} ${item.doctor?.last_name || ''}`,
+                                                                doctorId: item.doctor?.id || item.doctor_id,
+                                                                doctorName: item.doctor?.name || 'Doctor',
                                                                 queueId: item.id
                                                             });
                                                             setShowConsultationModal(true);

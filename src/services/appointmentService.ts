@@ -1,12 +1,8 @@
-import { supabase } from '../config/supabase';
-import { PatientService, type CreatePatientData } from './patientService';
-import type { 
-  Appointment, 
-  AppointmentWithRelations, 
-  CreateAppointmentData, 
-  PaginatedResponse,
-  SupabaseQuery 
-} from '../config/supabase';
+// Appointment Service - Direct Supabase database access
+// Zero Backend Architecture - No API dependencies
+
+import { getSupabase } from '../lib/supabaseClient';
+import { logger } from '../utils/logger';
 
 export interface AppointmentFilters {
   patientId?: string;
@@ -28,6 +24,21 @@ export interface AppointmentListParams {
   filters?: AppointmentFilters;
 }
 
+export interface CreateAppointmentData {
+  patient_id: string;
+  doctor_id: string;
+  department_id?: string;
+  appointment_date: string;
+  appointment_time?: string;
+  appointment_type?: string;
+  reason?: string;
+  priority?: string;
+  status?: string;
+  notes?: string;
+  hospital_id?: string;
+  [key: string]: any;
+}
+
 export interface UpdateAppointmentData extends Partial<CreateAppointmentData> {
   status?: 'SCHEDULED' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
   actual_start_time?: string;
@@ -38,36 +49,66 @@ export interface UpdateAppointmentData extends Partial<CreateAppointmentData> {
   notes?: string;
 }
 
+export interface AppointmentWithRelations {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  department_id?: string;
+  appointment_date: string;
+  appointment_time?: string;
+  appointment_type?: string;
+  reason?: string;
+  priority?: string;
+  status: string;
+  notes?: string;
+  reminder_sent?: boolean;
+  created_from?: string;
+  hospital_id?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  patient?: any;
+  doctor?: any;
+  [key: string]: any;
+}
+
+const HOSPITAL_ID = '550e8400-e29b-41d4-a716-446655440000';
+
 class AppointmentService {
   /**
    * Get all appointments with pagination and filters
    */
-  async getAppointments(params: AppointmentListParams = {}): Promise<PaginatedResponse<AppointmentWithRelations>> {
+  async getAppointments(params: AppointmentListParams = {}): Promise<{
+    data: AppointmentWithRelations[];
+    count: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     try {
+      const supabase = await getSupabase();
       const {
         page = 1,
         limit = 20,
-        sortBy = 'scheduled_at',
         sortOrder = 'asc',
         filters = {},
       } = params;
 
       const offset = (page - 1) * limit;
 
-      // Build query - Updated to use future_appointments table
+      // Build query with doctor join to users table (FK confirmed)
       let query = supabase
         .from('future_appointments')
         .select(`
           *,
           patient:patients(
             id,
-            patient_id,
             first_name,
             last_name,
             phone,
             email,
             gender,
-            blood_group
+            age
           ),
           doctor:users!future_appointments_doctor_id_fkey(
             id,
@@ -109,9 +150,10 @@ class AppointmentService {
         .order('appointment_date', { ascending: sortOrder === 'asc' })
         .range(offset, offset + limit - 1);
 
-      const { data, error, count }: SupabaseQuery<AppointmentWithRelations> = await query;
+      const { data, error, count } = await query;
 
       if (error) {
+        logger.error('❌ Error fetching appointments:', error);
         throw new Error(error.message);
       }
 
@@ -123,7 +165,7 @@ class AppointmentService {
         totalPages: Math.ceil((count || 0) / limit),
       };
     } catch (error) {
-      console.error('Error fetching appointments:', error);
+      logger.error('Error fetching appointments:', error);
       throw error;
     }
   }
@@ -133,29 +175,26 @@ class AppointmentService {
    */
   async getAppointmentById(id: string): Promise<AppointmentWithRelations | null> {
     try {
+      const supabase = await getSupabase();
+
       const { data, error } = await supabase
         .from('future_appointments')
         .select(`
           *,
           patient:patients(
             id,
-            patient_id,
             first_name,
             last_name,
             phone,
             email,
             gender,
-            blood_group,
-            medical_history,
-            allergies,
-            current_medications
+            age
           ),
           doctor:users!future_appointments_doctor_id_fkey(
             id,
             first_name,
             last_name,
-            email,
-            role
+            email
           )
         `)
         .eq('id', id)
@@ -170,7 +209,61 @@ class AppointmentService {
 
       return data;
     } catch (error) {
-      console.error('Error fetching appointment:', error);
+      logger.error('Error fetching appointment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new appointment
+   */
+  async createAppointment(appointmentData: CreateAppointmentData): Promise<any> {
+    try {
+      const supabase = await getSupabase();
+
+      // Check for conflicts
+      const hasConflict = await this.checkTimeConflict(
+        appointmentData.doctor_id,
+        appointmentData.appointment_date
+      );
+
+      if (hasConflict) {
+        throw new Error('Doctor is not available at the requested time');
+      }
+
+      // Only include columns that exist in future_appointments table
+      const insertData: any = {
+        patient_id: appointmentData.patient_id,
+        doctor_id: appointmentData.doctor_id,
+        appointment_date: appointmentData.appointment_date,
+        appointment_type: appointmentData.appointment_type || 'CONSULTATION',
+        status: appointmentData.status || 'SCHEDULED',
+        hospital_id: appointmentData.hospital_id || HOSPITAL_ID,
+      };
+
+      // Optional fields
+      if (appointmentData.department_id) insertData.department_id = appointmentData.department_id;
+      if (appointmentData.appointment_time) insertData.appointment_time = appointmentData.appointment_time;
+      if (appointmentData.reason) insertData.reason = appointmentData.reason;
+      if (appointmentData.priority) insertData.priority = appointmentData.priority;
+      if (appointmentData.notes) insertData.notes = appointmentData.notes;
+      if (appointmentData.created_from) insertData.created_from = appointmentData.created_from;
+
+      const { data, error } = await supabase
+        .from('future_appointments')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('❌ Error creating appointment:', error);
+        throw new Error(error.message);
+      }
+
+      logger.log('✅ Appointment created:', data.id);
+      return data;
+    } catch (error) {
+      logger.error('Error creating appointment:', error);
       throw error;
     }
   }
@@ -180,12 +273,22 @@ class AppointmentService {
    */
   async createAppointmentWithNewPatient(
     appointmentData: Omit<CreateAppointmentData, 'patient_id'>,
-    patientData: CreatePatientData
-  ): Promise<{ appointment: Appointment; patient: any }> {
+    patientData: any
+  ): Promise<{ appointment: any; patient: any }> {
     try {
+      const supabase = await getSupabase();
+
       // First create the new patient
-      const newPatient = await PatientService.createPatient(patientData);
-      
+      const { data: newPatient, error: patientError } = await supabase
+        .from('patients')
+        .insert(patientData)
+        .select()
+        .single();
+
+      if (patientError) {
+        throw new Error('Failed to create patient: ' + patientError.message);
+      }
+
       // Then create the appointment with the new patient ID
       const appointment = await this.createAppointment({
         ...appointmentData,
@@ -194,45 +297,7 @@ class AppointmentService {
 
       return { appointment, patient: newPatient };
     } catch (error) {
-      console.error('Error creating appointment with new patient:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create a new appointment
-   */
-  async createAppointment(appointmentData: CreateAppointmentData): Promise<Appointment> {
-    try {
-      // Check for conflicts
-      const hasConflict = await this.checkTimeConflict(
-        appointmentData.doctor_id,
-        appointmentData.appointment_date,
-        appointmentData.duration_minutes || 30
-      );
-
-      if (hasConflict) {
-        throw new Error('Doctor is not available at the requested time');
-      }
-
-      const { data, error } = await supabase
-        .from('future_appointments')
-        .insert({
-          ...appointmentData,
-          duration_minutes: appointmentData.duration_minutes || 30,
-          appointment_type: appointmentData.appointment_type || 'CONSULTATION',
-          status: appointmentData.status || 'SCHEDULED',
-        })
-        .select()
-        .single();
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Error creating appointment:', error);
+      logger.error('Error creating appointment with new patient:', error);
       throw error;
     }
   }
@@ -240,25 +305,16 @@ class AppointmentService {
   /**
    * Update an existing appointment
    */
-  async updateAppointment(id: string, updates: UpdateAppointmentData): Promise<Appointment> {
+  async updateAppointment(id: string, updates: UpdateAppointmentData): Promise<any> {
     try {
-      // If updating scheduled time, check for conflicts
-      if (updates.appointment_date && updates.doctor_id) {
-        const hasConflict = await this.checkTimeConflict(
-          updates.doctor_id,
-          updates.appointment_date,
-          updates.duration_minutes || 30,
-          id // Exclude current appointment from conflict check
-        );
-
-        if (hasConflict) {
-          throw new Error('Doctor is not available at the requested time');
-        }
-      }
+      const supabase = await getSupabase();
 
       const { data, error } = await supabase
         .from('future_appointments')
-        .update(updates)
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
         .select()
         .single();
@@ -269,7 +325,7 @@ class AppointmentService {
 
       return data;
     } catch (error) {
-      console.error('Error updating appointment:', error);
+      logger.error('Error updating appointment:', error);
       throw error;
     }
   }
@@ -279,13 +335,14 @@ class AppointmentService {
    */
   async cancelAppointment(id: string, reason?: string): Promise<void> {
     try {
+      const supabase = await getSupabase();
+
       const updateData: any = {
         status: 'CANCELLED',
         updated_at: new Date().toISOString(),
       };
 
       if (reason) {
-        // Get current notes and append cancellation reason
         const { data: appointment } = await supabase
           .from('future_appointments')
           .select('notes')
@@ -293,7 +350,7 @@ class AppointmentService {
           .single();
 
         const currentNotes = appointment?.notes || '';
-        updateData.notes = currentNotes 
+        updateData.notes = currentNotes
           ? `${currentNotes}\nCancellation reason: ${reason}`
           : `Cancellation reason: ${reason}`;
       }
@@ -307,7 +364,7 @@ class AppointmentService {
         throw new Error(error.message);
       }
     } catch (error) {
-      console.error('Error cancelling appointment:', error);
+      logger.error('Error cancelling appointment:', error);
       throw error;
     }
   }
@@ -317,9 +374,8 @@ class AppointmentService {
    */
   async getTodayAppointments(): Promise<AppointmentWithRelations[]> {
     try {
-      const today = new Date();
-      const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-      const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+      const supabase = await getSupabase();
+      const todayStr = new Date().toISOString().split('T')[0];
 
       const { data, error } = await supabase
         .from('future_appointments')
@@ -327,7 +383,6 @@ class AppointmentService {
           *,
           patient:patients(
             id,
-            patient_id,
             first_name,
             last_name,
             phone
@@ -338,9 +393,8 @@ class AppointmentService {
             last_name
           )
         `)
-        .gte('appointment_date', startOfDay.split('T')[0])
-        .lte('appointment_date', endOfDay.split('T')[0])
-        .order('appointment_date', { ascending: true });
+        .eq('appointment_date', todayStr)
+        .order('appointment_time', { ascending: true });
 
       if (error) {
         throw new Error(error.message);
@@ -348,7 +402,7 @@ class AppointmentService {
 
       return data || [];
     } catch (error) {
-      console.error('Error fetching today\'s appointments:', error);
+      logger.error('Error fetching today\'s appointments:', error);
       throw error;
     }
   }
@@ -358,13 +412,14 @@ class AppointmentService {
    */
   async getDoctorUpcomingAppointments(doctorId: string, limit: number = 10): Promise<AppointmentWithRelations[]> {
     try {
+      const supabase = await getSupabase();
+
       const { data, error } = await supabase
         .from('future_appointments')
         .select(`
           *,
           patient:patients(
             id,
-            patient_id,
             first_name,
             last_name,
             phone
@@ -387,7 +442,7 @@ class AppointmentService {
 
       return data || [];
     } catch (error) {
-      console.error('Error fetching doctor upcoming appointments:', error);
+      logger.error('Error fetching doctor upcoming appointments:', error);
       throw error;
     }
   }
@@ -406,10 +461,8 @@ class AppointmentService {
     completionRate: number;
   }> {
     try {
-      // Get basic counts
-      const today = new Date();
-      const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-      const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+      const supabase = await getSupabase();
+      const todayStr = new Date().toISOString().split('T')[0];
 
       const [
         { count: total },
@@ -420,8 +473,7 @@ class AppointmentService {
       ] = await Promise.all([
         supabase.from('future_appointments').select('id', { count: 'exact', head: true }),
         supabase.from('future_appointments').select('id', { count: 'exact', head: true })
-          .gte('appointment_date', startOfDay.split('T')[0])
-          .lte('appointment_date', endOfDay.split('T')[0]),
+          .eq('appointment_date', todayStr),
         supabase.from('future_appointments').select('id', { count: 'exact', head: true })
           .eq('status', 'SCHEDULED'),
         supabase.from('future_appointments').select('id', { count: 'exact', head: true })
@@ -439,9 +491,13 @@ class AppointmentService {
       const statusDistribution: Record<string, number> = {};
       const typeDistribution: Record<string, number> = {};
 
-      appointments?.forEach((appointment) => {
-        statusDistribution[appointment.status] = (statusDistribution[appointment.status] || 0) + 1;
-        typeDistribution[appointment.appointment_type] = (typeDistribution[appointment.appointment_type] || 0) + 1;
+      appointments?.forEach((appointment: any) => {
+        if (appointment.status) {
+          statusDistribution[appointment.status] = (statusDistribution[appointment.status] || 0) + 1;
+        }
+        if (appointment.appointment_type) {
+          typeDistribution[appointment.appointment_type] = (typeDistribution[appointment.appointment_type] || 0) + 1;
+        }
       });
 
       const completionRate = total ? ((completed || 0) / (total || 1)) * 100 : 0;
@@ -457,7 +513,7 @@ class AppointmentService {
         completionRate,
       };
     } catch (error) {
-      console.error('Error fetching appointment stats:', error);
+      logger.error('Error fetching appointment stats:', error);
       throw error;
     }
   }
@@ -468,10 +524,10 @@ class AppointmentService {
   private async checkTimeConflict(
     doctorId: string,
     appointmentDate: string,
-    duration: number,
     excludeAppointmentId?: string
   ): Promise<boolean> {
     try {
+      const supabase = await getSupabase();
       const appointmentDateOnly = appointmentDate.split('T')[0];
 
       let query = supabase
@@ -491,49 +547,21 @@ class AppointmentService {
         throw new Error(error.message);
       }
 
-      // No overlapping appointments found
-      return false; // No conflict
+      // For now, no conflict detection (would need time slot logic)
+      return false;
     } catch (error) {
-      console.error('Error checking time conflict:', error);
-      return false; // Assume no conflict on error
+      logger.error('Error checking time conflict:', error);
+      return false;
     }
   }
 
   /**
-   * Generate a unique appointment ID
-   */
-  private async generateAppointmentId(): Promise<string> {
-    try {
-      const currentYear = new Date().getFullYear();
-      const currentMonth = new Date().getMonth() + 1;
-      const prefix = `APT${currentYear}${currentMonth.toString().padStart(2, '0')}`;
-
-      // Get the last appointment ID for this month
-      const { data } = await supabase
-        .from('future_appointments')
-        .select('id')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      let nextNumber = 1;
-      if (data && data.length > 0) {
-        // Simple counter based on existing records
-        nextNumber = data.length + 1;
-      }
-
-      return `${prefix}${nextNumber.toString().padStart(4, '0')}`;
-    } catch (error) {
-      console.error('Error generating appointment ID:', error);
-      // Fallback to timestamp-based ID
-      return `APT${Date.now()}`;
-    }
-  }
-
-  /**
-   * Delete an appointment completely from the database
+   * Delete an appointment
    */
   async deleteAppointment(id: string): Promise<void> {
     try {
+      const supabase = await getSupabase();
+
       const { error } = await supabase
         .from('future_appointments')
         .delete()
@@ -543,7 +571,7 @@ class AppointmentService {
         throw new Error(error.message);
       }
     } catch (error) {
-      console.error('Error deleting appointment:', error);
+      logger.error('Error deleting appointment:', error);
       throw error;
     }
   }
@@ -551,15 +579,16 @@ class AppointmentService {
   /**
    * Subscribe to appointment changes
    */
-  subscribeToAppointments(callback: (payload: any) => void) {
+  async subscribeToAppointments(callback: (payload: any) => void) {
+    const supabase = await getSupabase();
     return supabase
       .channel('future_appointments_changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'future_appointments' 
-        }, 
+      .on('postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'future_appointments'
+        },
         callback
       )
       .subscribe();
