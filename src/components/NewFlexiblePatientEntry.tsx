@@ -834,6 +834,23 @@ const NewFlexiblePatientEntry: React.FC = () => {
       }
 
       // Create transactions for each assigned doctor (wrapped in try-catch to not break patient creation)
+      // ALSO create if consultation_fee > 0 even without doctor (to record payment)
+      const shouldCreateTransaction = !saveAsDraft && (
+        assignedDoctorsData.length > 0 ||
+        (formData.consultation_mode === 'single' && formData.consultation_fee > 0)
+      );
+
+      if (shouldCreateTransaction) {
+        // If no doctors assigned but fee exists, create a generic transaction
+        if (assignedDoctorsData.length === 0 && formData.consultation_fee > 0) {
+          assignedDoctorsData.push({
+            name: 'General Consultation',
+            department: 'OPD',
+            consultationFee: formData.consultation_fee
+          });
+        }
+      }
+
       if (!saveAsDraft && assignedDoctorsData.length > 0) {
         try {
           for (const doctor of assignedDoctorsData) {
