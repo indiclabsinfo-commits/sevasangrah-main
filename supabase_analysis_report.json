@@ -1,0 +1,433 @@
+{
+  "metadata": {
+    "supabaseUrl": "https://plkbxjedbjpmbfrekmrr.supabase.co",
+    "analysisDate": "2026-02-21T09:03:49.042Z",
+    "totalTables": 9,
+    "totalRows": 0
+  },
+  "tables": [
+    {
+      "name": "patients",
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "sample": "b00afa82-c9ed-4baf-9e59-d16fc2f63a96"
+        },
+        {
+          "name": "patient_id",
+          "type": "string",
+          "sample": "P000001"
+        },
+        {
+          "name": "prefix",
+          "type": "string",
+          "sample": "Mr"
+        },
+        {
+          "name": "first_name",
+          "type": "string",
+          "sample": "yash"
+        },
+        {
+          "name": "last_name",
+          "type": "string",
+          "sample": ""
+        },
+        {
+          "name": "age",
+          "type": "number",
+          "sample": 25
+        },
+        {
+          "name": "gender",
+          "type": "string",
+          "sample": "MALE"
+        },
+        {
+          "name": "phone",
+          "type": "string",
+          "sample": "9089786756"
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "sample": "yash@gmail.com"
+        },
+        {
+          "name": "address",
+          "type": "string",
+          "sample": "udaipur"
+        },
+        {
+          "name": "emergency_contact_name",
+          "type": "string",
+          "sample": "yash "
+        },
+        {
+          "name": "emergency_contact_phone",
+          "type": "string",
+          "sample": "9089786756"
+        },
+        {
+          "name": "medical_history",
+          "type": "string",
+          "sample": "udaipur"
+        },
+        {
+          "name": "allergies",
+          "type": "string",
+          "sample": "none"
+        },
+        {
+          "name": "current_medications",
+          "type": "string",
+          "sample": "none"
+        },
+        {
+          "name": "blood_group",
+          "type": "string",
+          "sample": "A+"
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "sample": "REF: hi"
+        },
+        {
+          "name": "date_of_entry",
+          "type": "string",
+          "sample": "2026-02-14"
+        },
+        {
+          "name": "patient_tag",
+          "type": "string",
+          "sample": "Bohara Community"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "hospital_id",
+          "type": "string",
+          "sample": "550e8400-e29b-41d4-a716-446655440000"
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "sample": "2026-02-14T07:09:00.38443+00:00"
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "sample": "2026-02-14T10:49:04.729672+00:00"
+        },
+        {
+          "name": "created_by",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "aadhaar_number",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "abha_id",
+          "type": "string",
+          "sample": "89786756453423"
+        },
+        {
+          "name": "assigned_department",
+          "type": "string",
+          "sample": "GASTRO"
+        },
+        {
+          "name": "assigned_doctor",
+          "type": "string",
+          "sample": "DR. MILIND KIRIT AKHANI"
+        },
+        {
+          "name": "date_of_birth",
+          "type": "string",
+          "sample": "2000-01-02"
+        },
+        {
+          "name": "photo_url",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "has_reference",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "reference_details",
+          "type": "string",
+          "sample": "hi"
+        },
+        {
+          "name": "queue_no",
+          "type": "number",
+          "sample": 0
+        },
+        {
+          "name": "queue_status",
+          "type": "string",
+          "sample": "waiting"
+        },
+        {
+          "name": "queue_date",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "has_pending_appointment",
+          "type": "boolean",
+          "sample": false
+        },
+        {
+          "name": "rghs_number",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "token_number",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "uhid",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "photo_thumbnail_url",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "photo_uploaded_at",
+          "type": "object",
+          "sample": null
+        }
+      ]
+    },
+    {
+      "name": "doctors",
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "sample": "ee07ce03-427e-45ab-a7ab-91ec6fa32ff8"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "sample": "Dr. Rajesh Kumar"
+        },
+        {
+          "name": "department",
+          "type": "string",
+          "sample": "General"
+        },
+        {
+          "name": "specialization",
+          "type": "string",
+          "sample": "General Medicine"
+        },
+        {
+          "name": "fee",
+          "type": "number",
+          "sample": 500
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "sample": "2026-02-13T11:58:25.661645+00:00"
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "sample": "2026-02-13T11:58:25.661645+00:00"
+        },
+        {
+          "name": "consultation_fee",
+          "type": "number",
+          "sample": 0
+        },
+        {
+          "name": "first_name",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "last_name",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "email",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "phone",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "qualification",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "experience_years",
+          "type": "object",
+          "sample": null
+        }
+      ]
+    },
+    {
+      "name": "appointments",
+      "rowCount": 0,
+      "columns": []
+    },
+    {
+      "name": "prescriptions",
+      "rowCount": 0,
+      "columns": []
+    },
+    {
+      "name": "bills",
+      "rowCount": 0,
+      "columns": []
+    },
+    {
+      "name": "departments",
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "sample": "5210af56-2657-4451-a011-07154b4fef28"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "sample": "General"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "sample": "General Medicine"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "sample": "2026-02-13T11:58:25.661645+00:00"
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "sample": "2026-02-13T11:58:25.661645+00:00"
+        }
+      ]
+    },
+    {
+      "name": "medicines",
+      "rowCount": 0,
+      "columns": []
+    },
+    {
+      "name": "users",
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "sample": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "sample": "admin@hospital.com"
+        },
+        {
+          "name": "first_name",
+          "type": "string",
+          "sample": "Super"
+        },
+        {
+          "name": "last_name",
+          "type": "string",
+          "sample": "Admin"
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "sample": "ADMIN"
+        },
+        {
+          "name": "department",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "specialization",
+          "type": "object",
+          "sample": null
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "sample": "2026-02-14T05:55:20.203823+00:00"
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "sample": "2026-02-14T05:55:20.203823+00:00"
+        },
+        {
+          "name": "password_hash",
+          "type": "string",
+          "sample": "$2a$10$dummyhashforadminbypassUseHardcodedCheck"
+        }
+      ]
+    },
+    {
+      "name": "transactions",
+      "rowCount": 0,
+      "columns": []
+    }
+  ],
+  "relationships": [
+    {
+      "from": "patients",
+      "fromColumn": "hospital_id",
+      "to": "hospitals",
+      "type": "foreign_key"
+    }
+  ],
+  "businessLogic": {}
+}
