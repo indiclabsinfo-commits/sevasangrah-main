@@ -394,7 +394,7 @@ export class SupabasePatientService {
             const completeQueueData = {
                 ...queueData,
                 queue_no: nextQueueNumber,
-                queue_status: queueData.queue_status || 'waiting'
+                queue_status: queueData.queue_status || 'WAITING' // Uppercase to match database constraint
             };
 
             console.log('📝 Inserting to queue with number:', nextQueueNumber);
