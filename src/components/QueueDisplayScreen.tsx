@@ -49,19 +49,20 @@ const QueueDisplayScreen: React.FC = () => {
       const data = await SupabaseHospitalService.getOPDQueues(undefined, selectedDoctor || undefined);
 
       // Transform data to match component interface
+      // Data from getOPDQueues has nested patient/doctor objects from Supabase joins
       const transformedData: QueuePatient[] = data.map((item: any) => ({
         id: item.id,
-        patient_id: item.patient_code || item.patient_id, // Use code if available
-        first_name: item.first_name,
-        last_name: item.last_name,
-        queue_no: item.token_number,
-        // Map status: IN_CONSULTATION -> called, WAITING/VITALS_DONE -> waiting
-        queue_status: item.status === 'IN_CONSULTATION' ? 'called' :
-          item.status === 'COMPLETED' ? 'completed' : 'waiting',
-        age: item.age,
-        gender: item.gender,
+        patient_id: item.patient?.uhid || item.patient?.patient_id || `P${String(item.patient?.id || item.patient_id).substring(0, 8)}`,
+        first_name: item.patient?.first_name || 'Unknown',
+        last_name: item.patient?.last_name || '',
+        queue_no: item.queue_no || item.token_number || 0,
+        // Map status: queue_status from DB is uppercase
+        queue_status: (item.queue_status || item.status || 'WAITING') === 'IN_CONSULTATION' ? 'called' :
+          (item.queue_status || item.status || 'WAITING') === 'COMPLETED' ? 'completed' : 'waiting',
+        age: item.patient?.age,
+        gender: item.patient?.gender,
         doctor_id: item.doctor_id,
-        assigned_doctor: item.doctor?.name || (item.assigned_doctor ? item.assigned_doctor : 'Unassigned'),
+        assigned_doctor: item.doctor?.name || item.doctor?.first_name ? `${item.doctor?.first_name || ''} ${item.doctor?.last_name || ''}`.trim() : 'Unassigned',
         doctor: item.doctor
       }));
 
@@ -303,10 +304,10 @@ const QueueDisplayScreen: React.FC = () => {
               {currentPatient.queue_no}
             </div>
             <div style={{ fontSize: '48px', fontWeight: '700', color: '#111827', marginBottom: '8px' }}>
-              {currentPatient.patient?.first_name || 'Unknown'} {currentPatient.patient?.last_name || ''}
+              {currentPatient.first_name} {currentPatient.last_name}
             </div>
             <div style={{ fontSize: '24px', color: '#666666', marginTop: '16px' }}>
-              Patient ID: {currentPatient.patient?.patient_id || currentPatient.id}
+              Patient ID: {currentPatient.patient_id}
             </div>
           </div>
         </div>
