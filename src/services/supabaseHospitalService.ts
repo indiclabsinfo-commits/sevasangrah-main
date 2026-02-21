@@ -216,6 +216,74 @@ export class SupabaseHospitalService {
     }
   }
 
+  /**
+   * Resolve a logged-in user (from users table) to their doctors table record
+   */
+  static async getDoctorRecordForUser(userId: string): Promise<any | null> {
+    const supabase = await getSupabase();
+    try {
+      logger.log('🔍 Resolving doctor record for user:', userId);
+
+      // Get user profile first
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name')
+        .eq('id', userId)
+        .single();
+
+      if (!userRow) {
+        // Try auth_id match
+        const { data: authRow } = await supabase
+          .from('users')
+          .select('id, email, first_name, last_name')
+          .eq('auth_id', userId)
+          .single();
+        if (!authRow) {
+          logger.warn('⚠️ No user profile found for:', userId);
+          return null;
+        }
+        Object.assign(userRow || {}, authRow);
+      }
+
+      const user = userRow!;
+
+      // Try to find matching doctor by name
+      const { data: doctors } = await supabase
+        .from('doctors')
+        .select('*')
+        .eq('is_active', true);
+
+      if (doctors && doctors.length > 0) {
+        // Match by name (first_name or full name)
+        const match = doctors.find((d: any) => {
+          const doctorName = (d.name || '').toLowerCase();
+          const doctorFirst = (d.first_name || '').toLowerCase();
+          const userFirst = (user.first_name || '').toLowerCase();
+          const userLast = (user.last_name || '').toLowerCase();
+          const userFull = `${userFirst} ${userLast}`.trim();
+          return doctorFirst === userFirst ||
+                 doctorName === userFull ||
+                 doctorName.includes(userFirst);
+        });
+
+        if (match) {
+          logger.log('✅ Doctor record matched:', match.id, match.name || match.first_name);
+          return match;
+        }
+
+        // If no name match, return the first doctor as fallback for demo
+        logger.warn('⚠️ No name match found, returning first doctor as fallback');
+        return doctors[0];
+      }
+
+      logger.warn('⚠️ No doctors found in doctors table');
+      return null;
+    } catch (error) {
+      logger.error('🚨 Failed to resolve doctor record:', error);
+      return null;
+    }
+  }
+
   // ==================== OPD QUEUES ====================
 
   static async getOPDQueues(

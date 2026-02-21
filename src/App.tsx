@@ -36,6 +36,7 @@ import AdminAuditLog from './components/AdminAuditLog';
 import HRMManagementSimple from './components/HRMManagementSimple';
 import QueueDisplayScreen from './components/QueueDisplayScreen';
 import OPDQueueManager from './components/OPD/OPDQueueManager';
+import DoctorConsole from './components/DoctorConsole/DoctorConsole';
 // import TableInspector from './components/TableInspector'; // Removed debug component
 import { Login } from './pages/Login/Login'; // Import 3D Login component
 // import RemoveTriggerComponent from './components/RemoveTriggerComponent'; // Not needed - backend issue
@@ -113,6 +114,13 @@ const App: React.FC = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   // const [showTriggerFix, setShowTriggerFix] = useState(false);
   const [showDebugger, setShowDebugger] = useState(false);
+
+  // Auto-redirect doctors to Doctor Console on login
+  useEffect(() => {
+    if (user && user.role === 'DOCTOR' && activeTab === 'dashboard') {
+      setActiveTab('doctor-console');
+    }
+  }, [user?.id]);
 
   // Removed trigger fix logic - issue is in backend code
 
@@ -912,6 +920,13 @@ const App: React.FC = () => {
       name: '🚶‍♂️ OPD Queue',
       component: OPDQueueManager,
       description: 'Manage OPD patient queue'
+    },
+    {
+      id: 'doctor-console',
+      name: '🩺 Doctor Console',
+      component: DoctorConsole,
+      description: 'Doctor consultation workspace with queue, prescriptions, and patient history',
+      permission: 'doctor_console'
     },
     {
       id: 'ipd-beds',

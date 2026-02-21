@@ -292,9 +292,33 @@ export const authService = {
     const currentUser = user || AuthService.getCurrentUser();
     return currentUser?.role === 'ADMIN';
   },
-  isDoctor: () => AuthService.isDoctor(),
+  isDoctor: (user?: AuthUser | null) => {
+    const currentUser = user || AuthService.getCurrentUser();
+    return currentUser?.role === 'DOCTOR';
+  },
+  isFrontdesk: (user?: AuthUser | null) => {
+    const currentUser = user || AuthService.getCurrentUser();
+    return currentUser?.role === 'RECEPTION' || currentUser?.role === 'STAFF';
+  },
   isAuthenticated: () => AuthService.isAuthenticated(),
-  hasRole: (role: AuthUser['role'] | AuthUser['role'][]) => AuthService.hasRole(role),
+  hasRole: (role: AuthUser['role'] | AuthUser['role'][], user?: AuthUser | null) => {
+    const currentUser = user || AuthService.getCurrentUser();
+    if (!currentUser) return false;
+    if (Array.isArray(role)) return role.includes(currentUser.role);
+    return currentUser.role === role;
+  },
+  getUserPermissions: (user?: AuthUser | null): string[] => {
+    const currentUser = user || AuthService.getCurrentUser();
+    if (!currentUser) return [];
+    const role = currentUser.role?.toUpperCase();
+    const roleMap: Record<string, string[]> = {
+      ADMIN: ['admin_access', 'access_operations', 'access_hrm', 'doctor_console', 'read_patients', 'read_appointments', 'create_patients'],
+      DOCTOR: ['doctor_console', 'read_patients', 'read_appointments'],
+      RECEPTION: ['read_patients', 'read_appointments', 'create_patients'],
+      STAFF: ['read_patients', 'read_appointments', 'create_patients'],
+    };
+    return roleMap[role] || ['read_patients'];
+  },
   
   // For compatibility with old code
   onAuthStateChange: (callback: (user: any) => void) => {

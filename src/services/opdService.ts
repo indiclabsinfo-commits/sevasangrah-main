@@ -351,6 +351,140 @@ class OPDService {
         }
     }
 
+    // ==================== DOCTOR CONSOLE METHODS ====================
+
+    /**
+     * Get today's queue for a specific doctor
+     */
+    async getTodayQueueForDoctor(doctorId: string): Promise<any[]> {
+        try {
+            const supabase = await getSupabase();
+            const todayStr = new Date().toISOString().split('T')[0];
+            logger.log('📋 Fetching today\'s queue for doctor:', doctorId);
+
+            const { data, error } = await supabase
+                .from('opd_queue')
+                .select(`
+                    *,
+                    patient:patients(id, first_name, last_name, age, gender, phone, uhid, blood_group, patient_id),
+                    doctor:doctors(id, name, department, specialization)
+                `)
+                .eq('doctor_id', doctorId)
+                .eq('queue_date', todayStr)
+                .neq('queue_status', 'CANCELLED')
+                .order('queue_no', { ascending: true });
+
+            if (error) {
+                logger.error('❌ Error fetching doctor queue:', error);
+                throw new Error(error.message);
+            }
+
+            logger.log(`✅ Retrieved ${(data || []).length} queue entries for doctor`);
+            return data || [];
+        } catch (error: any) {
+            logger.error('❌ Error fetching doctor queue:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Search drugs from drug_catalog via RPC
+     */
+    async searchDrugs(query: string, limit: number = 20): Promise<any[]> {
+        try {
+            if (!query.trim()) return [];
+            const supabase = await getSupabase();
+
+            // Try RPC first
+            const { data, error } = await supabase.rpc('search_drugs', {
+                search_term: query,
+                limit_count: limit
+            });
+
+            if (error) {
+                // Fallback: direct table search
+                logger.warn('⚠️ search_drugs RPC failed, falling back to direct query:', error.message);
+                const { data: fallbackData } = await supabase
+                    .from('drug_catalog')
+                    .select('*')
+                    .or(`drug_name.ilike.%${query}%,generic_name.ilike.%${query}%`)
+                    .eq('is_active', true)
+                    .limit(limit);
+                return fallbackData || [];
+            }
+
+            return data || [];
+        } catch (error: any) {
+            logger.error('❌ Error searching drugs:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Save prescription lines for a consultation
+     */
+    async savePrescriptionLines(consultationId: string, patientId: string, lines: any[]): Promise<string | null> {
+        try {
+            const supabase = await getSupabase();
+            logger.log('💊 Saving prescription lines for consultation:', consultationId);
+
+            // Save as a single prescription record with medications as JSONB
+            const { data, error } = await supabase
+                .from('patient_enhanced_prescription')
+                .insert({
+                    patient_id: patientId,
+                    medications: JSON.stringify(lines),
+                    prescription_date: new Date().toISOString().split('T')[0],
+                    notes: `Consultation: ${consultationId}`,
+                    hospital_id: HOSPITAL_ID
+                })
+                .select('id')
+                .single();
+
+            if (error) {
+                logger.error('❌ Error saving prescription:', error);
+                throw new Error(error.message);
+            }
+
+            // Link prescription to consultation
+            if (data?.id) {
+                await supabase
+                    .from('opd_consultations')
+                    .update({ prescription_id: data.id, updated_at: new Date().toISOString() })
+                    .eq('id', consultationId);
+            }
+
+            logger.log('✅ Prescription saved:', data?.id);
+            return data?.id || null;
+        } catch (error: any) {
+            logger.error('❌ Error saving prescription:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Get existing in-progress consultation for a queue entry
+     */
+    async getConsultationByQueueId(queueId: string): Promise<OPDConsultation | null> {
+        try {
+            const supabase = await getSupabase();
+            const { data, error } = await supabase
+                .from('opd_consultations')
+                .select('*')
+                .eq('queue_id', queueId)
+                .eq('status', 'IN_PROGRESS')
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') return null; // No rows
+                return null;
+            }
+            return data;
+        } catch {
+            return null;
+        }
+    }
+
     // ==================== HELPER METHODS ====================
 
     /**
