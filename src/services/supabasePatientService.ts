@@ -381,19 +381,19 @@ export class SupabasePatientService {
             // Get the last queue number for this doctor today
             const { data: lastQueue } = await supabaseClient
                 .from('opd_queue')
-                .select('queue_no')
+                .select('queue_number')
                 .eq('doctor_id', queueData.doctor_id)
                 .gte('created_at', today.toISOString())
                 .lt('created_at', tomorrow.toISOString())
-                .order('queue_no', { ascending: false })
+                .order('queue_number', { ascending: false })
                 .limit(1);
 
-            const nextQueueNumber = (lastQueue?.[0]?.queue_no || 0) + 1;
+            const nextQueueNumber = (lastQueue?.[0]?.queue_number || 0) + 1;
 
-            // Add queue_no to the data (database column is queue_no, not queue_number)
+            // Add queue_number to the data
             const completeQueueData = {
                 ...queueData,
-                queue_no: nextQueueNumber,
+                queue_number: nextQueueNumber,
                 queue_status: queueData.queue_status || 'waiting'
             };
 
