@@ -19,10 +19,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ isOpen, onClose, onSu
     doctor_id: '',
     appointment_date: '',
     appointment_time: '',
-    duration_minutes: 30,
     appointment_type: 'CONSULTATION',
     reason: '',
-    estimated_cost: 0,
     notes: '',
     send_sms: false
   });
@@ -61,17 +59,17 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ isOpen, onClose, onSu
 
   const loadPatientsAndDoctors = async () => {
     try {
-      const [patientsData, currentUser] = await Promise.all([
+      const [patientsData, doctorsData] = await Promise.all([
         SupabaseHospitalService.getPatients(50000, true, true),
-        SupabaseHospitalService.getCurrentUser()
+        SupabaseHospitalService.getDoctors()
       ]);
-      
+
       setPatients(patientsData);
-      
-      // For now, use current user as doctor (in real app, you'd fetch all doctors)
-      if (currentUser) {
-        setDoctors([currentUser]);
-        setFormData(prev => ({ ...prev, doctor_id: currentUser.id }));
+      setDoctors(doctorsData);
+
+      // Auto-select first doctor if available
+      if (doctorsData.length > 0) {
+        setFormData(prev => ({ ...prev, doctor_id: doctorsData[0].id }));
       }
     } catch (error: any) {
       toast.error(`Failed to load data: ${error.message}`);
@@ -94,10 +92,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ isOpen, onClose, onSu
         doctor_id: formData.doctor_id,
         appointment_date: formData.appointment_date,
         appointment_time: formData.appointment_time,
-        duration_minutes: formData.duration_minutes,
         appointment_type: formData.appointment_type,
         reason: formData.reason.trim(),
-        estimated_cost: formData.estimated_cost,
         notes: formData.notes.trim() || undefined
       };
 
@@ -142,10 +138,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ isOpen, onClose, onSu
         doctor_id: doctors[0]?.id || '',
         appointment_date: new Date().toISOString().split('T')[0],
         appointment_time: '',
-        duration_minutes: 30,
         appointment_type: 'CONSULTATION',
         reason: '',
-        estimated_cost: 0,
         notes: '',
         send_sms: false
       });
@@ -218,6 +212,26 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ isOpen, onClose, onSu
             )}
           </div>
 
+          {/* Doctor Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Doctor <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.doctor_id}
+              onChange={(e) => setFormData({ ...formData, doctor_id: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">Select a doctor</option>
+              {doctors.map(doctor => (
+                <option key={doctor.id} value={doctor.id}>
+                  {doctor.first_name} {doctor.last_name} {doctor.specialization ? `(${doctor.specialization})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Date and Time */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -248,36 +262,18 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ isOpen, onClose, onSu
             </div>
           </div>
 
-          {/* Duration and Type */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
-              <select
-                value={formData.duration_minutes}
-                onChange={(e) => setFormData({ ...formData, duration_minutes: Number(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value={15}>15 minutes</option>
-                <option value={30}>30 minutes</option>
-                <option value={45}>45 minutes</option>
-                <option value={60}>1 hour</option>
-                <option value={90}>1.5 hours</option>
-                <option value={120}>2 hours</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Appointment Type</label>
-              <select
-                value={formData.appointment_type}
-                onChange={(e) => setFormData({ ...formData, appointment_type: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {APPOINTMENT_TYPES.map(type => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
-            </div>
+          {/* Appointment Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Appointment Type</label>
+            <select
+              value={formData.appointment_type}
+              onChange={(e) => setFormData({ ...formData, appointment_type: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {APPOINTMENT_TYPES.map(type => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* Reason */}
@@ -292,19 +288,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ isOpen, onClose, onSu
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Brief description of the visit purpose"
               required
-            />
-          </div>
-
-          {/* Estimated Cost */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Cost (₹)</label>
-            <input
-              type="number"
-              value={formData.estimated_cost}
-              onChange={(e) => setFormData({ ...formData, estimated_cost: Number(e.target.value) || 0 })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="0"
-              min="0"
             />
           </div>
 
@@ -490,9 +473,9 @@ const FutureAppointmentsSystem: React.FC = () => {
         </div>
         <div className="bg-purple-50 p-4 rounded-lg border-2 border-purple-200">
           <div className="text-2xl font-bold text-purple-700">
-            ₹{appointments.reduce((sum, a) => sum + (a.estimated_cost || 0), 0).toLocaleString()}
+            {appointments.filter(a => a.status === 'CONFIRMED').length}
           </div>
-          <div className="text-purple-600">Estimated Revenue</div>
+          <div className="text-purple-600">Confirmed</div>
         </div>
       </div>
 
@@ -538,11 +521,10 @@ const FutureAppointmentsSystem: React.FC = () => {
                 <tr>
                   <th className="text-left p-4 font-semibold text-gray-700">Date & Time</th>
                   <th className="text-left p-4 font-semibold text-gray-700">Patient</th>
+                  <th className="text-left p-4 font-semibold text-gray-700">Doctor</th>
                   <th className="text-left p-4 font-semibold text-gray-700">Type</th>
                   <th className="text-left p-4 font-semibold text-gray-700">Reason</th>
-                  <th className="text-left p-4 font-semibold text-gray-700">Duration</th>
                   <th className="text-left p-4 font-semibold text-gray-700">Status</th>
-                  <th className="text-left p-4 font-semibold text-gray-700">Est. Cost</th>
                   <th className="text-left p-4 font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
@@ -575,24 +557,21 @@ const FutureAppointmentsSystem: React.FC = () => {
                         </div>
                       </td>
                       <td className="p-4">
+                        <div className="font-medium text-sm">
+                          {appointment.doctor?.first_name} {appointment.doctor?.last_name}
+                        </div>
+                      </td>
+                      <td className="p-4">
                         <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs">
-                          {appointment.appointment_type.replace('_', ' ')}
+                          {(appointment.appointment_type || 'CONSULTATION').replace('_', ' ')}
                         </span>
                       </td>
                       <td className="p-4">
                         <div className="max-w-xs truncate">{appointment.reason}</div>
                       </td>
                       <td className="p-4">
-                        {appointment.duration_minutes} min
-                      </td>
-                      <td className="p-4">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(appointment.status)}`}>
                           {appointment.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-green-600 font-medium">
-                          ₹{(appointment.estimated_cost || 0).toLocaleString()}
                         </span>
                       </td>
                       <td className="p-4">
