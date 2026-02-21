@@ -29,6 +29,7 @@ export interface RegisterData {
 }
 
 // Hardcoded admin users (fallback when Supabase Auth is not configured)
+// NOTE: Uses snake_case internally but toAppUser() converts to camelCase for the app
 const HARDCODED_USERS: AuthUser[] = [
   {
     id: '00000000-0000-0000-0000-000000000000',
@@ -52,6 +53,21 @@ const HARDCODED_USERS: AuthUser[] = [
     last_name: 'Reception'
   }
 ];
+
+// Convert internal snake_case user to camelCase for the app (AuthUser from supabaseNew.ts)
+function toAppUser(user: AuthUser): any {
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    phone: '',
+    isActive: true,
+  };
+}
 
 export class AuthService {
   private static currentUser: AuthUser | null = null;
@@ -80,17 +96,17 @@ export class AuthService {
           .single();
         
         if (profile) {
-          this.currentUser = profile as AuthUser;
+          this.currentUser = toAppUser(profile as AuthUser);
           logger.log('✅ Authenticated via Supabase:', this.currentUser.email);
         } else {
           // Create from auth user
-          this.currentUser = {
+          this.currentUser = toAppUser({
             id: session.user.id,
             email: session.user.email || '',
             role: 'STAFF',
             first_name: session.user.user_metadata?.first_name || 'User',
             last_name: session.user.user_metadata?.last_name || ''
-          };
+          });
         }
       } else {
         this.initializeHardcodedAuth();
@@ -105,7 +121,7 @@ export class AuthService {
   private static initializeHardcodedAuth() {
     logger.log('🔓 Using hardcoded authentication');
     // Auto-login as admin for demo
-    this.currentUser = HARDCODED_USERS[0];
+    this.currentUser = toAppUser(HARDCODED_USERS[0]);
     this.token = 'hardcoded-token-' + Date.now();
     
     // Store in localStorage for persistence
@@ -142,15 +158,15 @@ export class AuthService {
           .single();
         
         if (profile) {
-          this.currentUser = profile as AuthUser;
+          this.currentUser = toAppUser(profile as AuthUser);
         } else {
-          this.currentUser = {
+          this.currentUser = toAppUser({
             id: data.user.id,
             email: data.user.email || '',
             role: 'STAFF',
             first_name: data.user.user_metadata?.first_name || 'User',
             last_name: data.user.user_metadata?.last_name || ''
-          };
+          });
         }
         
         // Store
@@ -175,14 +191,15 @@ export class AuthService {
     const user = HARDCODED_USERS.find(u => u.email === email);
 
     if (user) {
-      this.currentUser = user;
+      const appUser = toAppUser(user);
+      this.currentUser = appUser;
       this.token = 'hardcoded-token-' + Date.now();
 
       localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
       localStorage.setItem('auth_token', this.token);
 
       logger.log('✅ Login successful (hardcoded):', user.email);
-      return user;
+      return appUser;
     }
 
     // 2. Check users table in database (for doctor/staff accounts)
@@ -196,20 +213,21 @@ export class AuthService {
         .single();
 
       if (dbUser && dbUser.password_hash === password) {
-        this.currentUser = {
+        const appUser = toAppUser({
           id: dbUser.id,
           email: dbUser.email,
           role: dbUser.role || 'STAFF',
           first_name: dbUser.first_name || '',
           last_name: dbUser.last_name || '',
-        };
+        });
+        this.currentUser = appUser;
         this.token = 'db-token-' + Date.now();
 
         localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
         localStorage.setItem('auth_token', this.token);
 
-        logger.log('✅ Login successful (database):', this.currentUser.email);
-        return this.currentUser;
+        logger.log('✅ Login successful (database):', appUser.email);
+        return appUser;
       }
     } catch (error) {
       logger.warn('⚠️ Database user lookup failed:', error);

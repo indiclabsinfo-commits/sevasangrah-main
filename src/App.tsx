@@ -117,10 +117,10 @@ const App: React.FC = () => {
 
   // Auto-redirect doctors to Doctor Console on login
   useEffect(() => {
-    if (user && user.role === 'DOCTOR' && activeTab === 'dashboard') {
+    if (user && user.role === 'DOCTOR') {
       setActiveTab('doctor-console');
     }
-  }, [user?.id]);
+  }, [user]);
 
   // Removed trigger fix logic - issue is in backend code
 
@@ -895,31 +895,8 @@ const App: React.FC = () => {
     {
       id: 'dashboard',
       name: '📊 Dashboard',
-      component: EnhancedDashboard
-    },
-    {
-      id: 'patient-entry',
-      name: '👤 New Patient',
-      component: NewFlexiblePatientEntry,
-      description: 'Register new patients with comprehensive information and reference tracking'
-    },
-    {
-      id: 'patient-list',
-      name: '👥 Patient List',
-      component: ComprehensivePatientList,
-      description: 'View and manage all registered patients'
-    },
-    {
-      id: 'queue-display',
-      name: '🎫 Queue Display',
-      component: QueueDisplayScreen,
-      description: 'Display and manage patient queue with real-time updates'
-    },
-    {
-      id: 'opdQueue',
-      name: '🚶‍♂️ OPD Queue',
-      component: OPDQueueManager,
-      description: 'Manage OPD patient queue'
+      component: EnhancedDashboard,
+      permission: 'admin_access'
     },
     {
       id: 'doctor-console',
@@ -929,34 +906,67 @@ const App: React.FC = () => {
       permission: 'doctor_console'
     },
     {
+      id: 'patient-entry',
+      name: '👤 New Patient',
+      component: NewFlexiblePatientEntry,
+      description: 'Register new patients with comprehensive information and reference tracking',
+      permission: 'create_patients'
+    },
+    {
+      id: 'patient-list',
+      name: '👥 Patient List',
+      component: ComprehensivePatientList,
+      description: 'View and manage all registered patients',
+      permission: 'read_patients'
+    },
+    {
+      id: 'queue-display',
+      name: '🎫 Queue Display',
+      component: QueueDisplayScreen,
+      description: 'Display and manage patient queue with real-time updates',
+      permission: 'create_patients'
+    },
+    {
+      id: 'opdQueue',
+      name: '🚶‍♂️ OPD Queue',
+      component: OPDQueueManager,
+      description: 'Manage OPD patient queue',
+      permission: 'create_patients'
+    },
+    {
       id: 'ipd-beds',
       name: '🛏️ IPD Beds',
       component: IPDBedManagement,
-      description: 'Real-time hospital bed occupancy tracking and management'
+      description: 'Real-time hospital bed occupancy tracking and management',
+      permission: 'admin_access'
     },
     {
       id: 'discharge',
       name: '📤 Discharge',
       component: DischargeSection,
-      description: 'View all discharged patients with complete discharge summaries'
+      description: 'View all discharged patients with complete discharge summaries',
+      permission: 'admin_access'
     },
     {
       id: 'expenses',
       name: '💸 Expenses',
       component: DailyExpenseTab,
-      description: 'Record and track daily hospital expenses'
+      description: 'Record and track daily hospital expenses',
+      permission: 'admin_access'
     },
     {
       id: 'refunds',
       name: '💰 Refunds',
       component: RefundTab,
-      description: 'Process patient refunds and maintain financial records'
+      description: 'Process patient refunds and maintain financial records',
+      permission: 'admin_access'
     },
     {
       id: 'billing',
       name: '💳 Billing',
       component: BillingSection,
-      description: 'Generate IPD, OPD, and Combined bills for patients'
+      description: 'Generate IPD, OPD, and Combined bills for patients',
+      permission: 'admin_access'
     },
     {
       id: 'operations',
