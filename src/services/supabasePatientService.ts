@@ -334,11 +334,19 @@ export class SupabasePatientService {
 
             console.log('💰 Creating transaction via REST API:', Object.keys(transactionData));
 
-            // Remove patient_uuid if it's not a valid UUID (the column has FK to patients.id)
-            // The patient_id field already contains the correct UUID reference
+            // Clean data to match DB constraints
             const cleanData = { ...transactionData };
+
+            // Remove patient_uuid if it's not a valid UUID (the column has FK to patients.id)
             if (cleanData.patient_uuid && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanData.patient_uuid)) {
                 delete cleanData.patient_uuid;
+            }
+
+            // discount_type has a CHECK constraint - must be null when discount_value is 0
+            if (!cleanData.discount_value || cleanData.discount_value <= 0) {
+                cleanData.discount_type = null;
+                cleanData.discount_value = 0;
+                cleanData.discount_reason = null;
             }
 
             const response = await fetch(`${supabaseUrl}/rest/v1/patient_transactions`, {
