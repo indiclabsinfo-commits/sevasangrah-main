@@ -41,8 +41,8 @@ const HARDCODED_USERS: AuthUser[] = [
     id: '00000000-0000-0000-0000-000000000001',
     email: 'doctor@hospital.com',
     role: 'DOCTOR',
-    first_name: 'Demo',
-    last_name: 'Doctor'
+    first_name: 'Rajesh',
+    last_name: 'Sharma'
   },
   {
     id: '00000000-0000-0000-0000-000000000002',
@@ -170,22 +170,52 @@ export class AuthService {
   }
 
   // Hardcoded login (demo fallback)
-  private static loginHardcoded(email: string, password: string): AuthUser | null {
-    // Simple password check for demo
+  private static async loginHardcoded(email: string, password: string): Promise<AuthUser | null> {
+    // 1. Check hardcoded users first
     const user = HARDCODED_USERS.find(u => u.email === email);
-    
+
     if (user) {
       this.currentUser = user;
       this.token = 'hardcoded-token-' + Date.now();
-      
+
       localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
       localStorage.setItem('auth_token', this.token);
-      
+
       logger.log('✅ Login successful (hardcoded):', user.email);
       return user;
     }
-    
-    logger.warn('❌ Invalid credentials for hardcoded login');
+
+    // 2. Check users table in database (for doctor/staff accounts)
+    try {
+      const supabase = await getSupabase();
+      const { data: dbUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .eq('is_active', true)
+        .single();
+
+      if (dbUser && dbUser.password_hash === password) {
+        this.currentUser = {
+          id: dbUser.id,
+          email: dbUser.email,
+          role: dbUser.role || 'STAFF',
+          first_name: dbUser.first_name || '',
+          last_name: dbUser.last_name || '',
+        };
+        this.token = 'db-token-' + Date.now();
+
+        localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
+        localStorage.setItem('auth_token', this.token);
+
+        logger.log('✅ Login successful (database):', this.currentUser.email);
+        return this.currentUser;
+      }
+    } catch (error) {
+      logger.warn('⚠️ Database user lookup failed:', error);
+    }
+
+    logger.warn('❌ Invalid credentials for login');
     return null;
   }
 
