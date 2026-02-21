@@ -1,8 +1,10 @@
 // Medical Certificate Generator Component
 // Feature #13: Medical certificate generation
+// Connected to Express.js backend for DB storage + PDF generation
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, Printer, Copy, Check, AlertCircle, Calendar, User, Stethoscope, Building } from 'lucide-react';
+import api from '../services/apiService';
 
 interface CertificateTemplate {
   id: string;
@@ -59,6 +61,7 @@ const MedicalCertificateGenerator: React.FC<MedicalCertificateGeneratorProps> = 
   const [loading, setLoading] = useState(false);
   const [generatedCertificate, setGeneratedCertificate] = useState<string>('');
   const [certificateNumber, setCertificateNumber] = useState<string>('');
+  const [savedCertificateId, setSavedCertificateId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
 
@@ -198,16 +201,15 @@ Stamp:`,
     });
   };
 
-  // Generate certificate content
-  const generateCertificate = () => {
+  // Generate certificate content and save to backend
+  const generateCertificate = async () => {
     setLoading(true);
 
-    // Generate certificate number
+    // Generate certificate number (used as fallback if backend doesn't provide one)
     const certNumber = generateCertNumber();
-    setCertificateNumber(certNumber);
 
-    // Prepare variables
-    const variables: Record<string, string> = {
+    // Prepare variables for template
+    const templateVars: Record<string, string> = {
       patient_name: patient.name,
       age: patient.age.toString(),
       gender: patient.gender,
@@ -235,20 +237,50 @@ Stamp:`,
       issued_date: formatDate(new Date().toISOString())
     };
 
-    // Replace variables in template
+    // Replace variables in template for preview
     let certificateContent = currentTemplate.content;
-    Object.entries(variables).forEach(([key, value]) => {
+    Object.entries(templateVars).forEach(([key, value]) => {
       const placeholder = `{${key}}`;
-      certificateContent = certificateContent.replace(new RegExp(placeholder, 'g'), value);
+      certificateContent = certificateContent.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
     });
 
+    // Try to save to backend
+    let savedCertNumber = certNumber;
+    let savedId: string | null = null;
+    try {
+      const result = await api.certificates.create({
+        certificate_number: certNumber,
+        patient_id: patient.id,
+        doctor_id: doctor.id,
+        certificate_type: certificateType,
+        diagnosis,
+        diagnosis_codes: diagnosisCodes,
+        start_date: startDate,
+        end_date: endDate,
+        duration_days: durationDays,
+        restrictions: restrictions || null,
+        recommendations: recommendations || null,
+        additional_notes: additionalNotes || null,
+        purpose,
+        disability_percentage: certificateType === 'disability' ? disabilityPercentage : null,
+        nature_of_disability: certificateType === 'disability' ? natureOfDisability : null,
+      });
+      savedCertNumber = result?.certificate_number || certNumber;
+      savedId = result?.id || null;
+    } catch (err) {
+      console.warn('Backend not available for certificate save, using local generation:', err);
+    }
+
+    setCertificateNumber(savedCertNumber);
+    setSavedCertificateId(savedId);
     setGeneratedCertificate(certificateContent);
     setLoading(false);
 
     // Callback with certificate data
     if (onCertificateGenerated) {
       onCertificateGenerated({
-        certificateNumber: certNumber,
+        id: savedId,
+        certificateNumber: savedCertNumber,
         certificateType,
         content: certificateContent,
         patient,
@@ -262,10 +294,18 @@ Stamp:`,
     }
   };
 
-  // Download as text file
+  // Download as PDF (from backend) or text (fallback)
   const downloadCertificate = () => {
     if (!generatedCertificate) return;
 
+    // If saved to backend, download real PDF
+    if (savedCertificateId) {
+      const pdfUrl = api.certificates.getPdfUrl(savedCertificateId);
+      window.open(pdfUrl, '_blank');
+      return;
+    }
+
+    // Fallback: download as text file
     const blob = new Blob([generatedCertificate], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -336,6 +376,7 @@ Stamp:`,
     setNatureOfDisability('');
     setGeneratedCertificate('');
     setCertificateNumber('');
+    setSavedCertificateId(null);
   };
 
   return (
@@ -664,7 +705,7 @@ Stamp:`,
                   className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 transition-colors"
                 >
                   <Download size={18} />
-                  Download as Text
+                  {savedCertificateId ? 'Download PDF' : 'Download as Text'}
                 </button>
                 
                 <button

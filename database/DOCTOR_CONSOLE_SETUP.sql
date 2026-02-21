@@ -341,6 +341,16 @@ ALTER TABLE examination_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE examination_components ENABLE ROW LEVEL SECURITY;
 ALTER TABLE examination_findings ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist, then recreate
+DROP POLICY IF EXISTS "anon_all_patient_enhanced_prescription" ON patient_enhanced_prescription;
+DROP POLICY IF EXISTS "anon_all_drug_catalog" ON drug_catalog;
+DROP POLICY IF EXISTS "anon_all_prescription_templates" ON prescription_templates;
+DROP POLICY IF EXISTS "anon_all_prescription_template_items" ON prescription_template_items;
+DROP POLICY IF EXISTS "anon_all_body_systems" ON body_systems;
+DROP POLICY IF EXISTS "anon_all_examination_templates" ON examination_templates;
+DROP POLICY IF EXISTS "anon_all_examination_components" ON examination_components;
+DROP POLICY IF EXISTS "anon_all_examination_findings" ON examination_findings;
+
 -- Anon + Authenticated full access policies
 CREATE POLICY "anon_all_patient_enhanced_prescription" ON patient_enhanced_prescription FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "anon_all_drug_catalog" ON drug_catalog FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);

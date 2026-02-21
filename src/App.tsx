@@ -48,6 +48,7 @@ import PrintSchedule from './components/PrintSchedule';
 import DigitalMedicalRecords from './components/DigitalMedicalRecords';
 import SelfRegistrationKiosk from './components/SelfRegistrationKiosk';
 import ExternalAppointmentCapture from './components/ExternalAppointmentCapture';
+import PharmacyModule from './pages/Pharmacy';
 import ReferralSystem from './components/ReferralSystem';
 
 // Login Component - Replaced with 3D animated version from ./pages/Login/Login
@@ -967,6 +968,13 @@ const App: React.FC = () => {
       name: '💳 Billing',
       component: BillingSection,
       description: 'Generate IPD, OPD, and Combined bills for patients',
+      permission: 'admin_access'
+    },
+    {
+      id: 'pharmacy',
+      name: '💊 Pharmacy',
+      component: PharmacyModule,
+      description: 'Pharmacy inventory, billing, and order management',
       permission: 'admin_access'
     },
     {

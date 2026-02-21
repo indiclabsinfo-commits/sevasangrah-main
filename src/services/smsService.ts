@@ -1,128 +1,27 @@
-import axios from 'axios';
+/**
+ * SMS Service — Routes all SMS operations through the backend server.
+ * No Twilio keys are stored or used in the frontend.
+ */
 
-interface SMSConfig {
-  accountSid: string;
-  authToken: string;
-  fromNumber: string;
-  enabled: boolean;
-}
+import api from './apiService';
 
-interface SMSLog {
-  patient_id?: string;
-  phone_number: string;
-  message: string;
-  status: 'sent' | 'failed' | 'pending';
-  error_message?: string;
-  sms_type: 'appointment_confirmation' | 'registration' | 'reminder' | 'general';
+interface SMSResult {
+  success: boolean;
+  error?: string;
+  messageId?: string;
 }
 
 export class SMSService {
-  private static config: SMSConfig = {
-    accountSid: import.meta.env.VITE_TWILIO_ACCOUNT_SID || '',
-    authToken: import.meta.env.VITE_TWILIO_AUTH_TOKEN || '',
-    fromNumber: import.meta.env.VITE_TWILIO_PHONE_NUMBER || '',
-    enabled: import.meta.env.VITE_SMS_ENABLED === 'true',
-  };
-
   /**
-   * Check if SMS service is properly configured
+   * Check if SMS service is available (backend handles actual config check)
    */
   static isConfigured(): boolean {
-    return !!(
-      this.config.enabled &&
-      this.config.accountSid &&
-      this.config.authToken &&
-      this.config.fromNumber
-    );
+    // Always return true — the backend decides whether to send real or mock SMS
+    return true;
   }
 
   /**
-   * Send SMS using Twilio API
-   */
-  private static async sendViaTwilio(
-    to: string,
-    message: string
-  ): Promise<{ success: boolean; error?: string; messageId?: string }> {
-    try {
-      const url = `https://api.twilio.com/2010-04-01/Accounts/${this.config.accountSid}/Messages.json`;
-
-      const formData = new URLSearchParams();
-      formData.append('To', to);
-      formData.append('From', this.config.fromNumber);
-      formData.append('Body', message);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Basic ' + btoa(`${this.config.accountSid}:${this.config.authToken}`),
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to send SMS');
-      }
-
-      return {
-        success: true,
-        messageId: data.sid,
-      };
-    } catch (error: any) {
-      console.error('Twilio SMS error:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * Log SMS to database for tracking
-   */
-  private static async logSMS(log: SMSLog): Promise<void> {
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL || '';
-      const token = localStorage.getItem('auth_token');
-
-      await axios.post(`${baseUrl}/api/sms-logs`, {
-        patient_id: log.patient_id,
-        phone_number: log.phone_number,
-        message: log.message,
-        status: log.status,
-        error_message: log.error_message,
-        sms_type: log.sms_type,
-        sent_at: new Date().toISOString(),
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-    } catch (error) {
-      console.error('Failed to log SMS:', error);
-      // Don't throw - logging failure shouldn't break SMS sending
-    }
-  }
-
-  /**
-   * Format Indian phone number
-   */
-  private static formatPhoneNumber(phone: string): string {
-    // Remove all non-numeric characters
-    const cleaned = phone.replace(/\D/g, '');
-
-    // Add country code if not present
-    if (cleaned.length === 10) {
-      return `+91${cleaned}`;
-    } else if (cleaned.startsWith('91') && cleaned.length === 12) {
-      return `+${cleaned}`;
-    }
-
-    return phone; // Return as-is if format is unclear
-  }
-
-  /**
-   * Send appointment confirmation SMS
+   * Send appointment confirmation SMS via backend
    */
   static async sendAppointmentConfirmation(
     patientId: string,
@@ -131,176 +30,99 @@ export class SMSService {
     appointmentDate: string,
     appointmentTime: string,
     doctorName: string,
-    registrationNo: string
-  ): Promise<{ success: boolean; error?: string }> {
-    if (!this.isConfigured()) {
-      console.warn('SMS service not configured - skipping SMS');
-      return { success: false, error: 'SMS service not configured' };
+    _registrationNo: string
+  ): Promise<SMSResult> {
+    try {
+      const result = await api.sms.sendAppointmentConfirmation({
+        patientName,
+        phone: phoneNumber,
+        date: appointmentDate,
+        time: appointmentTime,
+        doctorName,
+        patientId,
+      });
+      return { success: true, messageId: result?.messageId };
+    } catch (error: any) {
+      console.error('SMS send error:', error);
+      return { success: false, error: error.message };
     }
-
-    const formattedPhone = this.formatPhoneNumber(phoneNumber);
-
-    const message = `Dear ${patientName},
-
-Your appointment has been confirmed!
-
-Registration No: ${registrationNo}
-Date: ${appointmentDate}
-Time: ${appointmentTime}
-Doctor: Dr. ${doctorName}
-
-Thank you for choosing our hospital.
-
-- Sevasangraha`;
-
-    const result = await this.sendViaTwilio(formattedPhone, message);
-
-    await this.logSMS({
-      patient_id: patientId,
-      phone_number: formattedPhone,
-      message,
-      status: result.success ? 'sent' : 'failed',
-      error_message: result.error,
-      sms_type: 'appointment_confirmation',
-    });
-
-    return result;
   }
 
   /**
-   * Send patient registration confirmation SMS
+   * Send patient registration confirmation SMS via backend
    */
   static async sendRegistrationConfirmation(
     patientId: string,
     patientName: string,
     phoneNumber: string,
     registrationNo: string,
-    registrationDate: string,
-    doctorName: string,
-    department: string
-  ): Promise<{ success: boolean; error?: string }> {
-    if (!this.isConfigured()) {
-      console.warn('SMS service not configured - skipping SMS');
-      return { success: false, error: 'SMS service not configured' };
+    _registrationDate: string,
+    _doctorName: string,
+    _department: string
+  ): Promise<SMSResult> {
+    try {
+      const result = await api.sms.sendRegistrationConfirmation({
+        patientName,
+        phone: phoneNumber,
+        uhid: registrationNo,
+        patientId,
+      });
+      return { success: true, messageId: result?.messageId };
+    } catch (error: any) {
+      console.error('SMS send error:', error);
+      return { success: false, error: error.message };
     }
-
-    const formattedPhone = this.formatPhoneNumber(phoneNumber);
-
-    const message = `Dear ${patientName},
-
-Welcome to Sevasangraha!
-
-Registration No: ${registrationNo}
-Date: ${registrationDate}
-Department: ${department}
-Assigned Doctor: Dr. ${doctorName}
-
-Your registration is complete. Please keep your registration number for future reference.
-
-Thank you!
-
-- Sevasangraha`;
-
-    const result = await this.sendViaTwilio(formattedPhone, message);
-
-    await this.logSMS({
-      patient_id: patientId,
-      phone_number: formattedPhone,
-      message,
-      status: result.success ? 'sent' : 'failed',
-      error_message: result.error,
-      sms_type: 'registration',
-    });
-
-    return result;
   }
 
   /**
-   * Send appointment reminder SMS
+   * Send appointment reminder SMS via backend
    */
   static async sendAppointmentReminder(
     patientId: string,
     patientName: string,
     phoneNumber: string,
     appointmentDate: string,
-    appointmentTime: string,
+    _appointmentTime: string,
     doctorName: string
-  ): Promise<{ success: boolean; error?: string }> {
-    if (!this.isConfigured()) {
-      console.warn('SMS service not configured - skipping SMS');
-      return { success: false, error: 'SMS service not configured' };
+  ): Promise<SMSResult> {
+    try {
+      const result = await api.sms.sendReminder({
+        patientName,
+        phone: phoneNumber,
+        date: appointmentDate,
+        doctorName,
+        patientId,
+      });
+      return { success: true, messageId: result?.messageId };
+    } catch (error: any) {
+      console.error('SMS send error:', error);
+      return { success: false, error: error.message };
     }
-
-    const formattedPhone = this.formatPhoneNumber(phoneNumber);
-
-    const message = `Dear ${patientName},
-
-Reminder: You have an appointment tomorrow!
-
-Date: ${appointmentDate}
-Time: ${appointmentTime}
-Doctor: Dr. ${doctorName}
-
-Please arrive 15 minutes early.
-
-- Sevasangraha`;
-
-    const result = await this.sendViaTwilio(formattedPhone, message);
-
-    await this.logSMS({
-      patient_id: patientId,
-      phone_number: formattedPhone,
-      message,
-      status: result.success ? 'sent' : 'failed',
-      error_message: result.error,
-      sms_type: 'reminder',
-    });
-
-    return result;
   }
 
   /**
-   * Send custom SMS
+   * Send custom SMS via backend
    */
   static async sendCustomSMS(
     phoneNumber: string,
     message: string,
     patientId?: string
-  ): Promise<{ success: boolean; error?: string }> {
-    if (!this.isConfigured()) {
-      console.warn('SMS service not configured - skipping SMS');
-      return { success: false, error: 'SMS service not configured' };
+  ): Promise<SMSResult> {
+    try {
+      const result = await api.sms.send(phoneNumber, message, patientId);
+      return { success: true, messageId: result?.messageId };
+    } catch (error: any) {
+      console.error('SMS send error:', error);
+      return { success: false, error: error.message };
     }
-
-    const formattedPhone = this.formatPhoneNumber(phoneNumber);
-    const result = await this.sendViaTwilio(formattedPhone, message);
-
-    await this.logSMS({
-      patient_id: patientId,
-      phone_number: formattedPhone,
-      message,
-      status: result.success ? 'sent' : 'failed',
-      error_message: result.error,
-      sms_type: 'general',
-    });
-
-    return result;
   }
 
   /**
    * Get SMS logs for a patient
    */
-  static async getSMSLogs(patientId: string) {
+  static async getSMSLogs(patientId?: string) {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || '';
-      const token = localStorage.getItem('auth_token');
-
-      const response = await axios.get(`${baseUrl}/api/sms-logs`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { patient_id: patientId }
-      });
-
-      return response.data;
+      return await api.sms.getLogs(patientId);
     } catch (error) {
       console.error('Failed to fetch SMS logs:', error);
       return [];

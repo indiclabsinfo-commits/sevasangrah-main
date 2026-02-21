@@ -27,10 +27,7 @@ CREATE TABLE IF NOT EXISTS opd_consultations (
     -- Audit
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    hospital_id UUID NOT NULL,
-    
-    -- Indexes for performance
-    CONSTRAINT opd_consultations_pkey PRIMARY KEY (id)
+    hospital_id UUID NOT NULL
 );
 
 -- Indexes for faster queries

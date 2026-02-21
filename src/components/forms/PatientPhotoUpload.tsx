@@ -1,46 +1,81 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Upload, X, User } from 'lucide-react';
-import { Button } from '../ui/Button';
 import toast from 'react-hot-toast';
+import api from '../../services/apiService';
 
 interface PatientPhotoUploadProps {
   value?: string | null;
   onChange: (photoUrl: string | null) => void;
+  patientId?: string;
   disabled?: boolean;
 }
 
 export const PatientPhotoUpload: React.FC<PatientPhotoUploadProps> = ({
   value,
   onChange,
+  patientId,
   disabled = false,
 }) => {
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [uploading, setUploading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload blob to backend, fall back to DataURL if backend unavailable
+  const uploadPhoto = async (blob: Blob): Promise<string> => {
+    if (patientId) {
+      try {
+        const result = await api.patients.uploadPhoto(patientId, blob);
+        return result.photoUrl;
+      } catch (err) {
+        console.warn('Backend photo upload failed, using DataURL fallback:', err);
+      }
+    }
+    // Fallback: convert to DataURL
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // Resize image on canvas and return blob
+  const resizeToBlob = (source: HTMLVideoElement | HTMLImageElement): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const maxSize = 400;
+      let width = source instanceof HTMLVideoElement ? source.videoWidth : source.width;
+      let height = source instanceof HTMLVideoElement ? source.videoHeight : source.height;
+
+      if (width > height) {
+        if (width > maxSize) { height = (height * maxSize) / width; width = maxSize; }
+      } else {
+        if (height > maxSize) { width = (width * maxSize) / height; height = maxSize; }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(source, 0, 0, width, height);
+      canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.6);
+    });
+  };
 
   // Start camera stream
   const startCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false
       });
       setStream(mediaStream);
       setShowCameraModal(true);
 
-      // Wait for modal to render, then set video stream
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          // Explicitly play the video
-          videoRef.current.play().catch(err => {
-            console.error('Error playing video:', err);
-          });
+          videoRef.current.play().catch(err => console.error('Error playing video:', err));
         }
       }, 100);
     } catch (error) {
@@ -69,100 +104,55 @@ export const PatientPhotoUpload: React.FC<PatientPhotoUploadProps> = ({
   };
 
   // Capture photo from camera
-  const capturePhoto = () => {
-    if (videoRef.current) {
-      const canvas = document.createElement('canvas');
-
-      // Resize to max 400x400 to reduce size
-      const maxSize = 400;
-      let width = videoRef.current.videoWidth;
-      let height = videoRef.current.videoHeight;
-
-      if (width > height) {
-        if (width > maxSize) {
-          height = (height * maxSize) / width;
-          width = maxSize;
-        }
-      } else {
-        if (height > maxSize) {
-          width = (width * maxSize) / height;
-          height = maxSize;
-        }
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0, width, height);
-        // Compress to 0.6 quality (lower quality = smaller size)
-        const photoDataUrl = canvas.toDataURL('image/jpeg', 0.6);
-        onChange(photoDataUrl);
-        stopCamera();
-        toast.success('Photo captured successfully!');
-      }
+  const capturePhoto = async () => {
+    if (!videoRef.current) return;
+    setUploading(true);
+    try {
+      const blob = await resizeToBlob(videoRef.current);
+      const url = await uploadPhoto(blob);
+      onChange(url);
+      stopCamera();
+      toast.success('Photo captured successfully!');
+    } catch (err) {
+      toast.error('Failed to capture photo');
+    } finally {
+      setUploading(false);
     }
   };
 
   // Handle file upload
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
-        return;
-      }
+    if (!file) return;
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size should be less than 5MB');
-        return;
-      }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
 
-      // Compress and resize image before upload
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
 
-          // Resize to max 400x400
-          const maxSize = 400;
-          let width = img.width;
-          let height = img.height;
+    setUploading(true);
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = URL.createObjectURL(file);
+      });
 
-          if (width > height) {
-            if (width > maxSize) {
-              height = (height * maxSize) / width;
-              width = maxSize;
-            }
-          } else {
-            if (height > maxSize) {
-              width = (width * maxSize) / height;
-              height = maxSize;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            // Compress to 0.6 quality
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
-            onChange(compressedDataUrl);
-            toast.success('Photo uploaded and optimized!');
-          }
-        };
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = () => {
-        toast.error('Failed to read image file');
-      };
-      reader.readAsDataURL(file);
+      const blob = await resizeToBlob(img);
+      URL.revokeObjectURL(img.src);
+      const url = await uploadPhoto(blob);
+      onChange(url);
+      toast.success('Photo uploaded and optimized!');
+    } catch (err) {
+      toast.error('Failed to upload photo');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -213,7 +203,7 @@ export const PatientPhotoUpload: React.FC<PatientPhotoUploadProps> = ({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={disabled}
+            disabled={disabled || uploading}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -224,22 +214,31 @@ export const PatientPhotoUpload: React.FC<PatientPhotoUploadProps> = ({
               color: '#FFFFFF',
               border: 'none',
               fontWeight: '600',
-              cursor: disabled ? 'not-allowed' : 'pointer',
+              cursor: disabled || uploading ? 'not-allowed' : 'pointer',
               fontSize: '14px',
-              opacity: disabled ? 0.6 : 1,
+              opacity: disabled || uploading ? 0.6 : 1,
             }}
-            onMouseEnter={(e) => !disabled && (e.currentTarget.style.backgroundColor = '#004494')}
-            onMouseLeave={(e) => !disabled && (e.currentTarget.style.backgroundColor = '#0056B3')}
+            onMouseEnter={(e) => !disabled && !uploading && (e.currentTarget.style.backgroundColor = '#004494')}
+            onMouseLeave={(e) => !disabled && !uploading && (e.currentTarget.style.backgroundColor = '#0056B3')}
           >
-            <Upload className="w-4 h-4" />
-            Upload from Device
+            {uploading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                Upload from Device
+              </>
+            )}
           </button>
 
           {/* Capture with Camera */}
           <button
             type="button"
             onClick={startCamera}
-            disabled={disabled}
+            disabled={disabled || uploading}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -250,12 +249,12 @@ export const PatientPhotoUpload: React.FC<PatientPhotoUploadProps> = ({
               color: '#0056B3',
               border: '2px solid #0056B3',
               fontWeight: '600',
-              cursor: disabled ? 'not-allowed' : 'pointer',
+              cursor: disabled || uploading ? 'not-allowed' : 'pointer',
               fontSize: '14px',
-              opacity: disabled ? 0.6 : 1,
+              opacity: disabled || uploading ? 0.6 : 1,
             }}
-            onMouseEnter={(e) => !disabled && (e.currentTarget.style.backgroundColor = '#F0F7FF')}
-            onMouseLeave={(e) => !disabled && (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+            onMouseEnter={(e) => !disabled && !uploading && (e.currentTarget.style.backgroundColor = '#F0F7FF')}
+            onMouseLeave={(e) => !disabled && !uploading && (e.currentTarget.style.backgroundColor = '#FFFFFF')}
           >
             <Camera className="w-4 h-4" />
             Capture Live Photo
@@ -359,7 +358,6 @@ export const PatientPhotoUpload: React.FC<PatientPhotoUploadProps> = ({
                 display: 'block',
               }}
               onLoadedMetadata={(e) => {
-                // Ensure video plays when metadata is loaded
                 const video = e.target as HTMLVideoElement;
                 video.play().catch(err => console.error('Play error:', err));
               }}
@@ -385,6 +383,7 @@ export const PatientPhotoUpload: React.FC<PatientPhotoUploadProps> = ({
               </button>
               <button
                 onClick={capturePhoto}
+                disabled={uploading}
                 style={{
                   padding: '12px 24px',
                   borderRadius: '8px',
@@ -392,14 +391,24 @@ export const PatientPhotoUpload: React.FC<PatientPhotoUploadProps> = ({
                   color: '#FFFFFF',
                   border: 'none',
                   fontWeight: 'bold',
-                  cursor: 'pointer',
+                  cursor: uploading ? 'not-allowed' : 'pointer',
                   fontSize: '16px',
+                  opacity: uploading ? 0.6 : 1,
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#004494')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0056B3')}
+                onMouseEnter={(e) => !uploading && (e.currentTarget.style.backgroundColor = '#004494')}
+                onMouseLeave={(e) => !uploading && (e.currentTarget.style.backgroundColor = '#0056B3')}
               >
-                <Camera className="w-5 h-5 inline mr-2" />
-                Capture Photo
+                {uploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white inline mr-2"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-5 h-5 inline mr-2" />
+                    Capture Photo
+                  </>
+                )}
               </button>
             </div>
           </div>
