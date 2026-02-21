@@ -47,6 +47,7 @@
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.60.0",
     "react-hot-toast": "^2.5.2",
+    "react-is": "^19.2.4",
     "react-router-dom": "^7.7.0",
     "react-to-print": "^3.2.0",
     "react-virtualized-auto-sizer": "^1.0.26",
