@@ -268,12 +268,12 @@ export class SupabaseHospitalService {
 
         if (match) {
           logger.log('✅ Doctor record matched:', match.id, match.name || match.first_name);
-          return match;
+          return { ...match, user_id: user.id };
         }
 
         // If no name match, return the first doctor as fallback for demo
         logger.warn('⚠️ No name match found, returning first doctor as fallback');
-        return doctors[0];
+        return { ...doctors[0], user_id: user.id };
       }
 
       logger.warn('⚠️ No doctors found in doctors table');

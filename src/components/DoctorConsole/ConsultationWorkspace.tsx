@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
   MessageSquare, Stethoscope, FileSearch, Pill, CalendarCheck,
-  Save, Printer, CheckCircle, Loader2, Video, ExternalLink
+  Save, Printer, CheckCircle, Loader2, Video, ExternalLink,
+  Award, Upload, GitBranch
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PatientBanner from './PatientBanner';
@@ -10,6 +11,9 @@ import ExaminationTab from './tabs/ExaminationTab';
 import DiagnosisTab from './tabs/DiagnosisTab';
 import PrescriptionTab from './tabs/PrescriptionTab';
 import FollowUpTab from './tabs/FollowUpTab';
+import MedicalCertificateGenerator from '../MedicalCertificateGenerator';
+import DocumentUploader from '../documents/DocumentUploader';
+import EpisodeTimeline from '../episodes/EpisodeTimeline';
 import { useConsultation } from './hooks/useConsultation';
 import type { QueueEntry } from './hooks/useDoctorQueue';
 
@@ -22,7 +26,7 @@ interface ConsultationWorkspaceProps {
   showHistoryActive: boolean;
 }
 
-type TabId = 'complaints' | 'examination' | 'diagnosis' | 'prescription' | 'followup';
+type TabId = 'complaints' | 'examination' | 'diagnosis' | 'prescription' | 'followup' | 'certificates' | 'documents' | 'episodes';
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: 'complaints', label: 'Complaints', icon: <MessageSquare size={15} /> },
@@ -30,6 +34,9 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: 'diagnosis', label: 'Diagnosis', icon: <FileSearch size={15} /> },
   { id: 'prescription', label: 'Prescription', icon: <Pill size={15} /> },
   { id: 'followup', label: 'Follow-up', icon: <CalendarCheck size={15} /> },
+  { id: 'certificates', label: 'Certificates', icon: <Award size={15} /> },
+  { id: 'documents', label: 'Documents', icon: <Upload size={15} /> },
+  { id: 'episodes', label: 'Episodes', icon: <GitBranch size={15} /> },
 ];
 
 const ConsultationWorkspace: React.FC<ConsultationWorkspaceProps> = ({
@@ -198,6 +205,34 @@ const ConsultationWorkspace: React.FC<ConsultationWorkspaceProps> = ({
           )}
           {activeTab === 'followup' && (
             <FollowUpTab draft={draft} onUpdate={updateDraft} />
+          )}
+          {activeTab === 'certificates' && queueEntry.patient && (
+            <MedicalCertificateGenerator
+              patient={{
+                id: queueEntry.patient.id,
+                name: `${queueEntry.patient.first_name} ${queueEntry.patient.last_name}`.trim(),
+                age: queueEntry.patient.age || 0,
+                gender: queueEntry.patient.gender || ''
+              }}
+              doctor={{
+                id: doctorId,
+                name: doctorName
+              }}
+              diagnosis={draft.diagnosis}
+              diagnosisCodes={draft.diagnosis_codes}
+            />
+          )}
+          {activeTab === 'documents' && queueEntry.patient && (
+            <DocumentUploader
+              patientId={queueEntry.patient.id}
+              patientName={`${queueEntry.patient.first_name} ${queueEntry.patient.last_name}`.trim()}
+            />
+          )}
+          {activeTab === 'episodes' && queueEntry.patient && (
+            <EpisodeTimeline
+              patientId={queueEntry.patient.id}
+              patientName={`${queueEntry.patient.first_name} ${queueEntry.patient.last_name}`.trim()}
+            />
           )}
         </div>
       </div>

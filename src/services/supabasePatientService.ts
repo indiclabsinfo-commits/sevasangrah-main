@@ -151,10 +151,21 @@ export class SupabasePatientService {
                 throw new Error(`Patient ID Generation Failed: ${pidError.message}`);
             }
 
-            // UHID GENERATION DISABLED - Using patient_id only
-            // UHID is now optional and set to null
-            const uhid = null;
-            console.log('ℹ️ UHID generation disabled - using patient_id only');
+            // Generate UHID via backend API
+            let uhid: string | null = null;
+            try {
+                const apiBase = import.meta.env.VITE_API_URL || '';
+                const res = await fetch(`${apiBase}/api/uhid/next`, { method: 'POST' });
+                if (res.ok) {
+                    const result = await res.json();
+                    uhid = result.data?.uhid || result.uhid || null;
+                    console.log('✅ Generated UHID:', uhid);
+                } else {
+                    console.warn('⚠️ UHID generation failed, continuing without UHID');
+                }
+            } catch (uhidErr) {
+                console.warn('⚠️ UHID service unavailable, continuing without UHID:', uhidErr);
+            }
 
             // Prepare data for Supabase
             const supabaseData = {

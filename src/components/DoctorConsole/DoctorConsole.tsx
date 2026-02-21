@@ -117,7 +117,7 @@ const DoctorConsole: React.FC = () => {
             <div className={`flex-1 overflow-hidden transition-all ${showHistory ? 'mr-0' : ''}`}>
               <ConsultationWorkspace
                 queueEntry={selectedEntry}
-                doctorId={doctorRecord.id}
+                doctorId={doctorRecord.user_id || doctorRecord.id}
                 doctorName={doctorName}
                 onComplete={handleComplete}
                 onOpenHistory={() => setShowHistory(!showHistory)}

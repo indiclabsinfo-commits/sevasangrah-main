@@ -50,6 +50,9 @@ import SelfRegistrationKiosk from './components/SelfRegistrationKiosk';
 import ExternalAppointmentCapture from './components/ExternalAppointmentCapture';
 import PharmacyModule from './pages/Pharmacy';
 import ReferralSystem from './components/ReferralSystem';
+import NotificationSystem from './components/NotificationSystem';
+import OPDReportsDashboard from './components/reports/OPDReportsDashboard';
+import UHIDConfigPanel from './components/admin/UHIDConfigPanel';
 
 // Login Component - Replaced with 3D animated version from ./pages/Login/Login
 // The old LoginPage component has been commented out and replaced with the imported Login component
@@ -1046,6 +1049,27 @@ const App: React.FC = () => {
       component: ExternalAppointmentCapture,
       description: 'Capture appointments from external booking systems',
       permission: 'read_appointments'
+    },
+    {
+      id: 'notifications',
+      name: '🔔 Notifications',
+      component: NotificationSystem,
+      description: 'SMS, WhatsApp, and email notification management',
+      permission: 'admin_access'
+    },
+    {
+      id: 'opd-reports',
+      name: '📈 OPD Reports',
+      component: OPDReportsDashboard,
+      description: 'OPD analytics, MIS reports, and doctor-wise performance',
+      permission: 'admin_access'
+    },
+    {
+      id: 'uhid-config',
+      name: '⚙️ UHID Config',
+      component: UHIDConfigPanel,
+      description: 'Configure UHID format, prefix, and numbering sequence',
+      permission: 'admin_access'
     }
   ];
 
