@@ -147,30 +147,44 @@ export class AuthService {
 
   // Login with email/password
   static async login(email: string, password: string): Promise<AuthUser | null> {
+    // Check hardcoded users FIRST (always takes priority for role accuracy)
+    const hardcodedUser = HARDCODED_USERS.find(u => u.email === email);
+    if (hardcodedUser) {
+      const appUser = toAppUser(hardcodedUser);
+      this.currentUser = appUser;
+      this.token = 'hardcoded-token-' + Date.now();
+
+      localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
+      localStorage.setItem('auth_token', this.token);
+
+      logger.log('✅ Login successful (hardcoded):', hardcodedUser.email, 'role:', hardcodedUser.role);
+      return appUser;
+    }
+
     try {
-      // Try Supabase Auth
+      // Try Supabase Auth for non-hardcoded users
       const supabase = await getSupabase();
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-      
+
       if (error) {
         logger.warn('⚠️ Supabase login failed:', error.message);
-        // Fallback to hardcoded users
+        // Fallback to database lookup
         return this.loginHardcoded(email, password);
       }
-      
+
       if (data.user) {
         this.token = data.session?.access_token || null;
-        
+
         // Get user profile
         const { data: profile } = await supabase
           .from('users')
           .select('*')
           .eq('auth_id', data.user.id)
           .single();
-        
+
         if (profile) {
           this.currentUser = toAppUser(profile as AuthUser);
         } else {
@@ -182,20 +196,20 @@ export class AuthService {
             last_name: data.user.user_metadata?.last_name || ''
           });
         }
-        
+
         // Store
         localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
         if (this.token) {
           localStorage.setItem('auth_token', this.token);
         }
-        
+
         logger.log('✅ Login successful via Supabase:', this.currentUser.email);
         return this.currentUser;
       }
     } catch (error) {
       logger.error('❌ Login error:', error);
     }
-    
+
     return this.loginHardcoded(email, password);
   }
 
@@ -277,6 +291,15 @@ export class AuthService {
       if (stored) {
         this.currentUser = JSON.parse(stored);
         this.token = localStorage.getItem('auth_token');
+      }
+    }
+    // Always sync role from hardcoded users to prevent stale localStorage roles
+    if (this.currentUser) {
+      const hardcoded = HARDCODED_USERS.find(u => u.email === this.currentUser!.email);
+      if (hardcoded && this.currentUser.role !== hardcoded.role) {
+        logger.log('🔄 Syncing role from hardcoded user:', hardcoded.email, hardcoded.role);
+        this.currentUser.role = hardcoded.role;
+        localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
       }
     }
     return this.currentUser;
