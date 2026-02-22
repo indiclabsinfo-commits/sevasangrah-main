@@ -291,15 +291,15 @@ export class AuthService {
       if (stored) {
         this.currentUser = JSON.parse(stored);
         this.token = localStorage.getItem('auth_token');
-      }
-    }
-    // Always sync role from hardcoded users to prevent stale localStorage roles
-    if (this.currentUser) {
-      const hardcoded = HARDCODED_USERS.find(u => u.email === this.currentUser!.email);
-      if (hardcoded && this.currentUser.role !== hardcoded.role) {
-        logger.log('🔄 Syncing role from hardcoded user:', hardcoded.email, hardcoded.role);
-        this.currentUser.role = hardcoded.role;
-        localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
+        // Sync role from hardcoded users once on load to fix stale cached roles
+        if (this.currentUser) {
+          const hardcoded = HARDCODED_USERS.find(u => u.email === this.currentUser!.email);
+          if (hardcoded && this.currentUser.role !== hardcoded.role) {
+            logger.log('🔄 Syncing role from hardcoded user:', hardcoded.email, hardcoded.role);
+            this.currentUser.role = hardcoded.role;
+            localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
+          }
+        }
       }
     }
     return this.currentUser;
