@@ -58,6 +58,13 @@ const HARDCODED_USERS: AuthUser[] = [
     role: 'RECEPTION',
     first_name: 'Demo',
     last_name: 'Reception'
+  },
+  {
+    id: '2b43e58e-986e-4fd5-9350-86f928980af1',
+    email: 'hr@hospital.com',
+    role: 'ADMIN',
+    first_name: 'HR',
+    last_name: 'Manager'
   }
 ];
 

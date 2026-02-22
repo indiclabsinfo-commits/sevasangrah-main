@@ -608,6 +608,460 @@ class HRMService {
       throw error;
     }
   }
+
+  // =====================================================
+  // EMPLOYEE MASTER ALIASES (used by EmployeeForm, EmployeeList, EmployeeProfile)
+  // =====================================================
+
+  async getEmployeeMasters(filters?: EmployeeFilters): Promise<Employee[]> {
+    return this.getEmployees(filters);
+  }
+
+  async getEmployeeMasterById(id: string): Promise<Employee | null> {
+    return this.getEmployeeById(id);
+  }
+
+  async updateEmployeeMaster(id: string, data: Partial<EmployeeFormData>): Promise<Employee> {
+    return this.updateEmployee(id, data);
+  }
+
+  async createEmployeeMaster(data: EmployeeFormData): Promise<Employee> {
+    return this.createEmployee(data);
+  }
+
+  async generateStaffUniqueId(): Promise<string> {
+    return this.generateEmployeeId();
+  }
+
+  // =====================================================
+  // EMPLOYEE DETAILS (family, education, documents)
+  // =====================================================
+
+  async getEmployeeFamily(employeeId: string): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/family`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching employee family:', error);
+      return [];
+    }
+  }
+
+  async getEmployeeEducation(employeeId: string): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/education`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching employee education:', error);
+      return [];
+    }
+  }
+
+  async getEmployeeDocuments(employeeId: string): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/documents`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching employee documents:', error);
+      return [];
+    }
+  }
+
+  async addFamilyMember(data: any): Promise<any> {
+    try {
+      const employeeId = data.employee_id || data.employeeId;
+      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/family`, data, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error adding family member:', error);
+      throw error;
+    }
+  }
+
+  async addEducation(data: any): Promise<any> {
+    try {
+      const employeeId = data.employee_id || data.employeeId;
+      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/education`, data, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error adding education:', error);
+      throw error;
+    }
+  }
+
+  async addDocument(data: any): Promise<any> {
+    try {
+      const employeeId = data.employee_id || data.employeeId;
+      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/documents`, data, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error adding document:', error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // DEPARTMENT EXTRAS
+  // =====================================================
+
+  async deleteDepartment(id: string): Promise<void> {
+    try {
+      await axios.delete(`${this.getBaseUrl()}/api/hrm/departments/${id}`, {
+        headers: this.getHeaders()
+      });
+    } catch (error) {
+      console.error('Error deleting department:', error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // SHIFT MANAGEMENT
+  // =====================================================
+
+  async getShifts(): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/shifts`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching shifts:', error);
+      return [];
+    }
+  }
+
+  async createShift(data: any): Promise<any> {
+    try {
+      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/shifts`, data, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating shift:', error);
+      throw error;
+    }
+  }
+
+  async updateShift(id: string, data: any): Promise<any> {
+    try {
+      const response = await axios.put(`${this.getBaseUrl()}/api/hrm/shifts/${id}`, data, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating shift:', error);
+      throw error;
+    }
+  }
+
+  async requestShiftSwap(data: any): Promise<any> {
+    try {
+      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/shift-swaps`, data, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error requesting shift swap:', error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // ATTENDANCE EXTRAS
+  // =====================================================
+
+  async getAttendanceLogs(employeeId: string): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/attendance/logs/${employeeId}`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching attendance logs:', error);
+      return [];
+    }
+  }
+
+  // =====================================================
+  // PAYROLL EXTRAS
+  // =====================================================
+
+  async createPayrollCycle(month: number, year: number, workingDays: number): Promise<any> {
+    try {
+      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/payroll/cycles`, {
+        month, year, working_days: workingDays
+      }, { headers: this.getHeaders() });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating payroll cycle:', error);
+      throw error;
+    }
+  }
+
+  async processPayroll(cycleId: string): Promise<any> {
+    try {
+      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/payroll/process/${cycleId}`, {}, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error processing payroll:', error);
+      throw error;
+    }
+  }
+
+  async getPayrollCycles(): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/payroll/cycles`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching payroll cycles:', error);
+      return [];
+    }
+  }
+
+  async getEmployeePayrolls(cycleId: string): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/payroll/employees/${cycleId}`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching employee payrolls:', error);
+      return [];
+    }
+  }
+
+  async generatePayslipData(payrollId: string): Promise<any> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/payslips/${payrollId}/data`, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error generating payslip data:', error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // PERFORMANCE REVIEWS
+  // =====================================================
+
+  async getPerformanceReviews(): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/performance-reviews`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching performance reviews:', error);
+      return [];
+    }
+  }
+
+  // =====================================================
+  // TRAINING
+  // =====================================================
+
+  async getTrainingPrograms(): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/training-programs`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching training programs:', error);
+      return [];
+    }
+  }
+
+  async registerForTraining(trainingId: string, employeeId: string): Promise<any> {
+    try {
+      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/training-programs/${trainingId}/register`, {
+        employee_id: employeeId
+      }, { headers: this.getHeaders() });
+      return response.data;
+    } catch (error) {
+      console.error('Error registering for training:', error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // RECRUITMENT
+  // =====================================================
+
+  async getJobPostings(): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/recruitment/jobs`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching job postings:', error);
+      return [];
+    }
+  }
+
+  async getCandidates(): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/recruitment/candidates`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching candidates:', error);
+      return [];
+    }
+  }
+
+  // =====================================================
+  // ANNOUNCEMENTS
+  // =====================================================
+
+  async getAnnouncements(): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/announcements`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+      return [];
+    }
+  }
+
+  async createAnnouncement(data: any): Promise<any> {
+    try {
+      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/announcements`, data, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating announcement:', error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // EXIT MANAGEMENT
+  // =====================================================
+
+  async getExitRequests(): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/exits`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching exit requests:', error);
+      return [];
+    }
+  }
+
+  async getExitChecklist(exitId: string): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/exits/${exitId}/checklist`, {
+        headers: this.getHeaders()
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching exit checklist:', error);
+      return [];
+    }
+  }
+
+  async initiateExit(data: any): Promise<any> {
+    try {
+      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/exits`, data, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error initiating exit:', error);
+      throw error;
+    }
+  }
+
+  async updateExitStatus(exitId: string, status: string, userId?: string): Promise<any> {
+    try {
+      const response = await axios.put(`${this.getBaseUrl()}/api/hrm/exits/${exitId}/status`, {
+        status, processed_by: userId
+      }, { headers: this.getHeaders() });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating exit status:', error);
+      throw error;
+    }
+  }
+
+  async updateChecklistItem(itemId: string, status: string): Promise<any> {
+    try {
+      const response = await axios.put(`${this.getBaseUrl()}/api/hrm/exits/checklist/${itemId}`, {
+        status
+      }, { headers: this.getHeaders() });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating checklist item:', error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // ONBOARDING
+  // =====================================================
+
+  async getEmployeeOnboarding(employeeId: string): Promise<any> {
+    try {
+      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/onboarding/${employeeId}`, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching onboarding:', error);
+      return null;
+    }
+  }
+
+  async initiateOnboarding(employeeId: string): Promise<any> {
+    try {
+      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/onboarding/${employeeId}`, {}, {
+        headers: this.getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error initiating onboarding:', error);
+      throw error;
+    }
+  }
+
+  async updateOnboardingTask(taskId: string, status: string): Promise<any> {
+    try {
+      const response = await axios.put(`${this.getBaseUrl()}/api/hrm/onboarding/tasks/${taskId}`, {
+        status
+      }, { headers: this.getHeaders() });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating onboarding task:', error);
+      throw error;
+    }
+  }
 }
 
 export const hrmService = new HRMService();

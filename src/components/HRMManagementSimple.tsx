@@ -1,175 +1,180 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Calendar, DollarSign, Clock, UserPlus, TrendingUp, Briefcase } from 'lucide-react';
-import { Button } from './ui/Button';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
+import {
+  Users, Calendar, DollarSign, Clock, Settings,
+  Star, GraduationCap, UserPlus, Building2, BarChart3,
+  LogOut, Bell, Briefcase,
+} from 'lucide-react';
+import { hrmService } from '../services/hrmService';
 
-const HRMManagementSimple: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalEmployees: 0,
-    onLeaveToday: 0,
-    pendingLeaves: 0,
-    payrollDue: 0
-  });
+// Lazy-loaded sub-components
+const EmployeeList = lazy(() => import('./hrm/EmployeeList'));
+const AttendanceTracker = lazy(() => import('./hrm/AttendanceTracker'));
+const LeaveManagement = lazy(() => import('./hrm/LeaveManagement'));
+const ShiftMaster = lazy(() => import('./hrm/shifts/ShiftMaster'));
+const PayrollDashboard = lazy(() => import('./hrm/payroll/PayrollDashboard'));
+const PerformanceDashboard = lazy(() => import('./hrm/performance/PerformanceDashboard'));
+const TrainingCalendar = lazy(() => import('./hrm/training/TrainingCalendar'));
+const RecruitmentDashboard = lazy(() => import('./hrm/recruitment/RecruitmentDashboard'));
+const DepartmentMaster = lazy(() => import('./hrm/DepartmentMaster'));
+const ExitDashboard = lazy(() => import('./hrm/exits/ExitDashboard'));
+const AnnouncementBoard = lazy(() => import('./hrm/communication/AnnouncementBoard'));
+const OnboardingList = lazy(() => import('./hrm/onboarding/OnboardingList'));
+
+interface TabConfig {
+  key: string;
+  label: string;
+  icon: React.ElementType;
+}
+
+const TABS: TabConfig[] = [
+  { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+  { key: 'employees', label: 'Employees', icon: Users },
+  { key: 'attendance', label: 'Attendance', icon: Clock },
+  { key: 'leaves', label: 'Leaves', icon: Calendar },
+  { key: 'shifts', label: 'Shifts', icon: Settings },
+  { key: 'payroll', label: 'Payroll', icon: DollarSign },
+  { key: 'performance', label: 'Performance', icon: Star },
+  { key: 'training', label: 'Training', icon: GraduationCap },
+  { key: 'recruitment', label: 'Recruitment', icon: UserPlus },
+  { key: 'departments', label: 'Departments', icon: Building2 },
+  { key: 'exits', label: 'Exits', icon: LogOut },
+  { key: 'announcements', label: 'Announcements', icon: Bell },
+  { key: 'onboarding', label: 'Onboarding', icon: Briefcase },
+];
+
+const TabSpinner = () => (
+  <div className="flex items-center justify-center py-20">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+  </div>
+);
+
+// Inline dashboard with real stats
+const DashboardPanel: React.FC = () => {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
-      setStats({
-        totalEmployees: 45,
-        onLeaveToday: 3,
-        pendingLeaves: 7,
-        payrollDue: 2
-      });
-      setIsLoading(false);
-    }, 500);
-
-    return () => clearTimeout(timer);
+    hrmService
+      .getDashboardStats()
+      .then(setStats)
+      .catch(() =>
+        setStats({
+          total_employees: 0,
+          active_employees: 0,
+          present_today: 0,
+          absent_today: 0,
+          on_leave: 0,
+          pending_leaves: 0,
+          departments: 0,
+        })
+      )
+      .finally(() => setLoading(false));
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="p-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
-            ))}
-          </div>
-          <div className="h-64 bg-gray-200 rounded-xl"></div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <TabSpinner />;
+
+  const cards = [
+    { label: 'Total Employees', value: stats?.total_employees ?? 0, icon: Users, color: 'blue' },
+    { label: 'Active Employees', value: stats?.active_employees ?? 0, icon: Users, color: 'green' },
+    { label: 'Present Today', value: stats?.present_today ?? 0, icon: Clock, color: 'emerald' },
+    { label: 'Absent Today', value: stats?.absent_today ?? 0, icon: Clock, color: 'red' },
+    { label: 'On Leave', value: stats?.on_leave ?? 0, icon: Calendar, color: 'yellow' },
+    { label: 'Pending Leaves', value: stats?.pending_leaves ?? 0, icon: Calendar, color: 'orange' },
+    { label: 'Departments', value: stats?.departments ?? 0, icon: Building2, color: 'purple' },
+  ];
 
   return (
-    <div className="p-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {cards.map((c) => {
+        const Icon = c.icon;
+        return (
+          <div key={c.label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">{c.label}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">{c.value}</p>
+              </div>
+              <div className={`w-11 h-11 bg-${c.color}-50 rounded-xl flex items-center justify-center`}>
+                <Icon className={`w-5 h-5 text-${c.color}-600`} />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const HRMManagementSimple: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <DashboardPanel />;
+      case 'employees':
+        return <Suspense fallback={<TabSpinner />}><EmployeeList /></Suspense>;
+      case 'attendance':
+        return <Suspense fallback={<TabSpinner />}><AttendanceTracker /></Suspense>;
+      case 'leaves':
+        return <Suspense fallback={<TabSpinner />}><LeaveManagement /></Suspense>;
+      case 'shifts':
+        return <Suspense fallback={<TabSpinner />}><ShiftMaster /></Suspense>;
+      case 'payroll':
+        return <Suspense fallback={<TabSpinner />}><PayrollDashboard /></Suspense>;
+      case 'performance':
+        return <Suspense fallback={<TabSpinner />}><PerformanceDashboard /></Suspense>;
+      case 'training':
+        return <Suspense fallback={<TabSpinner />}><TrainingCalendar /></Suspense>;
+      case 'recruitment':
+        return <Suspense fallback={<TabSpinner />}><RecruitmentDashboard /></Suspense>;
+      case 'departments':
+        return <Suspense fallback={<TabSpinner />}><DepartmentMaster /></Suspense>;
+      case 'exits':
+        return <Suspense fallback={<TabSpinner />}><ExitDashboard /></Suspense>;
+      case 'announcements':
+        return <Suspense fallback={<TabSpinner />}><AnnouncementBoard /></Suspense>;
+      case 'onboarding':
+        return <Suspense fallback={<TabSpinner />}><OnboardingList /></Suspense>;
+      default:
+        return <DashboardPanel />;
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">HR Management</h1>
-        <p className="text-gray-600 mt-2">Simplified version - Full features coming soon</p>
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">HR Management</h1>
+        <p className="text-gray-500 mt-1">Manage employees, attendance, payroll and more</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Employees</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalEmployees}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">On Leave Today</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{stats.onLeaveToday}</p>
-            </div>
-            <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Pending Leaves</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{stats.pendingLeaves}</p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center">
-              <Clock className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Payroll Due</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{stats.payrollDue}</p>
-            </div>
-            <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
+      {/* Tab Navigation */}
+      <div className="mb-6 border-b border-gray-200 overflow-x-auto">
+        <nav className="flex gap-1 min-w-max" aria-label="Tabs">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Button className="flex items-center justify-center gap-2 py-4">
-            <UserPlus className="w-5 h-5" />
-            Add Employee
-          </Button>
-          <Button variant="outline" className="flex items-center justify-center gap-2 py-4">
-            <Calendar className="w-5 h-5" />
-            Manage Leaves
-          </Button>
-          <Button variant="outline" className="flex items-center justify-center gap-2 py-4">
-            <DollarSign className="w-5 h-5" />
-            Process Payroll
-          </Button>
-          <Button variant="outline" className="flex items-center justify-center gap-2 py-4">
-            <TrendingUp className="w-5 h-5" />
-            Performance Reviews
-          </Button>
-        </div>
-      </div>
-
-      {/* Info Message */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-6">
-        <div className="flex items-start">
-          <div className="flex-shrink-0">
-            <Briefcase className="w-6 h-6 text-blue-600" />
-          </div>
-          <div className="ml-4">
-            <h3 className="text-lg font-medium text-blue-900">HRM Module Update</h3>
-            <div className="mt-2 text-blue-700">
-              <p className="mb-2">We're currently optimizing the HRM module for better performance.</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Full self-service features coming soon</li>
-                <li>Database optimizations in progress</li>
-                <li>Mobile app integration planned</li>
-                <li>All core HR functions remain available</li>
-              </ul>
-            </div>
-            <div className="mt-4">
-              <Button variant="outline" size="sm" className="border-blue-300 text-blue-700">
-                Learn More
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Coming Soon Features */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gray-50 rounded-lg p-5">
-          <h4 className="font-medium text-gray-900 mb-2">Employee Self-Service</h4>
-          <p className="text-sm text-gray-600">Leave applications, payslip access, and profile management</p>
-          <div className="mt-3 text-xs text-gray-500">Coming Soon</div>
-        </div>
-        
-        <div className="bg-gray-50 rounded-lg p-5">
-          <h4 className="font-medium text-gray-900 mb-2">Attendance Automation</h4>
-          <p className="text-sm text-gray-600">Biometric integration and automated tracking</p>
-          <div className="mt-3 text-xs text-gray-500">Coming Soon</div>
-        </div>
-        
-        <div className="bg-gray-50 rounded-lg p-5">
-          <h4 className="font-medium text-gray-900 mb-2">Payroll Processing</h4>
-          <p className="text-sm text-gray-600">Automated salary calculation and bank transfers</p>
-          <div className="mt-3 text-xs text-gray-500">Coming Soon</div>
-        </div>
-      </div>
+      {/* Tab Content */}
+      <div>{renderContent()}</div>
     </div>
   );
 };

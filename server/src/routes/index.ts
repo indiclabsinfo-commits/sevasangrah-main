@@ -10,6 +10,7 @@ import uhidRoutes from './uhid.routes';
 import episodesRoutes from './episodes.routes';
 import reportsRoutes from './reports.routes';
 import uploadsRoutes from './uploads.routes';
+import hrmRoutes from './hrm.routes';
 
 const router = Router();
 
@@ -27,5 +28,6 @@ router.use('/uhid', uhidRoutes);
 router.use('/episodes', episodesRoutes);
 router.use('/reports', reportsRoutes);
 router.use('/uploads', uploadsRoutes);
+router.use('/hrm', hrmRoutes);
 
 export { router };
