@@ -239,6 +239,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return true;
     }
 
+    // HR users have ALL hrm.* permissions + access_hrm
+    if (user && user.role === 'HR' && (permission.startsWith('hrm.') || permission === 'access_hrm')) {
+      return true;
+    }
+
     const permissions = authService.getUserPermissions(user);
     const hasIt = permissions.includes(permission);
 

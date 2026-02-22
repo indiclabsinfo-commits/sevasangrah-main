@@ -1,9 +1,9 @@
 // =====================================================
-// HRM SERVICE LAYER
+// HRM SERVICE LAYER — Direct Supabase (no backend needed)
 // Hospital CRM Pro - Human Resource Management
 // =====================================================
 
-import axios from 'axios';
+import { getSupabase } from '../lib/supabaseClient';
 import type {
   Employee,
   EmployeeFormData,
@@ -27,154 +27,178 @@ import type {
   PayrollFilters,
 } from '../types/hrm';
 
-class HRMService {
-  
-  // =====================================================
-  // HELPERS
-  // =====================================================
-  
-  private getHeaders() {
-    const token = localStorage.getItem('auth_token');
-    return { Authorization: `Bearer ${token}` };
-  }
+const HOSPITAL_ID = '550e8400-e29b-41d4-a716-446655440000';
 
-  private getBaseUrl() {
-    return import.meta.env.VITE_API_URL || '';
+class HRMService {
+
+  private async sb() {
+    return getSupabase();
   }
 
   // =====================================================
   // EMPLOYEE MANAGEMENT
   // =====================================================
 
-  /**
-   * Get all employees with optional filtering
-   */
   async getEmployees(filters?: EmployeeFilters): Promise<Employee[]> {
     try {
-      console.log('🔍 HRM: Fetching employees with filters:', filters);
-      
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/employees`, {
-        headers: this.getHeaders(),
-        params: filters,
-        timeout: 3000,
-        validateStatus: () => true // Don't throw on HTTP errors
-      });
+      const supabase = await this.sb();
+      let query = supabase
+        .from('employee_master')
+        .select('*, department:department_master(id, department_name, department_code)')
+        .eq('hospital_id', HOSPITAL_ID)
+        .order('created_at', { ascending: false });
 
-      // ULTRA-SAFE: Handle ANY response type
-      const data = response.data;
-      
-      if (data === null || data === undefined) {
-        console.warn('⚠️ HRM: API returned null/undefined, returning empty array');
-        return [];
+      if (filters?.department_id) query = query.eq('department_id', filters.department_id);
+      if (filters?.is_active !== undefined) query = query.eq('is_active', filters.is_active);
+      if (filters?.search) {
+        query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,work_email.ilike.%${filters.search}%,staff_unique_id.ilike.%${filters.search}%`);
       }
-      
-      if (Array.isArray(data)) {
-        console.log('✅ HRM: Fetched employees:', data.length, 'employees');
-        return data as Employee[];
-      }
-      
-      if (typeof data === 'object') {
-        console.warn('⚠️ HRM: API returned object instead of array, converting');
-        // Try to extract array from common patterns
-        if (data.data && Array.isArray(data.data)) {
-          return data.data as Employee[];
-        }
-        if (data.results && Array.isArray(data.results)) {
-          return data.results as Employee[];
-        }
-        if (data.items && Array.isArray(data.items)) {
-          return data.items as Employee[];
-        }
-        // Last resort: wrap in array
-        return [data] as Employee[];
-      }
-      
-      // Not array or object? Return empty
-      console.warn('⚠️ HRM: API returned unexpected type:', typeof data);
-      return [];
-      
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return (data || []).map(emp => ({
+        ...emp,
+        employee_id: emp.staff_unique_id,
+        email: emp.work_email,
+        phone: emp.personal_phone,
+        joining_date: emp.date_of_joining,
+        designation: emp.job_title,
+        employment_type: emp.employment_status,
+        pan_number: emp.pan_card_number,
+      }));
     } catch (error: any) {
-      console.warn('⚠️ HRM: Employee fetch failed, returning empty array:', error.message);
+      console.warn('HRM: Employee fetch failed:', error.message);
       return [];
     }
   }
 
-  /**
-   * Get a single employee by ID
-   */
   async getEmployeeById(id: string): Promise<Employee | null> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/employees/${id}`, {
-        headers: this.getHeaders()
-      });
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('employee_master')
+        .select('*, department:department_master(id, department_name, department_code)')
+        .eq('id', id)
+        .single();
 
-      return response.data as Employee;
+      if (error) throw error;
+      if (!data) return null;
+
+      return {
+        ...data,
+        employee_id: data.staff_unique_id,
+        email: data.work_email,
+        phone: data.personal_phone,
+        joining_date: data.date_of_joining,
+        designation: data.job_title,
+        employment_type: data.employment_status,
+        pan_number: data.pan_card_number,
+      } as Employee;
     } catch (error) {
       console.error('Error fetching employee:', error);
-      throw error;
+      return null;
     }
   }
 
-  /**
-   * Create a new employee
-   */
   async createEmployee(employeeData: EmployeeFormData): Promise<Employee> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/employees`, employeeData, {
-        headers: this.getHeaders()
-      });
+    const supabase = await this.sb();
+    const dbData: any = {
+      hospital_id: HOSPITAL_ID,
+      first_name: employeeData.first_name,
+      last_name: employeeData.last_name,
+      work_email: employeeData.email || employeeData.work_email,
+      personal_phone: employeeData.phone || employeeData.personal_phone,
+      date_of_joining: employeeData.joining_date || employeeData.date_of_joining,
+      job_title: employeeData.designation || employeeData.job_title,
+      department_id: employeeData.department_id,
+      employment_status: employeeData.employment_type || employeeData.employment_status || 'Active',
+      staff_unique_id: employeeData.employee_id || employeeData.staff_unique_id,
+      gender: employeeData.gender,
+      date_of_birth: employeeData.date_of_birth,
+      aadhar_number: employeeData.aadhar_number,
+      pan_card_number: employeeData.pan_number || employeeData.pan_card_number,
+      bank_account_number: employeeData.bank_account_number,
+      bank_name: employeeData.bank_name,
+      ifsc_code: employeeData.ifsc_code,
+      address: employeeData.address,
+      city: employeeData.city,
+      state: employeeData.state,
+      pincode: employeeData.pincode,
+      blood_group: employeeData.blood_group,
+      emergency_contact_name: employeeData.emergency_contact_name,
+      emergency_contact_phone: employeeData.emergency_contact_phone,
+      emergency_contact_relation: employeeData.emergency_contact_relation,
+      is_active: true,
+    };
 
-      return response.data as Employee;
-    } catch (error) {
-      console.error('Error creating employee:', error);
-      throw error;
-    }
+    // Remove undefined values
+    Object.keys(dbData).forEach(key => dbData[key] === undefined && delete dbData[key]);
+
+    const { data, error } = await supabase
+      .from('employee_master')
+      .insert(dbData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Employee;
   }
 
-  /**
-   * Update an employee
-   */
   async updateEmployee(id: string, employeeData: Partial<EmployeeFormData>): Promise<Employee> {
-    try {
-      const response = await axios.put(`${this.getBaseUrl()}/api/hrm/employees/${id}`, employeeData, {
-        headers: this.getHeaders()
-      });
+    const supabase = await this.sb();
+    const dbData: any = {};
 
-      return response.data as Employee;
-    } catch (error) {
-      console.error('Error updating employee:', error);
-      throw error;
+    // Map frontend field names to DB column names
+    const fieldMap: Record<string, string> = {
+      email: 'work_email', phone: 'personal_phone', joining_date: 'date_of_joining',
+      designation: 'job_title', employment_type: 'employment_status',
+      pan_number: 'pan_card_number', employee_id: 'staff_unique_id',
+    };
+
+    for (const [key, value] of Object.entries(employeeData)) {
+      if (value !== undefined) {
+        dbData[fieldMap[key] || key] = value;
+      }
     }
+
+    const { data, error } = await supabase
+      .from('employee_master')
+      .update(dbData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Employee;
   }
 
-  /**
-   * Deactivate an employee (soft delete)
-   */
   async deactivateEmployee(id: string, reason?: string): Promise<void> {
-    try {
-      await axios.post(`${this.getBaseUrl()}/api/hrm/employees/${id}/deactivate`, {
-        reason
-      }, {
-        headers: this.getHeaders()
-      });
-    } catch (error) {
-      console.error('Error deactivating employee:', error);
-      throw error;
-    }
+    const supabase = await this.sb();
+    const { error } = await supabase
+      .from('employee_master')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw error;
   }
 
-  /**
-   * Generate next employee ID
-   */
   async generateEmployeeId(): Promise<string> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/employees/next-id`, {
-        headers: this.getHeaders()
-      });
+      const supabase = await this.sb();
+      const { data } = await supabase
+        .from('employee_master')
+        .select('staff_unique_id')
+        .eq('hospital_id', HOSPITAL_ID)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      return response.data.employee_id || 'EMP0001';
-    } catch (error) {
-      console.error('Error generating employee ID:', error);
+      if (data && data.length > 0 && data[0].staff_unique_id) {
+        const lastId = data[0].staff_unique_id;
+        const num = parseInt(lastId.replace(/\D/g, '')) || 0;
+        return `EMP${String(num + 1).padStart(4, '0')}`;
+      }
+      return 'EMP0001';
+    } catch {
       return 'EMP0001';
     }
   }
@@ -185,28 +209,45 @@ class HRMService {
 
   async getDepartments(): Promise<EmployeeDepartment[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/departments`, {
-        headers: this.getHeaders()
-      });
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('department_master')
+        .select('*')
+        .eq('hospital_id', HOSPITAL_ID)
+        .eq('is_active', true)
+        .order('department_name');
 
-      return response.data as EmployeeDepartment[];
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching departments:', error);
-      throw error;
+      return [];
     }
   }
 
   async createDepartment(department: Omit<EmployeeDepartment, 'id' | 'created_at' | 'updated_at' | 'hospital_id'>): Promise<EmployeeDepartment> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/departments`, department, {
-        headers: this.getHeaders()
-      });
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('department_master')
+      .insert({
+        ...department,
+        hospital_id: HOSPITAL_ID,
+        is_active: true,
+      })
+      .select()
+      .single();
 
-      return response.data as EmployeeDepartment;
-    } catch (error) {
-      console.error('Error creating department:', error);
-      throw error;
-    }
+    if (error) throw error;
+    return data as EmployeeDepartment;
+  }
+
+  async deleteDepartment(id: string): Promise<void> {
+    const supabase = await this.sb();
+    const { error } = await supabase
+      .from('department_master')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   }
 
   // =====================================================
@@ -215,115 +256,154 @@ class HRMService {
 
   async getRoles(): Promise<EmployeeRole[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/roles`, {
-        headers: this.getHeaders()
-      });
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('employee_roles')
+        .select('*')
+        .eq('hospital_id', HOSPITAL_ID)
+        .order('role_name');
 
-      return response.data as EmployeeRole[];
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching roles:', error);
-      throw error;
+      return [];
     }
   }
 
   async createRole(role: Omit<EmployeeRole, 'id' | 'created_at' | 'updated_at' | 'hospital_id'>): Promise<EmployeeRole> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/roles`, role, {
-        headers: this.getHeaders()
-      });
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('employee_roles')
+      .insert({ ...role, hospital_id: HOSPITAL_ID })
+      .select()
+      .single();
 
-      return response.data as EmployeeRole;
-    } catch (error) {
-      console.error('Error creating role:', error);
-      throw error;
-    }
+    if (error) throw error;
+    return data as EmployeeRole;
   }
 
   // =====================================================
   // ATTENDANCE MANAGEMENT
   // =====================================================
 
-  /**
-   * Get attendance records with filtering
-   */
   async getAttendance(filters?: AttendanceFilters): Promise<EmployeeAttendance[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/attendance`, {
-        headers: this.getHeaders(),
-        params: filters
-      });
+      const supabase = await this.sb();
+      let query = supabase
+        .from('attendance_logs')
+        .select('*, employee:employee_master(id, first_name, last_name, staff_unique_id, department_id)')
+        .order('attendance_date', { ascending: false });
 
-      return response.data as EmployeeAttendance[];
+      if (filters?.employee_id) query = query.eq('employee_id', filters.employee_id);
+      if (filters?.date) query = query.eq('attendance_date', filters.date);
+      if (filters?.start_date) query = query.gte('attendance_date', filters.start_date);
+      if (filters?.end_date) query = query.lte('attendance_date', filters.end_date);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching attendance:', error);
-      throw error;
+      return [];
     }
   }
 
-  /**
-   * Mark attendance for an employee
-   */
   async markAttendance(attendanceData: AttendanceFormData): Promise<EmployeeAttendance> {
-    try {
-      // Validate employee_id is not empty
-      if (!attendanceData.employee_id || attendanceData.employee_id.trim() === '') {
-        throw new Error('Employee ID is required');
-      }
+    if (!attendanceData.employee_id?.trim()) throw new Error('Employee ID is required');
 
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/attendance`, attendanceData, {
-        headers: this.getHeaders()
-      });
+    const supabase = await this.sb();
+    const today = attendanceData.date || new Date().toISOString().split('T')[0];
 
-      return response.data as EmployeeAttendance;
-    } catch (error) {
-      console.error('Error marking attendance:', error);
-      throw error;
-    }
+    const { data, error } = await supabase
+      .from('attendance_logs')
+      .upsert({
+        employee_id: attendanceData.employee_id,
+        attendance_date: today,
+        status: attendanceData.status || 'Present',
+        check_in_time: attendanceData.check_in_time ? `${today}T${attendanceData.check_in_time}` : null,
+        check_out_time: attendanceData.check_out_time ? `${today}T${attendanceData.check_out_time}` : null,
+        remarks: attendanceData.remarks,
+      }, { onConflict: 'employee_id,attendance_date' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as EmployeeAttendance;
   }
 
-  /**
-   * Get attendance summary for a date range
-   */
   async getAttendanceSummary(startDate: string, endDate: string): Promise<AttendanceSummary[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/attendance/summary`, {
-        headers: this.getHeaders(),
-        params: { start_date: startDate, end_date: endDate }
-      });
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('attendance_logs')
+        .select('attendance_date, status')
+        .gte('attendance_date', startDate)
+        .lte('attendance_date', endDate);
 
-      return response.data as AttendanceSummary[];
+      if (error) throw error;
+      // Group by date
+      const grouped: Record<string, any> = {};
+      (data || []).forEach((row: any) => {
+        const d = row.attendance_date;
+        if (!grouped[d]) grouped[d] = { date: d, present: 0, absent: 0, late: 0, half_day: 0 };
+        const status = (row.status || '').toLowerCase();
+        if (status === 'present') grouped[d].present++;
+        else if (status === 'absent') grouped[d].absent++;
+        else if (status === 'late') grouped[d].late++;
+        else if (status === 'half day' || status === 'half_day') grouped[d].half_day++;
+      });
+      return Object.values(grouped);
     } catch (error) {
       console.error('Error fetching attendance summary:', error);
-      throw error;
+      return [];
     }
+  }
+
+  async getAttendanceLogs(employeeId: string): Promise<any[]> {
+    try {
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('attendance_logs')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .order('attendance_date', { ascending: false })
+        .limit(30);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching attendance logs:', error);
+      return [];
+    }
+  }
+
+  async getRecentAttendance(employeeId: string, days: number = 7): Promise<any[]> {
+    return this.getAttendanceLogs(employeeId);
   }
 
   // =====================================================
   // LEAVE MANAGEMENT
   // =====================================================
 
-  /**
-   * Get leave types
-   */
   async getLeaveTypes(): Promise<LeaveType[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/leave-types`, {
-        headers: this.getHeaders(),
-        timeout: 5000 // 5 second timeout
-      });
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('leave_types')
+        .select('*')
+        .order('leave_name');
 
-      // Ensure we always return an array
-      const data = response.data;
-      if (Array.isArray(data)) {
-        return data as LeaveType[];
-      } else if (data && typeof data === 'object') {
-        // If API returns object instead of array
-        return Object.values(data);
-      }
-      return [];
+      if (error) throw error;
+      return (data || []).map((lt: any) => ({
+        id: lt.id,
+        code: lt.leave_code,
+        name: lt.leave_name,
+        description: lt.description,
+        max_days: lt.max_days_per_year,
+      }));
     } catch (error: any) {
-      console.warn('HRM: Using mock leave types (API failed):', error.message);
-      // Return mock data that matches the UI expectations
+      console.warn('HRM: Using mock leave types:', error.message);
       return [
         { id: '1', code: 'CL', name: 'Casual Leave', description: 'For personal work', max_days: 12 },
         { id: '2', code: 'SL', name: 'Sick Leave', description: 'Medical leave', max_days: 15 },
@@ -334,397 +414,109 @@ class HRMService {
     }
   }
 
-  /**
-   * Get leave requests with filtering
-   */
   async getLeaves(filters?: LeaveFilters): Promise<EmployeeLeave[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/leaves`, {
-        headers: this.getHeaders(),
-        params: filters
-      });
+      const supabase = await this.sb();
+      let query = supabase
+        .from('leave_applications')
+        .select('*, employee:employee_master(id, first_name, last_name, staff_unique_id), leave_type:leave_types(id, leave_name, leave_code)')
+        .order('created_at', { ascending: false });
 
-      return response.data as EmployeeLeave[];
+      if (filters?.employee_id) query = query.eq('employee_id', filters.employee_id);
+      if (filters?.status) query = query.eq('status', filters.status);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching leaves:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Apply for leave
-   */
-  async applyLeave(leaveData: LeaveFormData): Promise<EmployeeLeave> {
-    try {
-      // Validate required fields
-      if (!leaveData.employee_id || leaveData.employee_id.trim() === '') {
-        throw new Error('Employee ID is required');
-      }
-      if (!leaveData.leave_type_id || leaveData.leave_type_id.trim() === '') {
-        throw new Error('Leave type is required');
-      }
-
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/leaves`, leaveData, {
-        headers: this.getHeaders()
-      });
-
-      return response.data as EmployeeLeave;
-    } catch (error) {
-      console.error('Error applying leave:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Approve or reject leave
-   */
-  async updateLeaveStatus(
-    leaveId: string,
-    status: 'Approved' | 'Rejected',
-    approverId: string,
-    rejectionReason?: string
-  ): Promise<EmployeeLeave> {
-    try {
-      const response = await axios.put(`${this.getBaseUrl()}/api/hrm/leaves/${leaveId}/status`, {
-        status,
-        approver_id: approverId,
-        rejection_reason: rejectionReason
-      }, {
-        headers: this.getHeaders()
-      });
-
-      return response.data as EmployeeLeave;
-    } catch (error) {
-      console.error('Error updating leave status:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get leave balance for an employee
-   */
-  async getLeaveBalance(employeeId: string, year?: number): Promise<any> {
-    try {
-      const currentYear = year || new Date().getFullYear();
-
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/leave-balance/${employeeId}`, {
-        headers: this.getHeaders(),
-        params: { year: currentYear }
-      });
-
-      // Ensure we return an object, not array
-      const data = response.data;
-      if (Array.isArray(data)) {
-        // Convert array to object if needed
-        const balance: any = {};
-        data.forEach((item: any) => {
-          if (item.leave_type_code) {
-            balance[item.leave_type_code] = item.available_days || 0;
-          }
-        });
-        return balance;
-      }
-      return data || { CL: 12, SL: 15, EL: 30, ML: 180, PL: 15 };
-    } catch (error) {
-      console.error('Error fetching leave balance:', error);
-      // Return mock balance for development
-      return { CL: 12, SL: 15, EL: 30, ML: 180, PL: 15 };
-    }
-  }
-
-  /**
-   * Create a new leave application
-   */
-  async createLeaveApplication(leaveData: any): Promise<any> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/leave-applications`, leaveData, {
-        headers: this.getHeaders(),
-        timeout: 10000
-      });
-
-      return response.data || { success: true, id: 'mock-' + Date.now() };
-    } catch (error: any) {
-      console.warn('HRM: Leave application failed, returning mock success:', error.message);
-      // Return mock success to prevent UI errors
-      return { 
-        success: true, 
-        id: 'mock-' + Date.now(),
-        message: 'Leave application submitted (mock - database tables may not exist)'
-      };
-    }
-  }
-
-  /**
-   * Get holidays
-   */
-  async getHolidays(): Promise<any[]> {
-    try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/holidays`, {
-        headers: this.getHeaders()
-      });
-
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching holidays:', error);
       return [];
     }
   }
 
-  /**
-   * Get recent leaves for an employee
-   */
+  async applyLeave(leaveData: LeaveFormData): Promise<EmployeeLeave> {
+    if (!leaveData.employee_id?.trim()) throw new Error('Employee ID is required');
+    if (!leaveData.leave_type_id?.trim()) throw new Error('Leave type is required');
+
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('leave_applications')
+      .insert({
+        employee_id: leaveData.employee_id,
+        leave_type_id: leaveData.leave_type_id,
+        start_date: leaveData.start_date,
+        end_date: leaveData.end_date,
+        reason: leaveData.reason,
+        status: 'Pending',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as EmployeeLeave;
+  }
+
+  async updateLeaveStatus(leaveId: string, status: 'Approved' | 'Rejected', approverId: string, rejectionReason?: string): Promise<EmployeeLeave> {
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('leave_applications')
+      .update({ status })
+      .eq('id', leaveId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as EmployeeLeave;
+  }
+
+  async getLeaveBalance(employeeId: string, year?: number): Promise<any> {
+    try {
+      const supabase = await this.sb();
+      const currentYear = year || new Date().getFullYear();
+      const { data, error } = await supabase
+        .from('leave_balances')
+        .select('*, leave_type:leave_types(leave_code, leave_name)')
+        .eq('employee_id', employeeId)
+        .eq('year', currentYear);
+
+      if (error) throw error;
+      const balance: any = {};
+      (data || []).forEach((item: any) => {
+        if (item.leave_type?.leave_code) {
+          balance[item.leave_type.leave_code] = (item.total_allocated || 0) - (item.used || 0);
+        }
+      });
+      return Object.keys(balance).length > 0 ? balance : { CL: 12, SL: 15, EL: 30, ML: 180, PL: 15 };
+    } catch (error) {
+      console.error('Error fetching leave balance:', error);
+      return { CL: 12, SL: 15, EL: 30, ML: 180, PL: 15 };
+    }
+  }
+
+  async createLeaveApplication(leaveData: any): Promise<any> {
+    return this.applyLeave(leaveData);
+  }
+
   async getRecentLeaves(employeeId: string, limit: number = 5): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/leave-applications/recent/${employeeId}`, {
-        headers: this.getHeaders(),
-        params: { limit }
-      });
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('leave_applications')
+        .select('*, leave_type:leave_types(leave_name, leave_code)')
+        .eq('employee_id', employeeId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
 
-      return response.data || [];
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching recent leaves:', error);
       return [];
     }
   }
 
-  /**
-   * Get upcoming payslips for an employee
-   */
-  async getUpcomingPayslips(employeeId: string): Promise<any[]> {
-    try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/payslips/upcoming/${employeeId}`, {
-        headers: this.getHeaders()
-      });
-
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching upcoming payslips:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get recent attendance for an employee
-   */
-  async getRecentAttendance(employeeId: string, days: number = 7): Promise<any[]> {
-    try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/attendance/recent/${employeeId}`, {
-        headers: this.getHeaders(),
-        params: { days }
-      });
-
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching recent attendance:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get notifications for an employee
-   */
-  async getNotifications(employeeId: string): Promise<any[]> {
-    try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/notifications/${employeeId}`, {
-        headers: this.getHeaders()
-      });
-
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      return [];
-    }
-  }
-
-  // =====================================================
-  // PAYROLL MANAGEMENT
-  // =====================================================
-
-  /**
-   * Get payroll records with filtering
-   */
-  async getPayroll(filters?: PayrollFilters): Promise<EmployeePayroll[]> {
-    try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/payroll`, {
-        headers: this.getHeaders(),
-        params: filters
-      });
-
-      return response.data as EmployeePayroll[];
-    } catch (error) {
-      console.error('Error fetching payroll:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate payroll for an employee
-   */
-  async generatePayroll(payrollData: PayrollFormData): Promise<EmployeePayroll> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/payroll`, payrollData, {
-        headers: this.getHeaders()
-      });
-
-      return response.data as EmployeePayroll;
-    } catch (error) {
-      console.error('Error generating payroll:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update payroll status
-   */
-  async updatePayrollStatus(payrollId: string, status: 'Processed' | 'Paid', processedBy: string): Promise<EmployeePayroll> {
-    try {
-      const response = await axios.put(`${this.getBaseUrl()}/api/hrm/payroll/${payrollId}/status`, {
-        status,
-        processed_by: processedBy
-      }, {
-        headers: this.getHeaders()
-      });
-
-      return response.data as EmployeePayroll;
-    } catch (error) {
-      console.error('Error updating payroll status:', error);
-      throw error;
-    }
-  }
-
-  // =====================================================
-  // DASHBOARD STATISTICS
-  // =====================================================
-
-  async getDashboardStats(): Promise<HRMDashboardStats> {
-    try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/dashboard/stats`, {
-        headers: this.getHeaders()
-      });
-
-      return response.data as HRMDashboardStats;
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      throw error;
-    }
-  }
-
-  // =====================================================
-  // EMPLOYEE MASTER ALIASES (used by EmployeeForm, EmployeeList, EmployeeProfile)
-  // =====================================================
-
-  async getEmployeeMasters(filters?: EmployeeFilters): Promise<Employee[]> {
-    return this.getEmployees(filters);
-  }
-
-  async getEmployeeMasterById(id: string): Promise<Employee | null> {
-    return this.getEmployeeById(id);
-  }
-
-  async updateEmployeeMaster(id: string, data: Partial<EmployeeFormData>): Promise<Employee> {
-    return this.updateEmployee(id, data);
-  }
-
-  async createEmployeeMaster(data: EmployeeFormData): Promise<Employee> {
-    return this.createEmployee(data);
-  }
-
-  async generateStaffUniqueId(): Promise<string> {
-    return this.generateEmployeeId();
-  }
-
-  // =====================================================
-  // EMPLOYEE DETAILS (family, education, documents)
-  // =====================================================
-
-  async getEmployeeFamily(employeeId: string): Promise<any[]> {
-    try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/family`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching employee family:', error);
-      return [];
-    }
-  }
-
-  async getEmployeeEducation(employeeId: string): Promise<any[]> {
-    try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/education`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching employee education:', error);
-      return [];
-    }
-  }
-
-  async getEmployeeDocuments(employeeId: string): Promise<any[]> {
-    try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/documents`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching employee documents:', error);
-      return [];
-    }
-  }
-
-  async addFamilyMember(data: any): Promise<any> {
-    try {
-      const employeeId = data.employee_id || data.employeeId;
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/family`, data, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error adding family member:', error);
-      throw error;
-    }
-  }
-
-  async addEducation(data: any): Promise<any> {
-    try {
-      const employeeId = data.employee_id || data.employeeId;
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/education`, data, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error adding education:', error);
-      throw error;
-    }
-  }
-
-  async addDocument(data: any): Promise<any> {
-    try {
-      const employeeId = data.employee_id || data.employeeId;
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/employees/${employeeId}/documents`, data, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error adding document:', error);
-      throw error;
-    }
-  }
-
-  // =====================================================
-  // DEPARTMENT EXTRAS
-  // =====================================================
-
-  async deleteDepartment(id: string): Promise<void> {
-    try {
-      await axios.delete(`${this.getBaseUrl()}/api/hrm/departments/${id}`, {
-        headers: this.getHeaders()
-      });
-    } catch (error) {
-      console.error('Error deleting department:', error);
-      throw error;
-    }
+  async getHolidays(): Promise<any[]> {
+    return [];
   }
 
   // =====================================================
@@ -733,102 +525,144 @@ class HRMService {
 
   async getShifts(): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/shifts`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('shift_master')
+        .select('*')
+        .eq('hospital_id', HOSPITAL_ID)
+        .order('shift_name');
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching shifts:', error);
       return [];
     }
   }
 
-  async createShift(data: any): Promise<any> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/shifts`, data, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error creating shift:', error);
-      throw error;
-    }
+  async createShift(shiftData: any): Promise<any> {
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('shift_master')
+      .insert({ ...shiftData, hospital_id: HOSPITAL_ID })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
-  async updateShift(id: string, data: any): Promise<any> {
-    try {
-      const response = await axios.put(`${this.getBaseUrl()}/api/hrm/shifts/${id}`, data, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating shift:', error);
-      throw error;
-    }
+  async updateShift(id: string, shiftData: any): Promise<any> {
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('shift_master')
+      .update(shiftData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   async requestShiftSwap(data: any): Promise<any> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/shift-swaps`, data, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error requesting shift swap:', error);
-      throw error;
-    }
+    const supabase = await this.sb();
+    const { data: result, error } = await supabase
+      .from('shift_swap_requests')
+      .insert(data)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return result;
   }
 
   // =====================================================
-  // ATTENDANCE EXTRAS
+  // PAYROLL MANAGEMENT
   // =====================================================
 
-  async getAttendanceLogs(employeeId: string): Promise<any[]> {
+  async getPayroll(filters?: PayrollFilters): Promise<EmployeePayroll[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/attendance/logs/${employeeId}`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
+      const supabase = await this.sb();
+      let query = supabase
+        .from('employee_payroll')
+        .select('*, employee:employee_master(id, first_name, last_name, staff_unique_id)')
+        .order('created_at', { ascending: false });
+
+      if (filters?.employee_id) query = query.eq('employee_id', filters.employee_id);
+      if (filters?.month) query = query.eq('month', filters.month);
+      if (filters?.year) query = query.eq('year', filters.year);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
     } catch (error) {
-      console.error('Error fetching attendance logs:', error);
+      console.error('Error fetching payroll:', error);
       return [];
     }
   }
 
-  // =====================================================
-  // PAYROLL EXTRAS
-  // =====================================================
+  async generatePayroll(payrollData: PayrollFormData): Promise<EmployeePayroll> {
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('employee_payroll')
+      .insert(payrollData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as EmployeePayroll;
+  }
+
+  async updatePayrollStatus(payrollId: string, status: 'Processed' | 'Paid', processedBy: string): Promise<EmployeePayroll> {
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('employee_payroll')
+      .update({ status })
+      .eq('id', payrollId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as EmployeePayroll;
+  }
 
   async createPayrollCycle(month: number, year: number, workingDays: number): Promise<any> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/payroll/cycles`, {
-        month, year, working_days: workingDays
-      }, { headers: this.getHeaders() });
-      return response.data;
-    } catch (error) {
-      console.error('Error creating payroll cycle:', error);
-      throw error;
-    }
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('payroll_cycles')
+      .insert({ month, year, working_days: workingDays, status: 'Draft', hospital_id: HOSPITAL_ID })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   async processPayroll(cycleId: string): Promise<any> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/payroll/process/${cycleId}`, {}, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error processing payroll:', error);
-      throw error;
-    }
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('payroll_cycles')
+      .update({ status: 'Processed' })
+      .eq('id', cycleId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   async getPayrollCycles(): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/payroll/cycles`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('payroll_cycles')
+        .select('*')
+        .eq('hospital_id', HOSPITAL_ID)
+        .order('year', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching payroll cycles:', error);
       return [];
@@ -837,10 +671,14 @@ class HRMService {
 
   async getEmployeePayrolls(cycleId: string): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/payroll/employees/${cycleId}`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('employee_payroll')
+        .select('*, employee:employee_master(id, first_name, last_name, staff_unique_id)')
+        .eq('cycle_id', cycleId);
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching employee payrolls:', error);
       return [];
@@ -848,14 +686,32 @@ class HRMService {
   }
 
   async generatePayslipData(payrollId: string): Promise<any> {
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('employee_payroll')
+      .select('*, employee:employee_master(*), cycle:payroll_cycles(*)')
+      .eq('id', payrollId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async getUpcomingPayslips(employeeId: string): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/payslips/${payrollId}/data`, {
-        headers: this.getHeaders()
-      });
-      return response.data;
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('employee_payroll')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
-      console.error('Error generating payslip data:', error);
-      throw error;
+      console.error('Error fetching upcoming payslips:', error);
+      return [];
     }
   }
 
@@ -865,10 +721,14 @@ class HRMService {
 
   async getPerformanceReviews(): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/performance-reviews`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('performance_reviews')
+        .select('*, employee:employee_master(id, first_name, last_name, staff_unique_id)')
+        .order('review_date', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching performance reviews:', error);
       return [];
@@ -881,10 +741,14 @@ class HRMService {
 
   async getTrainingPrograms(): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/training-programs`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('training_programs')
+        .select('*')
+        .order('start_date', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching training programs:', error);
       return [];
@@ -892,15 +756,15 @@ class HRMService {
   }
 
   async registerForTraining(trainingId: string, employeeId: string): Promise<any> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/training-programs/${trainingId}/register`, {
-        employee_id: employeeId
-      }, { headers: this.getHeaders() });
-      return response.data;
-    } catch (error) {
-      console.error('Error registering for training:', error);
-      throw error;
-    }
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('training_participants')
+      .insert({ training_id: trainingId, employee_id: employeeId, status: 'Registered' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   // =====================================================
@@ -909,10 +773,14 @@ class HRMService {
 
   async getJobPostings(): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/recruitment/jobs`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('job_postings')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching job postings:', error);
       return [];
@@ -921,10 +789,14 @@ class HRMService {
 
   async getCandidates(): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/recruitment/candidates`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('candidates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching candidates:', error);
       return [];
@@ -937,26 +809,30 @@ class HRMService {
 
   async getAnnouncements(): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/announcements`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching announcements:', error);
       return [];
     }
   }
 
-  async createAnnouncement(data: any): Promise<any> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/announcements`, data, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error creating announcement:', error);
-      throw error;
-    }
+  async createAnnouncement(announcementData: any): Promise<any> {
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('announcements')
+      .insert({ ...announcementData, hospital_id: HOSPITAL_ID })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   // =====================================================
@@ -965,10 +841,14 @@ class HRMService {
 
   async getExitRequests(): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/exits`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('employee_exits')
+        .select('*, employee:employee_master(id, first_name, last_name, staff_unique_id)')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching exit requests:', error);
       return [];
@@ -977,50 +857,57 @@ class HRMService {
 
   async getExitChecklist(exitId: string): Promise<any[]> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/exits/${exitId}/checklist`, {
-        headers: this.getHeaders()
-      });
-      return response.data || [];
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('exit_checklist')
+        .select('*')
+        .eq('exit_id', exitId)
+        .order('created_at');
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching exit checklist:', error);
       return [];
     }
   }
 
-  async initiateExit(data: any): Promise<any> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/exits`, data, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error initiating exit:', error);
-      throw error;
-    }
+  async initiateExit(exitData: any): Promise<any> {
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('employee_exits')
+      .insert(exitData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   async updateExitStatus(exitId: string, status: string, userId?: string): Promise<any> {
-    try {
-      const response = await axios.put(`${this.getBaseUrl()}/api/hrm/exits/${exitId}/status`, {
-        status, processed_by: userId
-      }, { headers: this.getHeaders() });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating exit status:', error);
-      throw error;
-    }
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('employee_exits')
+      .update({ status })
+      .eq('id', exitId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   async updateChecklistItem(itemId: string, status: string): Promise<any> {
-    try {
-      const response = await axios.put(`${this.getBaseUrl()}/api/hrm/exits/checklist/${itemId}`, {
-        status
-      }, { headers: this.getHeaders() });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating checklist item:', error);
-      throw error;
-    }
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('exit_checklist')
+      .update({ status })
+      .eq('id', itemId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   // =====================================================
@@ -1029,10 +916,15 @@ class HRMService {
 
   async getEmployeeOnboarding(employeeId: string): Promise<any> {
     try {
-      const response = await axios.get(`${this.getBaseUrl()}/api/hrm/onboarding/${employeeId}`, {
-        headers: this.getHeaders()
-      });
-      return response.data;
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('employee_onboarding')
+        .select('*, tasks:onboarding_tasks(*)')
+        .eq('employee_id', employeeId)
+        .single();
+
+      if (error) return null;
+      return data;
     } catch (error) {
       console.error('Error fetching onboarding:', error);
       return null;
@@ -1040,28 +932,189 @@ class HRMService {
   }
 
   async initiateOnboarding(employeeId: string): Promise<any> {
-    try {
-      const response = await axios.post(`${this.getBaseUrl()}/api/hrm/onboarding/${employeeId}`, {}, {
-        headers: this.getHeaders()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error initiating onboarding:', error);
-      throw error;
-    }
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('employee_onboarding')
+      .insert({
+        employee_id: employeeId,
+        start_date: new Date().toISOString().split('T')[0],
+        status: 'In Progress',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   async updateOnboardingTask(taskId: string, status: string): Promise<any> {
+    const supabase = await this.sb();
+    const { data, error } = await supabase
+      .from('onboarding_tasks')
+      .update({ status })
+      .eq('id', taskId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // =====================================================
+  // EMPLOYEE DETAILS (family, education, documents)
+  // =====================================================
+
+  async getEmployeeFamily(employeeId: string): Promise<any[]> {
     try {
-      const response = await axios.put(`${this.getBaseUrl()}/api/hrm/onboarding/tasks/${taskId}`, {
-        status
-      }, { headers: this.getHeaders() });
-      return response.data;
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('employee_family')
+        .select('*')
+        .eq('employee_id', employeeId);
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
-      console.error('Error updating onboarding task:', error);
-      throw error;
+      console.error('Error fetching employee family:', error);
+      return [];
     }
   }
+
+  async getEmployeeEducation(employeeId: string): Promise<any[]> {
+    try {
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('employee_education')
+        .select('*')
+        .eq('employee_id', employeeId);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching employee education:', error);
+      return [];
+    }
+  }
+
+  async getEmployeeDocuments(employeeId: string): Promise<any[]> {
+    try {
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('employee_documents')
+        .select('*')
+        .eq('employee_id', employeeId);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching employee documents:', error);
+      return [];
+    }
+  }
+
+  async addFamilyMember(memberData: any): Promise<any> {
+    const supabase = await this.sb();
+    const employeeId = memberData.employee_id || memberData.employeeId;
+    const { data, error } = await supabase
+      .from('employee_family')
+      .insert({ ...memberData, employee_id: employeeId })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async addEducation(educationData: any): Promise<any> {
+    const supabase = await this.sb();
+    const employeeId = educationData.employee_id || educationData.employeeId;
+    const { data, error } = await supabase
+      .from('employee_education')
+      .insert({ ...educationData, employee_id: employeeId })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async addDocument(documentData: any): Promise<any> {
+    const supabase = await this.sb();
+    const employeeId = documentData.employee_id || documentData.employeeId;
+    const { data, error } = await supabase
+      .from('employee_documents')
+      .insert({ ...documentData, employee_id: employeeId })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // =====================================================
+  // NOTIFICATIONS
+  // =====================================================
+
+  async getNotifications(employeeId: string): Promise<any[]> {
+    try {
+      const supabase = await this.sb();
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return [];
+    }
+  }
+
+  // =====================================================
+  // DASHBOARD STATISTICS
+  // =====================================================
+
+  async getDashboardStats(): Promise<HRMDashboardStats> {
+    try {
+      const supabase = await this.sb();
+      const today = new Date().toISOString().split('T')[0];
+
+      const [empResult, activeResult, presentResult, absentResult, leaveResult, pendingResult, deptResult] = await Promise.all([
+        supabase.from('employee_master').select('id', { count: 'exact', head: true }).eq('hospital_id', HOSPITAL_ID),
+        supabase.from('employee_master').select('id', { count: 'exact', head: true }).eq('hospital_id', HOSPITAL_ID).eq('is_active', true),
+        supabase.from('attendance_logs').select('id', { count: 'exact', head: true }).eq('attendance_date', today).eq('status', 'Present'),
+        supabase.from('attendance_logs').select('id', { count: 'exact', head: true }).eq('attendance_date', today).eq('status', 'Absent'),
+        supabase.from('leave_applications').select('id', { count: 'exact', head: true }).eq('status', 'Approved').lte('start_date', today).gte('end_date', today),
+        supabase.from('leave_applications').select('id', { count: 'exact', head: true }).eq('status', 'Pending'),
+        supabase.from('department_master').select('id', { count: 'exact', head: true }).eq('hospital_id', HOSPITAL_ID).eq('is_active', true),
+      ]);
+
+      return {
+        total_employees: empResult.count || 0,
+        active_employees: activeResult.count || 0,
+        present_today: presentResult.count || 0,
+        absent_today: absentResult.count || 0,
+        on_leave: leaveResult.count || 0,
+        pending_leaves: pendingResult.count || 0,
+        departments: deptResult.count || 0,
+      };
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      return { total_employees: 0, active_employees: 0, present_today: 0, absent_today: 0, on_leave: 0, pending_leaves: 0, departments: 0 };
+    }
+  }
+
+  // =====================================================
+  // ALIASES (used by sub-components)
+  // =====================================================
+
+  async getEmployeeMasters(filters?: EmployeeFilters): Promise<Employee[]> { return this.getEmployees(filters); }
+  async getEmployeeMasterById(id: string): Promise<Employee | null> { return this.getEmployeeById(id); }
+  async updateEmployeeMaster(id: string, data: Partial<EmployeeFormData>): Promise<Employee> { return this.updateEmployee(id, data); }
+  async createEmployeeMaster(data: EmployeeFormData): Promise<Employee> { return this.createEmployee(data); }
+  async generateStaffUniqueId(): Promise<string> { return this.generateEmployeeId(); }
 }
 
 export const hrmService = new HRMService();
