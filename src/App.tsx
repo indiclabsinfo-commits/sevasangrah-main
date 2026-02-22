@@ -121,12 +121,17 @@ const App: React.FC = () => {
   // const [showTriggerFix, setShowTriggerFix] = useState(false);
   const [showDebugger, setShowDebugger] = useState(false);
 
-  // Auto-redirect based on role
+  // Auto-redirect based on role on login
   useEffect(() => {
-    if (user && user.role === 'DOCTOR') {
-      setActiveTab('doctor-console');
-    } else if (user && user.role === 'HR') {
-      setActiveTab('hrm');
+    if (user) {
+      if (user.role === 'DOCTOR') {
+        setActiveTab('doctor-console');
+      } else if (user.role === 'HR') {
+        setActiveTab('hrm');
+      } else {
+        // Admin and other roles always start on dashboard
+        setActiveTab('dashboard');
+      }
     }
   }, [user]);
 
