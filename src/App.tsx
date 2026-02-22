@@ -1075,21 +1075,23 @@ const App: React.FC = () => {
   ];
 
   // Filter tabs based on user permissions
-  const filteredTabs = tabs.filter(tab => {
-    if (!tab.permission) return true; // Allow tabs without permission requirements
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const filteredTabs = React.useMemo(() => tabs.filter(tab => {
+    if (!tab.permission) return true;
     return hasPermission(tab.permission);
-  });
+  }), [user]);
 
   // Auto-redirect to first available tab if current tab is not accessible
   const currentTabExists = filteredTabs.some(tab => tab.id === activeTab);
   const effectiveTab = currentTabExists ? activeTab : (filteredTabs[0]?.id || 'dashboard');
 
   // Update active tab if needed (e.g., HR user lands on 'dashboard' but only has HRM access)
+  const firstTabId = filteredTabs[0]?.id;
   React.useEffect(() => {
-    if (!currentTabExists && filteredTabs.length > 0) {
-      setActiveTab(filteredTabs[0].id);
+    if (!currentTabExists && firstTabId) {
+      setActiveTab(firstTabId);
     }
-  }, [currentTabExists, filteredTabs]);
+  }, [currentTabExists, firstTabId]);
 
   const ActiveComponent = filteredTabs.find(tab => tab.id === effectiveTab)?.component || RealTimeDashboard;
   const activeTabInfo = filteredTabs.find(tab => tab.id === effectiveTab);
