@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, AlertCircle } from 'lucide-react';
+import { Stethoscope, AlertCircle, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseHospitalService } from '../../services/supabaseHospitalService';
+import { getSupabase } from '../../lib/supabaseClient';
 import { useDoctorQueue } from './hooks/useDoctorQueue';
 import DoctorQueuePanel from './DoctorQueuePanel';
 import ConsultationWorkspace from './ConsultationWorkspace';
@@ -10,11 +11,12 @@ import PatientHistoryDrawer from './PatientHistoryDrawer';
 import type { QueueEntry } from './hooks/useDoctorQueue';
 
 const DoctorConsole: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [doctorRecord, setDoctorRecord] = useState<any | null>(null);
   const [doctorLoading, setDoctorLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<QueueEntry | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [allDoctors, setAllDoctors] = useState<any[]>([]);
 
   // Resolve logged-in user to doctor record
   useEffect(() => {
@@ -25,7 +27,21 @@ const DoctorConsole: React.FC = () => {
       }
       try {
         const doc = await SupabaseHospitalService.getDoctorRecordForUser(user.id);
-        setDoctorRecord(doc);
+        if (doc) {
+          setDoctorRecord(doc);
+        } else if (isAdmin()) {
+          // Admin user — load all doctors so they can pick one
+          const supabase = await getSupabase();
+          const { data: doctors } = await supabase
+            .from('doctors')
+            .select('*')
+            .eq('is_active', true)
+            .order('name');
+          if (doctors && doctors.length > 0) {
+            setAllDoctors(doctors);
+            setDoctorRecord(doctors[0]); // Auto-select first doctor
+          }
+        }
       } catch (error: any) {
         console.error('Failed to load doctor record:', error);
       } finally {
@@ -98,8 +114,37 @@ const DoctorConsole: React.FC = () => {
     );
   }
 
+  // Admin doctor selector handler
+  const handleDoctorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const doc = allDoctors.find(d => d.id === e.target.value);
+    if (doc) {
+      setDoctorRecord(doc);
+      setSelectedEntry(null);
+      setShowHistory(false);
+    }
+  };
+
   return (
-    <div className="flex h-full overflow-hidden bg-gray-100">
+    <div className="flex flex-col h-full overflow-hidden bg-gray-100">
+      {/* Admin: Doctor selector bar */}
+      {isAdmin() && allDoctors.length > 1 && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-blue-50 border-b border-blue-200">
+          <span className="text-sm font-medium text-blue-700">Viewing as:</span>
+          <select
+            value={doctorRecord?.id || ''}
+            onChange={handleDoctorChange}
+            className="text-sm border border-blue-300 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {allDoctors.map(d => (
+              <option key={d.id} value={d.id}>
+                Dr. {d.name || `${d.first_name || ''} ${d.last_name || ''}`.trim()}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="flex flex-1 overflow-hidden">
       {/* Left: Queue Panel */}
       <DoctorQueuePanel
         queue={queue}
@@ -148,6 +193,7 @@ const DoctorConsole: React.FC = () => {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
