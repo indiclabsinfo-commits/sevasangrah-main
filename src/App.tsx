@@ -115,6 +115,7 @@ const App: React.FC = () => {
   const [isNavVisible, setIsNavVisible] = useState(true);
   const [navHideTimer, setNavHideTimer] = useState<NodeJS.Timeout | null>(null);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   // const [showTriggerFix, setShowTriggerFix] = useState(false);
@@ -1103,6 +1104,20 @@ const App: React.FC = () => {
           {/* Header Content - Always Visible */}
           <div className="flex justify-between items-center py-3">
             <div className="flex items-center space-x-4">
+              {/* Hamburger Menu Button */}
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                aria-label="Toggle menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {sidebarOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
               {/* Logo */}
               <img
                 src="/logo.png"
@@ -1220,39 +1235,70 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Layout with Sidebar */}
-      <div className="flex" style={{ height: 'calc(100vh - 73px)' }}>
-        {/* Vertical Sidebar Navigation */}
-        <aside className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0">
-          <nav className="py-4">
-            {filteredTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full px-6 py-3 text-left text-sm font-medium transition-colors border-l-4 ${activeTab === tab.id
-                  ? 'bg-blue-50 text-blue-700 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-transparent'
-                  }`}
-                title={tab.description}
-              >
-                <div className="flex items-center justify-between">
-                  <span>{tab.name}</span>
-                  {activeTab === tab.id && (
-                    <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-                {tab.description && activeTab === tab.id && (
-                  <p className="text-xs text-gray-500 mt-1">{tab.description}</p>
-                )}
-              </button>
-            ))}
-          </nav>
-        </aside>
+      {/* Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-auto bg-gray-50">
+      {/* Slide-in Sidebar Navigation */}
+      <aside
+        className={`fixed top-0 left-0 z-50 h-full w-72 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Sidebar Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-blue-600">
+          <div className="flex items-center space-x-3">
+            <img src="/logo.png" alt="SevaSangraha" className="h-9 w-9 object-contain bg-white rounded-lg p-1" />
+            <span className="text-lg font-semibold text-white">Menu</span>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="p-1.5 rounded-lg text-blue-100 hover:text-white hover:bg-blue-700 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Sidebar Menu Items */}
+        <nav className="py-2 overflow-y-auto" style={{ height: 'calc(100% - 65px)' }}>
+          {filteredTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setSidebarOpen(false);
+              }}
+              className={`w-full px-5 py-3 text-left text-sm font-medium transition-colors border-l-4 ${activeTab === tab.id
+                ? 'bg-blue-50 text-blue-700 border-blue-600'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-transparent'
+                }`}
+              title={tab.description}
+            >
+              <div className="flex items-center justify-between">
+                <span>{tab.name}</span>
+                {activeTab === tab.id && (
+                  <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              {tab.description && activeTab === tab.id && (
+                <p className="text-xs text-gray-500 mt-1">{tab.description}</p>
+              )}
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Main Content Area - Full Width */}
+      <div style={{ height: 'calc(100vh - 73px)' }}>
+        <main className="h-full overflow-auto bg-gray-50">
           <ErrorBoundary>
             {renderActiveComponent()}
           </ErrorBoundary>
