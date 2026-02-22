@@ -121,10 +121,12 @@ const App: React.FC = () => {
   // const [showTriggerFix, setShowTriggerFix] = useState(false);
   const [showDebugger, setShowDebugger] = useState(false);
 
-  // Auto-redirect doctors to Doctor Console on login
+  // Auto-redirect based on role
   useEffect(() => {
     if (user && user.role === 'DOCTOR') {
       setActiveTab('doctor-console');
+    } else if (user && user.role === 'HR') {
+      setActiveTab('hrm');
     }
   }, [user]);
 
@@ -1075,35 +1077,22 @@ const App: React.FC = () => {
   ];
 
   // Filter tabs based on user permissions
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const filteredTabs = React.useMemo(() => tabs.filter(tab => {
-    if (!tab.permission) return true;
+  const filteredTabs = tabs.filter(tab => {
+    if (!tab.permission) return true; // Allow tabs without permission requirements
     return hasPermission(tab.permission);
-  }), [user]);
+  });
 
-  // Auto-redirect to first available tab if current tab is not accessible
-  const currentTabExists = filteredTabs.some(tab => tab.id === activeTab);
-  const effectiveTab = currentTabExists ? activeTab : (filteredTabs[0]?.id || 'dashboard');
-
-  // Update active tab if needed (e.g., HR user lands on 'dashboard' but only has HRM access)
-  const firstTabId = filteredTabs[0]?.id;
-  React.useEffect(() => {
-    if (!currentTabExists && firstTabId) {
-      setActiveTab(firstTabId);
-    }
-  }, [currentTabExists, firstTabId]);
-
-  const ActiveComponent = filteredTabs.find(tab => tab.id === effectiveTab)?.component || RealTimeDashboard;
-  const activeTabInfo = filteredTabs.find(tab => tab.id === effectiveTab);
+  const ActiveComponent = filteredTabs.find(tab => tab.id === activeTab)?.component || RealTimeDashboard;
+  const activeTabInfo = filteredTabs.find(tab => tab.id === activeTab);
 
   const renderActiveComponent = () => {
-    if (effectiveTab === 'dashboard') {
+    if (activeTab === 'dashboard') {
       return <EnhancedDashboard onNavigate={setActiveTab} />;
-    } else if (effectiveTab === 'patient-list') {
+    } else if (activeTab === 'patient-list') {
       return <ComprehensivePatientList onNavigate={setActiveTab} />;
-    } else if (effectiveTab === 'operations') {
+    } else if (activeTab === 'operations') {
       return <OperationsLedger />;
-    } else if (effectiveTab === 'audit-log') {
+    } else if (activeTab === 'audit-log') {
       return <AdminAuditLog />;
     }
     return <ActiveComponent />;
