@@ -1627,39 +1627,9 @@ const ComprehensivePatientList: React.FC<ComprehensivePatientListProps> = ({ onN
       // Debug the returned patients
       logger.log('✅ Loaded', patientsData.length, 'patients for the date range');
 
-      // Filter out patients who have PENDING appointments (not confirmed/completed ones)
-      // Check both database field (has_pending_appointment) and localStorage appointments
-      patientsData = patientsData.filter(patient => {
-        // First check the database flag (set when scheduling appointment during registration)
-        if ((patient as any).has_pending_appointment === true) {
-          logger.log(`👤 Hiding patient ${patient.first_name} ${patient.last_name} - has_pending_appointment=true in DB`);
-          return false; // Hide this patient
-        }
-
-        // Then check localStorage appointments for this patient
-        try {
-          const appointments = JSON.parse(localStorage.getItem('hospital_appointments') || '[]');
-          const hasPendingAppointment = appointments.some((apt: any) => {
-            // Match by patient name or patient_id or patient_uuid
-            const patientName = `${patient.first_name} ${patient.last_name}`;
-            const isPatientMatch = apt.patient_name === patientName ||
-              apt.patient_id === patient.patient_id ||
-              apt.patient_uuid === patient.id;
-
-            // Only hide if patient matches AND appointment is still pending (not confirmed/completed)
-            return isPatientMatch && (apt.status === 'scheduled' || !apt.status);
-          });
-
-          if (hasPendingAppointment) {
-            logger.log(`👤 Hiding patient ${patient.first_name} ${patient.last_name} - has PENDING appointment`);
-            return false; // Hide this patient
-          }
-        } catch (error) {
-          logger.error('Error checking appointments for patient:', error);
-        }
-
-        return true; // Show this patient (no pending appointments)
-      });
+      // NOTE: Previously patients with pending appointments were hidden.
+      // Now we show ALL patients and display an appointment badge instead.
+      // This ensures newly registered patients always appear in the list.
 
       // Calculate totalSpent based on selected date filter
       const filteredPatientsData = patientsData.map(patient => {

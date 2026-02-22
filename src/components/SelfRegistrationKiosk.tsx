@@ -3,10 +3,14 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { User, Phone, Mail, CreditCard, Fingerprint, Camera, CheckCircle, AlertCircle, Home, Calendar } from 'lucide-react';
+import { SupabasePatientService } from '../services/supabasePatientService';
+import toast from 'react-hot-toast';
 
 const SelfRegistrationKiosk: React.FC = () => {
   const [step, setStep] = useState(1);
   const [registrationType, setRegistrationType] = useState<'new' | 'existing'>('new');
+  const [submitting, setSubmitting] = useState(false);
+  const [registrationResult, setRegistrationResult] = useState<{ patientId: string; uhid?: string } | null>(null);
   const [formData, setFormData] = useState({
     // Personal Information
     firstName: '',
@@ -61,9 +65,41 @@ const SelfRegistrationKiosk: React.FC = () => {
     }
   };
 
-  const handleSubmit = () => {
-    alert('Registration submitted successfully! UHID will be generated.');
-    // In real implementation: Submit to API, generate UHID, print token
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const patientData = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        gender: formData.gender.toUpperCase() || 'MALE',
+        date_of_birth: formData.dateOfBirth || null,
+        age: formData.dateOfBirth ? Math.floor((Date.now() - new Date(formData.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0,
+        phone: formData.mobileNumber,
+        email: formData.email || null,
+        address: [formData.address, formData.city, formData.pincode].filter(Boolean).join(', ') || null,
+        blood_group: formData.bloodGroup || null,
+        aadhaar_number: formData.aadhaarNumber || null,
+        allergies: formData.knownAllergies || null,
+        medical_history: formData.existingConditions || null,
+        emergency_contact_name: formData.emergencyName || null,
+        emergency_contact_phone: formData.emergencyPhone || null,
+        patient_tag: 'Regular',
+        notes: `Self-registered via kiosk. Emergency relation: ${formData.emergencyRelation || 'N/A'}`,
+      };
+
+      const result = await SupabasePatientService.createPatient(patientData);
+      setRegistrationResult({
+        patientId: result.patient_id || result.id,
+        uhid: result.uhid || undefined,
+      });
+      toast.success(`Registration successful! Patient ID: ${result.patient_id}`);
+      setStep(totalSteps + 1); // Go to success screen
+    } catch (err: any) {
+      toast.error('Registration failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleScanAadhaar = () => {
@@ -589,14 +625,48 @@ const SelfRegistrationKiosk: React.FC = () => {
                   </div>
                 </div>
 
-                <Button 
+                <Button
                   onClick={handleNext}
+                  disabled={submitting}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  {step === totalSteps ? 'Complete Registration' : 'Next →'}
+                  {submitting ? 'Registering...' : step === totalSteps ? 'Complete Registration' : 'Next →'}
                 </Button>
               </div>
             </Card>
+
+            {/* Success Screen */}
+            {step > totalSteps && registrationResult && (
+              <Card className="p-8 text-center">
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Registration Successful!</h2>
+                <p className="text-lg text-gray-600 mb-4">
+                  Patient ID: <span className="font-bold text-blue-600">{registrationResult.patientId}</span>
+                </p>
+                {registrationResult.uhid && (
+                  <p className="text-lg text-gray-600 mb-4">
+                    UHID: <span className="font-bold text-blue-600">{registrationResult.uhid}</span>
+                  </p>
+                )}
+                <p className="text-sm text-gray-500 mb-6">Please note your Patient ID for future visits</p>
+                <Button
+                  onClick={() => {
+                    setStep(1);
+                    setRegistrationResult(null);
+                    setFormData({
+                      firstName: '', lastName: '', gender: '', dateOfBirth: '',
+                      mobileNumber: '', email: '', address: '', city: '', pincode: '',
+                      aadhaarNumber: '', panNumber: '', emergencyName: '', emergencyPhone: '',
+                      emergencyRelation: '', bloodGroup: '', knownAllergies: '',
+                      existingConditions: '', paymentMethod: 'cash', amount: '200', transactionId: ''
+                    });
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Register Another Patient
+                </Button>
+              </Card>
+            )}
 
             {/* Quick Actions */}
             <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
