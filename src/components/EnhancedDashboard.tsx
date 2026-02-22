@@ -150,8 +150,16 @@ export const EnhancedDashboard: React.FC<Props> = ({ onNavigate }) => {
   // Fetch dashboard data
   const { data: dashboardStats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
     queryKey: queryKeys.dashboardStats,
-    queryFn: () => dashboardService.getDashboardStats(),
+    queryFn: async () => {
+      try {
+        return await dashboardService.getDashboardStats();
+      } catch {
+        // Return empty stats so dashboard still renders
+        return { todaysPatients: 0, todaysRevenue: 0, totalPatients: 0, totalRevenue: 0, todaysAppointments: 0, admissions: 0, discharges: 0, availableBeds: 0 } as any;
+      }
+    },
     refetchInterval: 5 * 60 * 1000,
+    retry: 1,
   });
 
   // Helper function to format date as YYYY-MM-DD
