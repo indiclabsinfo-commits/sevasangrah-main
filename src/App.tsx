@@ -1080,17 +1080,28 @@ const App: React.FC = () => {
     return hasPermission(tab.permission);
   });
 
-  const ActiveComponent = filteredTabs.find(tab => tab.id === activeTab)?.component || RealTimeDashboard;
-  const activeTabInfo = filteredTabs.find(tab => tab.id === activeTab);
+  // Auto-redirect to first available tab if current tab is not accessible
+  const currentTabExists = filteredTabs.some(tab => tab.id === activeTab);
+  const effectiveTab = currentTabExists ? activeTab : (filteredTabs[0]?.id || 'dashboard');
+
+  // Update active tab if needed (e.g., HR user lands on 'dashboard' but only has HRM access)
+  React.useEffect(() => {
+    if (!currentTabExists && filteredTabs.length > 0) {
+      setActiveTab(filteredTabs[0].id);
+    }
+  }, [currentTabExists, filteredTabs]);
+
+  const ActiveComponent = filteredTabs.find(tab => tab.id === effectiveTab)?.component || RealTimeDashboard;
+  const activeTabInfo = filteredTabs.find(tab => tab.id === effectiveTab);
 
   const renderActiveComponent = () => {
-    if (activeTab === 'dashboard') {
+    if (effectiveTab === 'dashboard') {
       return <EnhancedDashboard onNavigate={setActiveTab} />;
-    } else if (activeTab === 'patient-list') {
+    } else if (effectiveTab === 'patient-list') {
       return <ComprehensivePatientList onNavigate={setActiveTab} />;
-    } else if (activeTab === 'operations') {
+    } else if (effectiveTab === 'operations') {
       return <OperationsLedger />;
-    } else if (activeTab === 'audit-log') {
+    } else if (effectiveTab === 'audit-log') {
       return <AdminAuditLog />;
     }
     return <ActiveComponent />;

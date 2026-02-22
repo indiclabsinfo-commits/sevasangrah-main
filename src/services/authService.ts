@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 export interface AuthUser {
   id: string;
   email: string;
-  role: 'ADMIN' | 'DOCTOR' | 'STAFF' | 'RECEPTION';
+  role: 'ADMIN' | 'DOCTOR' | 'STAFF' | 'RECEPTION' | 'HR';
   first_name: string;
   last_name: string;
   hospital_id?: string;
@@ -62,7 +62,7 @@ const HARDCODED_USERS: AuthUser[] = [
   {
     id: '2b43e58e-986e-4fd5-9350-86f928980af1',
     email: 'hr@hospital.com',
-    role: 'ADMIN',
+    role: 'HR',
     first_name: 'HR',
     last_name: 'Manager'
   }
@@ -375,6 +375,7 @@ export const authService = {
     const role = currentUser.role?.toUpperCase();
     const roleMap: Record<string, string[]> = {
       ADMIN: ['admin_access', 'access_operations', 'access_hrm', 'doctor_console', 'read_patients', 'read_appointments', 'create_patients'],
+      HR: ['access_hrm'],
       DOCTOR: ['doctor_console', 'read_patients', 'read_appointments'],
       RECEPTION: ['read_patients', 'read_appointments', 'create_patients'],
       STAFF: ['read_patients', 'read_appointments', 'create_patients'],
