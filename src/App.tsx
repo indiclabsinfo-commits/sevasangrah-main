@@ -121,21 +121,19 @@ const App: React.FC = () => {
   // const [showTriggerFix, setShowTriggerFix] = useState(false);
   const [showDebugger, setShowDebugger] = useState(false);
 
-  // Auto-redirect based on role on login — v3 fix
+  // Auto-redirect based on role on initial login only
+  const hasRedirected = React.useRef(false);
   useEffect(() => {
-    if (user) {
-      console.log('[App] Role-based redirect. Role:', user.role, 'Current tab:', activeTab);
+    if (user && !hasRedirected.current) {
+      hasRedirected.current = true;
       if (user.role === 'DOCTOR') {
         setActiveTab('doctor-console');
       } else if (user.role === 'HR') {
         setActiveTab('hrm');
-      } else if (activeTab === 'doctor-console') {
-        // Force admin/staff away from doctor-console (they can't use it)
-        console.log('[App] Redirecting non-doctor away from doctor-console to dashboard');
-        setActiveTab('dashboard');
       }
+      // Admin stays on default 'dashboard' — no redirect needed
     }
-  }, [user, activeTab]);
+  }, [user]);
 
   // Removed trigger fix logic - issue is in backend code
 
