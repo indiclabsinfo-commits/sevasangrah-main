@@ -4,6 +4,7 @@ import { supabase } from '../config/supabaseNew';
 import { SupabaseHospitalService } from '../services/supabaseHospitalService';
 import type { PatientWithRelations } from '../config/supabaseNew';
 import { exportToExcel, formatDate } from '../utils/excelExport';
+import { downloadPDFFromHTML } from '../utils/pdfGenerator';
 import IPDConsentForm from './IPDConsentForm';
 import ClinicalRecordForm from './ClinicalRecordForm';
 import DoctorProgressSheet from './DoctorProgressSheet';
@@ -649,6 +650,117 @@ const DischargeSection: React.FC = () => {
     setEditedDischargeDate('');
   };
 
+  const handleDownloadDischargePDF = async (patient: DischargedPatient) => {
+    try {
+      toast.loading('Generating PDF...', { id: 'pdf-gen' });
+      const summary = patient.discharge_summary || {};
+      const patientName = `${patient.first_name} ${patient.last_name}`.trim();
+      const dischargeDate = patient.discharge_date
+        ? new Date(patient.discharge_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : 'Not specified';
+
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 780px; margin: 0 auto; padding: 30px; color: #333;">
+          <div style="text-align: center; border-bottom: 3px solid #0056B3; padding-bottom: 15px; margin-bottom: 20px;">
+            <h1 style="margin: 0; color: #0056B3; font-size: 22px;">DISCHARGE SUMMARY</h1>
+            <p style="margin: 5px 0 0; color: #666; font-size: 13px;">Hospital Management System</p>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <tr>
+              <td style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold; width: 30%;">Patient Name</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd;">${patientName}</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold; width: 20%;">Patient ID</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd;">${patient.patient_id}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">IPD Number</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd;">${patient.ipd_number || 'N/A'}</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Gender</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd;">${patient.gender || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Discharge Date</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd;">${dischargeDate}</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Stay Duration</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd;">${patient.admission_duration || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Blood Group</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd;">${patient.blood_group || 'N/A'}</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Contact</td>
+              <td style="padding: 8px 12px; border: 1px solid #ddd;">${patient.phone || 'N/A'}</td>
+            </tr>
+            ${summary.primary_consultant ? `
+            <tr>
+              <td style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; font-weight: bold;">Primary Consultant</td>
+              <td colspan="3" style="padding: 8px 12px; border: 1px solid #ddd;">${summary.primary_consultant}</td>
+            </tr>` : ''}
+          </table>
+
+          ${summary.final_diagnosis ? `
+          <div style="margin-bottom: 16px;">
+            <h3 style="margin: 0 0 8px; color: #0056B3; font-size: 15px; border-bottom: 1px solid #0056B3; padding-bottom: 4px;">Final Diagnosis</h3>
+            <p style="margin: 0; line-height: 1.6;">${summary.final_diagnosis}</p>
+          </div>` : ''}
+
+          ${summary.chief_complaints ? `
+          <div style="margin-bottom: 16px;">
+            <h3 style="margin: 0 0 8px; color: #0056B3; font-size: 15px; border-bottom: 1px solid #0056B3; padding-bottom: 4px;">Chief Complaints</h3>
+            <p style="margin: 0; line-height: 1.6;">${summary.chief_complaints}</p>
+          </div>` : ''}
+
+          ${summary.treatment_summary ? `
+          <div style="margin-bottom: 16px;">
+            <h3 style="margin: 0 0 8px; color: #0056B3; font-size: 15px; border-bottom: 1px solid #0056B3; padding-bottom: 4px;">Treatment Summary</h3>
+            <p style="margin: 0; line-height: 1.6; white-space: pre-wrap;">${summary.treatment_summary}</p>
+          </div>` : ''}
+
+          ${summary.discharge_medication ? `
+          <div style="margin-bottom: 16px;">
+            <h3 style="margin: 0 0 8px; color: #0056B3; font-size: 15px; border-bottom: 1px solid #0056B3; padding-bottom: 4px;">Discharge Medication</h3>
+            <pre style="margin: 0; line-height: 1.6; font-family: Arial, sans-serif; white-space: pre-wrap;">${summary.discharge_medication}</pre>
+          </div>` : ''}
+
+          ${summary.follow_up_on ? `
+          <div style="margin-bottom: 16px;">
+            <h3 style="margin: 0 0 8px; color: #0056B3; font-size: 15px; border-bottom: 1px solid #0056B3; padding-bottom: 4px;">Follow-Up Instructions</h3>
+            <p style="margin: 0; line-height: 1.6;">${summary.follow_up_on}</p>
+          </div>` : ''}
+
+          ${summary.discharge_notes ? `
+          <div style="margin-bottom: 16px;">
+            <h3 style="margin: 0 0 8px; color: #0056B3; font-size: 15px; border-bottom: 1px solid #0056B3; padding-bottom: 4px;">Additional Notes</h3>
+            <p style="margin: 0; line-height: 1.6; white-space: pre-wrap;">${summary.discharge_notes}</p>
+          </div>` : ''}
+
+          ${patient.total_bill_amount ? `
+          <div style="margin-bottom: 16px; background: #f0f9ff; padding: 12px; border-radius: 6px; border: 1px solid #bae6fd;">
+            <h3 style="margin: 0 0 8px; color: #0056B3; font-size: 15px;">Billing Summary</h3>
+            <p style="margin: 0; font-size: 18px; font-weight: bold; color: #0056B3;">Total Amount: Rs. ${patient.total_bill_amount.toLocaleString()}</p>
+          </div>` : ''}
+
+          <div style="margin-top: 40px; border-top: 1px solid #ddd; padding-top: 15px; display: flex; justify-content: space-between;">
+            <div>
+              <p style="margin: 0; font-size: 12px; color: #999;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+            </div>
+            <div style="text-align: right;">
+              <p style="margin: 0 0 30px; font-size: 12px; color: #666;">Authorized Signature</p>
+              <div style="border-top: 1px solid #333; width: 200px; margin-left: auto;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const filename = `Discharge_Summary_${patientName.replace(/\s+/g, '_')}_${patient.patient_id}`;
+      await downloadPDFFromHTML(htmlContent, filename);
+      toast.success('Discharge Summary PDF downloaded!', { id: 'pdf-gen' });
+    } catch (error: any) {
+      console.error('PDF generation error:', error);
+      toast.error(`Failed to generate PDF: ${error.message}`, { id: 'pdf-gen' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto p-6">
@@ -857,6 +969,13 @@ const DischargeSection: React.FC = () => {
                           👁️ View Details
                         </button>
                         <button
+                          onClick={() => handleDownloadDischargePDF(patient)}
+                          className="px-3 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 text-sm font-medium"
+                          title="Download discharge summary as PDF"
+                        >
+                          📄 PDF
+                        </button>
+                        <button
                           onClick={() => handleEditDischargeDate(patient)}
                           className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200 text-sm font-medium"
                           title="Edit discharge date"
@@ -1016,8 +1135,14 @@ const DischargeSection: React.FC = () => {
               )}
 
 
-              {/* Close Button */}
-              <div className="flex justify-end">
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => handleDownloadDischargePDF(selectedPatientForDetails)}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  📄 Download PDF
+                </button>
                 <button
                   onClick={handleCloseDetailsModal}
                   className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
