@@ -20,8 +20,8 @@ router.get('/dashboard/stats', async (_req: Request, res: Response) => {
     const [active] = await db('employee_master').where({ hospital_id: HOSPITAL_ID, is_active: true }).count('id as count');
     const [present] = await db('attendance_logs').where({ hospital_id: HOSPITAL_ID, date: today, status: 'Present' }).count('id as count');
     const [absent] = await db('attendance_logs').where({ hospital_id: HOSPITAL_ID, date: today, status: 'Absent' }).count('id as count');
-    const [onLeave] = await db('leave_applications').where('hospital_id', HOSPITAL_ID).where('status', 'Approved').where('start_date', '<=', today).where('end_date', '>=', today).count('id as count');
-    const [pendingLeaves] = await db('leave_applications').where({ hospital_id: HOSPITAL_ID, status: 'Pending' }).count('id as count');
+    const [onLeave] = await db('leave_applications').where('status', 'Approved').where('start_date', '<=', today).where('end_date', '>=', today).count('id as count');
+    const [pendingLeaves] = await db('leave_applications').where({ status: 'Pending' }).count('id as count');
     const [depts] = await db('department_master').where({ hospital_id: HOSPITAL_ID, is_active: true }).count('id as count');
 
     return ok(res, {
@@ -450,7 +450,6 @@ router.get('/leaves', async (req: Request, res: Response) => {
   try {
     const { employee_id, status } = req.query;
     let query = db('leave_applications')
-      .where('leave_applications.hospital_id', HOSPITAL_ID)
       .leftJoin('employee_master', 'leave_applications.employee_id', 'employee_master.id')
       .leftJoin('leave_types', 'leave_applications.leave_type_id', 'leave_types.id')
       .select('leave_applications.*', 'employee_master.first_name', 'employee_master.last_name', 'employee_master.staff_unique_id', 'leave_types.leave_name', 'leave_types.leave_code');
@@ -475,16 +474,12 @@ router.post('/leaves', async (req: Request, res: Response) => {
 
     await db('leave_applications').insert({
       id,
-      hospital_id: HOSPITAL_ID,
       employee_id: body.employee_id,
       leave_type_id: body.leave_type_id,
       start_date: body.start_date,
       end_date: body.end_date,
-      total_days: totalDays,
       reason: body.reason || '',
       status: 'Pending',
-      created_at: new Date(),
-      updated_at: new Date(),
     });
 
     const leave = await db('leave_applications').where('id', id).first();
@@ -497,20 +492,15 @@ router.post('/leave-applications', async (req: Request, res: Response) => {
   try {
     const body = req.body;
     const id = uuidv4();
-    const totalDays = body.total_days || 1;
 
     await db('leave_applications').insert({
       id,
-      hospital_id: HOSPITAL_ID,
       employee_id: body.employee_id,
       leave_type_id: body.leave_type_id,
       start_date: body.start_date,
       end_date: body.end_date,
-      total_days: totalDays,
       reason: body.reason || '',
       status: 'Pending',
-      created_at: new Date(),
-      updated_at: new Date(),
     });
 
     return ok(res, { success: true, id }, 201);
@@ -519,11 +509,8 @@ router.post('/leave-applications', async (req: Request, res: Response) => {
 
 router.put('/leaves/:id/status', async (req: Request, res: Response) => {
   try {
-    const { status, approver_id, rejection_reason } = req.body;
-    const updates: any = { status, updated_at: new Date() };
-    if (approver_id) updates.approved_by = approver_id;
-    if (rejection_reason) updates.rejection_reason = rejection_reason;
-    if (status === 'Approved') updates.approval_date = new Date();
+    const { status } = req.body;
+    const updates: any = { status };
 
     await db('leave_applications').where('id', req.params.id).update(updates);
     const leave = await db('leave_applications').where('id', req.params.id).first();
@@ -556,7 +543,6 @@ router.get('/leave-applications/recent/:employeeId', async (req: Request, res: R
     const limit = parseInt(req.query.limit as string) || 5;
     const data = await db('leave_applications')
       .where('employee_id', req.params.employeeId)
-      .where('hospital_id', HOSPITAL_ID)
       .orderBy('created_at', 'desc')
       .limit(limit);
     return ok(res, data);
