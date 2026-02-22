@@ -247,33 +247,43 @@ export class SupabaseHospitalService {
 
       const user = userRow!;
 
-      // Try to find matching doctor by name
+      // Try to find matching doctor by email first, then by name
       const { data: doctors } = await supabase
         .from('doctors')
         .select('*')
         .eq('is_active', true);
 
       if (doctors && doctors.length > 0) {
-        // Match by name (first_name or full name)
-        const match = doctors.find((d: any) => {
+        // 1. Match by email (most reliable)
+        const emailMatch = doctors.find((d: any) => {
+          const doctorEmail = (d.email || '').toLowerCase();
+          const userEmail = (user.email || '').toLowerCase();
+          return doctorEmail && userEmail && doctorEmail === userEmail;
+        });
+
+        if (emailMatch) {
+          logger.log('✅ Doctor record matched by email:', emailMatch.id, emailMatch.name || emailMatch.first_name);
+          return { ...emailMatch, user_id: user.id };
+        }
+
+        // 2. Match by name (fallback)
+        const nameMatch = doctors.find((d: any) => {
           const doctorName = (d.name || '').toLowerCase();
           const doctorFirst = (d.first_name || '').toLowerCase();
           const userFirst = (user.first_name || '').toLowerCase();
           const userLast = (user.last_name || '').toLowerCase();
           const userFull = `${userFirst} ${userLast}`.trim();
-          return doctorFirst === userFirst ||
-                 doctorName === userFull ||
-                 doctorName.includes(userFirst);
+          return (doctorFirst && userFirst && doctorFirst === userFirst && (d.last_name || '').toLowerCase() === userLast) ||
+                 (doctorName && userFull && doctorName === userFull);
         });
 
-        if (match) {
-          logger.log('✅ Doctor record matched:', match.id, match.name || match.first_name);
-          return { ...match, user_id: user.id };
+        if (nameMatch) {
+          logger.log('✅ Doctor record matched by name:', nameMatch.id, nameMatch.name || nameMatch.first_name);
+          return { ...nameMatch, user_id: user.id };
         }
 
-        // If no name match, return the first doctor as fallback for demo
-        logger.warn('⚠️ No name match found, returning first doctor as fallback');
-        return { ...doctors[0], user_id: user.id };
+        logger.warn('⚠️ No doctor match found for user:', user.email, user.first_name, user.last_name);
+        return null;
       }
 
       logger.warn('⚠️ No doctors found in doctors table');

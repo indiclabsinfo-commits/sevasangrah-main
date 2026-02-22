@@ -39,11 +39,18 @@ const HARDCODED_USERS: AuthUser[] = [
     last_name: 'Administrator'
   },
   {
-    id: '00000000-0000-0000-0000-000000000001',
-    email: 'doctor@hospital.com',
+    id: '8f31b9e5-0c15-4b56-b0f2-ed5bf1891a5a',
+    email: 'dr.naveen@hospital.com',
     role: 'DOCTOR',
-    first_name: 'Rajesh',
-    last_name: 'Sharma'
+    first_name: 'Naveen',
+    last_name: 'Goyal'
+  },
+  {
+    id: '10d8bcde-24c2-4d62-8301-64799f41f6aa',
+    email: 'dr.shilpa@hospital.com',
+    role: 'DOCTOR',
+    first_name: 'Shilpa',
+    last_name: 'Goyal'
   },
   {
     id: '00000000-0000-0000-0000-000000000002',
