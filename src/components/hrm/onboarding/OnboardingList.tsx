@@ -15,8 +15,8 @@ const OnboardingList: React.FC = () => {
         queryKey: ['new-hires'],
         queryFn: async () => {
             // Temporary: Fetch all employees for demo
-            const { data } = await hrmService.getEmployeeMasters();
-            return data;
+            const employees = await hrmService.getEmployeeMasters();
+            return employees;
         }
     });
 

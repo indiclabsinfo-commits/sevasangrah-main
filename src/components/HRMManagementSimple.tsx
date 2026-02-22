@@ -2,12 +2,14 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import {
   Users, Calendar, DollarSign, Clock, Settings,
   Star, GraduationCap, UserPlus, Building2, BarChart3,
-  LogOut, Bell, Briefcase,
+  LogOut, Bell, Briefcase, ArrowLeft,
 } from 'lucide-react';
 import { hrmService } from '../services/hrmService';
 
 // Lazy-loaded sub-components
 const EmployeeList = lazy(() => import('./hrm/EmployeeList'));
+const EmployeeForm = lazy(() => import('./hrm/EmployeeForm'));
+const EmployeeProfile = lazy(() => import('./hrm/EmployeeProfile'));
 const AttendanceTracker = lazy(() => import('./hrm/AttendanceTracker'));
 const LeaveManagement = lazy(() => import('./hrm/LeaveManagement'));
 const ShiftMaster = lazy(() => import('./hrm/shifts/ShiftMaster'));
@@ -74,13 +76,13 @@ const DashboardPanel: React.FC = () => {
   if (loading) return <TabSpinner />;
 
   const cards = [
-    { label: 'Total Employees', value: stats?.total_employees ?? 0, icon: Users, color: 'blue' },
-    { label: 'Active Employees', value: stats?.active_employees ?? 0, icon: Users, color: 'green' },
-    { label: 'Present Today', value: stats?.present_today ?? 0, icon: Clock, color: 'emerald' },
-    { label: 'Absent Today', value: stats?.absent_today ?? 0, icon: Clock, color: 'red' },
-    { label: 'On Leave', value: stats?.on_leave ?? 0, icon: Calendar, color: 'yellow' },
-    { label: 'Pending Leaves', value: stats?.pending_leaves ?? 0, icon: Calendar, color: 'orange' },
-    { label: 'Departments', value: stats?.departments ?? 0, icon: Building2, color: 'purple' },
+    { label: 'Total Employees', value: stats?.total_employees ?? 0, icon: Users, bg: 'bg-blue-50', text: 'text-blue-600' },
+    { label: 'Active Employees', value: stats?.active_employees ?? 0, icon: Users, bg: 'bg-green-50', text: 'text-green-600' },
+    { label: 'Present Today', value: stats?.present_today ?? 0, icon: Clock, bg: 'bg-emerald-50', text: 'text-emerald-600' },
+    { label: 'Absent Today', value: stats?.absent_today ?? 0, icon: Clock, bg: 'bg-red-50', text: 'text-red-600' },
+    { label: 'On Leave', value: stats?.on_leave ?? 0, icon: Calendar, bg: 'bg-yellow-50', text: 'text-yellow-600' },
+    { label: 'Pending Leaves', value: stats?.pending_leaves ?? 0, icon: Calendar, bg: 'bg-orange-50', text: 'text-orange-600' },
+    { label: 'Departments', value: stats?.departments ?? 0, icon: Building2, bg: 'bg-purple-50', text: 'text-purple-600' },
   ];
 
   return (
@@ -94,8 +96,8 @@ const DashboardPanel: React.FC = () => {
                 <p className="text-sm font-medium text-gray-500">{c.label}</p>
                 <p className="text-3xl font-bold text-gray-900 mt-1">{c.value}</p>
               </div>
-              <div className={`w-11 h-11 bg-${c.color}-50 rounded-xl flex items-center justify-center`}>
-                <Icon className={`w-5 h-5 text-${c.color}-600`} />
+              <div className={`w-11 h-11 ${c.bg} rounded-xl flex items-center justify-center`}>
+                <Icon className={`w-5 h-5 ${c.text}`} />
               </div>
             </div>
           </div>
@@ -107,13 +109,94 @@ const DashboardPanel: React.FC = () => {
 
 const HRMManagementSimple: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  // Employee sub-views: 'list' | 'add' | 'edit' | 'profile'
+  const [employeeView, setEmployeeView] = useState<'list' | 'add' | 'edit' | 'profile'>('list');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+
+  const handleAddEmployee = () => {
+    setSelectedEmployeeId(null);
+    setEmployeeView('add');
+  };
+
+  const handleEditEmployee = (id: string) => {
+    setSelectedEmployeeId(id);
+    setEmployeeView('edit');
+  };
+
+  const handleViewProfile = (id: string) => {
+    setSelectedEmployeeId(id);
+    setEmployeeView('profile');
+  };
+
+  const handleEmployeeFormClose = () => {
+    setEmployeeView('list');
+    setSelectedEmployeeId(null);
+  };
+
+  const handleEmployeeFormSuccess = () => {
+    setEmployeeView('list');
+    setSelectedEmployeeId(null);
+  };
+
+  // Reset employee sub-view when switching tabs
+  useEffect(() => {
+    if (activeTab !== 'employees') {
+      setEmployeeView('list');
+      setSelectedEmployeeId(null);
+    }
+  }, [activeTab]);
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return <DashboardPanel />;
       case 'employees':
-        return <Suspense fallback={<TabSpinner />}><EmployeeList /></Suspense>;
+        if (employeeView === 'add' || employeeView === 'edit') {
+          return (
+            <Suspense fallback={<TabSpinner />}>
+              <div className="mb-4">
+                <button
+                  onClick={handleEmployeeFormClose}
+                  className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Back to Employee List
+                </button>
+              </div>
+              <EmployeeForm
+                employeeId={selectedEmployeeId}
+                onClose={handleEmployeeFormClose}
+                onSuccess={handleEmployeeFormSuccess}
+              />
+            </Suspense>
+          );
+        }
+        if (employeeView === 'profile' && selectedEmployeeId) {
+          return (
+            <Suspense fallback={<TabSpinner />}>
+              <div className="mb-4">
+                <button
+                  onClick={handleEmployeeFormClose}
+                  className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Back to Employee List
+                </button>
+              </div>
+              <EmployeeProfile
+                employeeId={selectedEmployeeId}
+                onBack={handleEmployeeFormClose}
+              />
+            </Suspense>
+          );
+        }
+        return (
+          <Suspense fallback={<TabSpinner />}>
+            <EmployeeList
+              onAddEmployee={handleAddEmployee}
+              onEditEmployee={handleEditEmployee}
+              onViewProfile={handleViewProfile}
+            />
+          </Suspense>
+        );
       case 'attendance':
         return <Suspense fallback={<TabSpinner />}><AttendanceTracker /></Suspense>;
       case 'leaves':
